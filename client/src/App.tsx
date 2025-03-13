@@ -22,6 +22,66 @@ async function sampleEventFetch() {
 
 function App() {
   const calendarRef = useRef<FullCalendar | null>(null);
+
+  const slotsRef = useRef<{
+    from: Date;
+    to: Date;
+  }[]>([]);
+
+  function addSlots(from: Date, to: Date) {
+    if (!calendarRef.current) {
+      console.log("no calendar ref");
+      return;
+    }
+    const calendarApi = calendarRef.current.getApi();
+
+    const startDate = from.getDate();
+    const endDate = to.getDate();
+
+    const dateDiff = endDate - startDate + 1;
+
+    // 各日付ごとに分解して Slot に追加
+    for (let i = 0; i < dateDiff; i++) {
+      const base = new Date(
+        from.getFullYear(),
+        from.getMonth(),
+        from.getDate() + i
+      )
+
+      const start = new Date(
+        base.getFullYear(),
+        base.getMonth(),
+        base.getDate(),
+        from.getHours(),
+        from.getMinutes()
+      )
+
+      const end = new Date(
+        base.getFullYear(),
+        base.getMonth(),
+        base.getDate(),
+        to.getHours(),
+        to.getMinutes()
+      )
+
+      slotsRef.current.push({
+        from: start,
+        to: end,
+      });
+
+      calendarApi.addEvent({
+        start,
+        end,
+      });
+    }
+
+    // 選択範囲をクリア
+    const existing = calendarApi.getEventById("selectBox");
+    if (existing) {
+      existing.remove();
+    }
+  }
+
   return (
     <>
       <h1 className="text-4xl">トップページ</h1>
@@ -36,7 +96,6 @@ function App() {
         selectAllow={
           // https://github.com/fullcalendar/fullcalendar/issues/4119
           (info) => {
-            console.log("selecting " + info.startStr + " to " + info.endStr, calendarRef);
             if (!calendarRef.current) {
               console.log("no calendar ref");
               return false;
@@ -71,14 +130,25 @@ function App() {
               endRecur: info.end,
               display: "background",
             });
-            return false;
+            return true;
           }
         }
         select={(info) => {
-          console.log("selected " + info.startStr + " to " + info.endStr);
+          addSlots(info.start, info.end);
         }}
       />
       <div>
+        <button onClick={
+          () => {
+            alert(
+              slotsRef.current.map((slot) => {
+                return `${slot.from.toLocaleString()} - ${slot.to.toLocaleString()}`;
+              }).join("\n")
+            )
+          }
+        }>
+          イベントを表示
+        </button>
         <button className="btn" onClick={sampleFetch}>
           fetch
         </button>
