@@ -8,6 +8,7 @@ export default function Create() {
   const [endDate, setEndDate] = useState<string>(""); // ISO 文字列
   const [ranges, setRanges] = useState<{ startTime: string; endTime: string }[]>([]); // range 配列
   const navigate = useNavigate(); // ページ遷移
+  const [loading, setLoading] = useState<boolean>(false);
 
   // range 追加処理
   const handleAddRange = () => {
@@ -24,18 +25,38 @@ export default function Create() {
   // 送信処理
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
 
-    // EventSchema に合わせた形で送信
+    // 日付部分が空の場合は送信させない
+    if (!startDate || !endDate || !ranges) {
+      alert("開始日と終了日を入力してください");
+      setLoading(false);
+      return;
+    }
+
+    // startDate, endDate は "2025-03-13T00:00:00.000Z" 形式に変換
+    const startDateTime = new Date(startDate + "T00:00:00.000Z").toISOString();
+    const endDateTime = new Date(endDate + "T23:59:59.999Z").toISOString(); // 終日のため最後の瞬間
+
+    // range も "startDate" を基準にして日時結合
+    const rangeWithDateTime = ranges.map((range) => {
+      const start = new Date(`${startDate}T${range.startTime}`).toISOString();
+      const end = new Date(`${startDate}T${range.endTime}`).toISOString(); // 同日の時間帯として送信
+      return {
+        startTime: start,
+        endTime: end,
+      };
+    });
+
+    // 最終送信データ
     const eventData = {
       name,
-      startDate,
-      endDate,
-      range: ranges.map((range) => ({
-        ...range,
-      })),
+      startDate: startDateTime,
+      endDate: endDateTime,
+      range: rangeWithDateTime,
     };
 
-    console.log("送信データ:", eventData); // デバッグ用
+    console.log("送信データ:", eventData); // デバッグ用確認
 
     const res = await fetch("http://localhost:3000/event", {
       method: "POST",
@@ -43,19 +64,26 @@ export default function Create() {
       body: JSON.stringify(eventData),
     });
     const data = await res.json();
-    console.log("受信データ", data.event);
+    const parseData = EventSchema.parse(data.event);
+    console.log("受信データ", parseData);
 
-    const eventId = data.event.id; //TODO: バリデーション
+    const eventId = parseData.id;
 
     if (res.ok) {
       navigate(`./${eventId}/done`);
+      setLoading(false);
     } else {
       alert("送信に失敗しました");
+      setLoading(false);
     }
   };
-
   return (
     <>
+      {loading && (
+        <div className="fixed inset-0 bg-opacity-50 flex justify-center items-center z-50">
+          <span className="loading loading-spinner loading-lg text-blue"></span>
+        </div>
+      )}
       <h1>イベント作成</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">

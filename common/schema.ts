@@ -1,45 +1,47 @@
 import { z } from "zod";
 
+// ---------- 共通ID ----------
+export const idSchema = z.string().uuid();
+
 // ---------- Range ----------
 export const RangeSchema = z.object({
-  id: z.string().uuid().optional(),
-  startTime: z.string().time(),
-  endTime: z.string().time(),
-  eventId: z.string().uuid().optional(),
+  id: idSchema.optional(),
+  startTime: z.string().datetime(), // 修正: time() → datetime()
+  endTime: z.string().datetime(), // 修正: time() → datetime()
+  eventId: idSchema.optional(),
 });
 
 // ---------- Slot ----------
 export const SlotSchema = z.object({
-  id: z.string().uuid(),
+  id: idSchema,
   start: z.string().datetime(),
   end: z.string().datetime(),
-  eventId: z.string().uuid(),
-  guestId: z.string().uuid(),
+  eventId: idSchema,
+  guestId: idSchema,
 });
 
 // ---------- Host ----------
 export const HostSchema = z.object({
-  id: z.string().uuid(),
+  id: idSchema,
   name: z.string(),
-  browserId: z.string().uuid(), // Prismaの@default(uuid())に対応
-  eventId: z.string().uuid(),
+  browserId: idSchema,
+  eventId: idSchema,
 });
 
 // ---------- Guest ----------
 export const GuestSchema = z.object({
-  id: z.string().uuid(),
+  id: idSchema,
   name: z.string(),
-  browserId: z.string().uuid(),
-  eventId: z.string().uuid(),
+  browserId: idSchema,
+  eventId: idSchema,
 });
 
 // ---------- Event ----------
 export const EventSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: idSchema.optional(),
   name: z.string(),
-  startDate: z.string().date(),
-  endDate: z.string().date(),
-  // 配列の関係部分（関連オブジェクトとの関係）は個別に使う時に組み合わせる
+  startDate: z.string().datetime(), // 修正: date() → datetime()
+  endDate: z.string().datetime(), // 修正: date() → datetime()
   range: z.array(RangeSchema),
   slots: z.array(SlotSchema).optional(),
   hosts: z.array(HostSchema).optional(),

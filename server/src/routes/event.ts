@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { EventSchema } from "../../../common/schema";
+import { EventSchema, idSchema } from "../../../common/schema";
 import { z } from "zod";
 import { prisma } from "../main";
 
@@ -12,18 +12,13 @@ router.post("/", async (req: Request, res: Response) => {
 
     const parsedData = EventSchema.parse(req.body);
 
-    const isoRanges = parsedData.range.map((r) => ({
-      startTime: new Date(`${parsedData.startDate}T${r.startTime}`),
-      endTime: new Date(`${parsedData.startDate}T${r.endTime}`),
-    }));
-
     const event = await prisma.event.create({
       data: {
         name: parsedData.name,
-        startDate: new Date(`${parsedData.startDate}T00:00:00`),
-        endDate: new Date(`${parsedData.endDate}T23:59:59`),
+        startDate: parsedData.startDate,
+        endDate: parsedData.endDate,
         range: {
-          create: isoRanges,
+          create: parsedData.range,
         },
       },
       include: { range: true },
@@ -38,6 +33,32 @@ router.post("/", async (req: Request, res: Response) => {
         .json({ message: "バリデーションエラー", errors: err.errors });
     }
     res.status(500).json({ message: "イベント作成時にエラーが発生しました" });
+  }
+});
+
+// 特定のイベント取得
+router.get("/:eventId", async (req: Request, res: Response) => {
+  const { eventId } = req.params;
+  const id = idSchema.parse(eventId);
+
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id },
+      include: { range: true },
+    });
+
+    // イベントが存在しない場合
+    if (!event) {
+      return res
+        .status(404)
+        .json({ message: "指定されたイベントが見つかりません。" });
+    }
+
+    // 成功レスポンス
+    res.status(200).json({ event });
+  } catch (error) {
+    console.error("イベント取得エラー:", error);
+    res.status(500).json({ message: "イベント取得中にエラーが発生しました。" });
   }
 });
 
