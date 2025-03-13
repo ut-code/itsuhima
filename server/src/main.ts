@@ -1,6 +1,6 @@
 import express from "express";
-import { Request, Response } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { PrismaClient } from "@prisma/client";
 import eventRoutes from "./routes/event";
 import userRoutes from "./routes/user";
@@ -12,6 +12,7 @@ const port = 3000;
 
 app.use(cors()); // TODO: configure
 app.use(express.json());
+app.use(cookieParser());
 
 // テスト用
 app.get("/", (req, res) => {

@@ -24,7 +24,7 @@ export const SlotSchema = z.object({
 export const HostSchema = z.object({
   id: idSchema,
   name: z.string(),
-  browserId: idSchema,
+  browserId: idSchema.optional(),
   eventId: idSchema,
 });
 
@@ -32,7 +32,7 @@ export const HostSchema = z.object({
 export const GuestSchema = z.object({
   id: idSchema.optional(),
   name: z.string(),
-  browserId: z.string(),
+  browserId: idSchema.optional(),
   eventId: idSchema,
   slots: z.array(SlotSchema).optional(),
 });

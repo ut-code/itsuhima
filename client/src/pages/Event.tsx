@@ -15,7 +15,6 @@ export default function Event() {
 
   const [guestName, setGuestName] = useState("");
   const [selectedSlots, setSelectedSlots] = useState<Slot[]>([]);
-  const browserId = "1234"; //TODO: cookieでいい感じにする。
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -94,7 +93,6 @@ export default function Event() {
     const guest = {
       name: guestName,
       slots: selectedSlots,
-      browserId: browserId,
       eventId: eventId,
     };
     console.log("送信情報", guest);
@@ -178,7 +176,7 @@ export default function Event() {
           {event.guests.map((guest) => (
             <li key={guest.id} className="border p-2 my-2">
               {guest.name} (ID: {guest.id})
-              {guest.slots?.length! > 0 && (
+              {guest.slots && guest.slots.length > 0 && (
                 <ul className="pl-4 mt-1">
                   {guest.slots!.map((slot) => (
                     <li key={slot.id}>

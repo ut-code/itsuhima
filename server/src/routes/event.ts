@@ -65,10 +65,8 @@ router.get("/:eventId", async (req: Request, res: Response) => {
   }
 });
 router.post("/:eventId/submit", async (req: Request, res: Response) => {
-  const { eventId } = req.params;
   const guest = req.body;
-
-  console.log(`イベントID: ${eventId}`);
+  console.log(`イベントID: ${guest.eventId}`);
   console.log("送信されたゲスト情報:", guest);
 
   // ✅ Zodによるバリデーション
@@ -84,7 +82,7 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
 
   // ✅ もしeventIdとslot.eventIdが一致しているかチェックする場合
   const invalidSlots = parsed.data.slots!.filter(
-    (slot) => slot.eventId !== eventId
+    (slot) => slot.eventId !== guest.eventId
   );
   if (invalidSlots.length > 0) {
     return res
@@ -96,8 +94,7 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
     const data = await prisma.guest.create({
       data: {
         name: guest.name,
-        eventId: eventId,
-        browserId: guest.browserId,
+        browserId: req.cookies?.browserId,
         slots: {
           create: guest.slots.map((slot: Slot) => ({
             start: slot.start,
@@ -105,12 +102,19 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
             eventId: slot.eventId,
           })),
         },
+        event: {
+          connect: { id: guest.eventId },
+        },
       },
       include: {
         slots: true,
       },
     });
     console.log("登録されたデータ:", data);
+    res.cookie("browserId", data.browserId, {
+      httpOnly: true, // クライアント側からアクセスさせない場合
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年間有効
+    });
     return res.status(201).json({ data });
   } catch (error) {
     console.error(error);
