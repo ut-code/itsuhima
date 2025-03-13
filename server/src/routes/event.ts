@@ -1,15 +1,18 @@
 import { Router, Request, Response } from "express";
-import { EventSchema, idSchema } from "../../../common/schema";
+import {
+  EventSchema,
+  GuestSchema,
+  idSchema,
+  SlotSchema,
+} from "../../../common/schema";
 import { z } from "zod";
 import { prisma } from "../main";
 
 const router = Router();
-
+type Slot = z.infer<typeof SlotSchema>;
 // /event POST
 router.post("/", async (req: Request, res: Response) => {
   try {
-    console.log("⭐️⭐️⭐️⭐️⭐️⭐️", req.body);
-
     const parsedData = EventSchema.parse(req.body);
 
     const event = await prisma.event.create({
@@ -61,27 +64,56 @@ router.get("/:eventId", async (req: Request, res: Response) => {
     res.status(500).json({ message: "イベント取得中にエラーが発生しました。" });
   }
 });
-
-// /events/:eventId/submit POST
-router.post("/:eventId/submit", (req: Request, res: Response) => {
+router.post("/:eventId/submit", async (req: Request, res: Response) => {
   const { eventId } = req.params;
-  const { startDate, endDate } = req.body;
+  const guest = req.body;
 
   console.log(`イベントID: ${eventId}`);
-  console.log(`開始日: ${startDate}`);
-  console.log(`終了日: ${endDate}`);
+  console.log("送信されたゲスト情報:", guest);
 
-  if (!startDate || !endDate) {
-    return res.status(400).json({ message: "開始日と終了日は必須です。" });
+  // ✅ Zodによるバリデーション
+  const parsed = GuestSchema.safeParse(guest);
+
+  if (!parsed.success) {
+    console.error("バリデーションエラー:", parsed.error);
+    return res.status(400).json({
+      message: "送信データの形式が不正です",
+      errors: parsed.error.errors,
+    });
   }
 
-  if (startDate > endDate) {
+  // ✅ もしeventIdとslot.eventIdが一致しているかチェックする場合
+  const invalidSlots = parsed.data.slots!.filter(
+    (slot) => slot.eventId !== eventId
+  );
+  if (invalidSlots.length > 0) {
     return res
       .status(400)
-      .json({ message: "開始日は終了日より前にしてください。" });
+      .json({ message: "一部のスロットのイベントIDが一致していません。" });
   }
 
-  return res.status(200).json({ message: "登録が完了しました！" });
+  try {
+    const data = await prisma.guest.create({
+      data: {
+        name: guest.name,
+        eventId: eventId,
+        slots: {
+          create: guest.slots.map((slot: Slot) => ({
+            start: slot.start,
+            end: slot.end,
+            eventId: slot.eventId,
+          })),
+        },
+      },
+      include: {
+        slots: true,
+      },
+    });
+    console.log("登録されたデータ:", data);
+    return res.status(201).json({ data });
+  } catch (error) {
+    return res.status(500).json({ message: "サーバーエラーが発生しました" });
+  }
 });
 
 export default router;

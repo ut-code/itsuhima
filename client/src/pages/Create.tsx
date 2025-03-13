@@ -36,7 +36,7 @@ export default function Create() {
 
     // startDate, endDate は "2025-03-13T00:00:00.000Z" 形式に変換
     const startDateTime = new Date(startDate + "T00:00:00.000Z").toISOString();
-    const endDateTime = new Date(endDate + "T23:59:59.999Z").toISOString(); // 終日のため最後の瞬間
+    const endDateTime = new Date(endDate + "T00:00:00.000Z").toISOString(); // 終日のため最後の瞬間
 
     // range も "startDate" を基準にして日時結合
     const rangeWithDateTime = ranges.map((range) => {
@@ -55,6 +55,7 @@ export default function Create() {
       endDate: endDateTime,
       range: rangeWithDateTime,
     };
+    
 
     console.log("送信データ:", eventData); // デバッグ用確認
 

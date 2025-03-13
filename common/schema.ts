@@ -13,11 +13,11 @@ export const RangeSchema = z.object({
 
 // ---------- Slot ----------
 export const SlotSchema = z.object({
-  id: idSchema,
+  id: idSchema.optional(),
   start: z.string().datetime(),
   end: z.string().datetime(),
   eventId: idSchema,
-  guestId: idSchema,
+  guestId: idSchema.optional(),
 });
 
 // ---------- Host ----------
@@ -30,10 +30,11 @@ export const HostSchema = z.object({
 
 // ---------- Guest ----------
 export const GuestSchema = z.object({
-  id: idSchema,
+  id: idSchema.optional(),
   name: z.string(),
-  browserId: idSchema,
+  browserId: z.string(),
   eventId: idSchema,
+  slots: z.array(SlotSchema).optional(),
 });
 
 // ---------- Event ----------
