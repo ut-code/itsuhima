@@ -1,34 +1,33 @@
-import { UserSchema } from "../../common/schema";
 import { z } from "zod";
-import FullCalendar from "@fullcalendar/react";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import { useRef } from "react";
+// import FullCalendar from "@fullcalendar/react";
+// import timeGridPlugin from "@fullcalendar/timegrid";
+// import interactionPlugin from "@fullcalendar/interaction";
+// import { useRef } from "react";
 
 import { NavLink } from "react-router";
 
-async function sampleFetch() {
-  const response = await fetch("http://localhost:3000/users/");
-  const result = await response.json();
-  const data = z.array(UserSchema).parse(result);
-  data.forEach((item) => console.log("name: ", item.name, "age: ", item.age));
-}
+// async function sampleFetch() {
+//   const response = await fetch("http://localhost:3000/users/");
+//   const result = await response.json();
+//   const data = z.array(UserSchema).parse(result);
+//   data.forEach((item) => console.log("name: ", item.name, "age: ", item.age));
+// }
 
-async function sampleEventFetch() {
-  const response = await fetch("http://localhost:3000/sample/events");
-  const result = await response.json();
-  console.log(result);
-}
+// async function sampleEventFetch() {
+//   const response = await fetch("http://localhost:3000/sample/events");
+//   const result = await response.json();
+//   console.log(result);
+// }
 
 function App() {
-  const calendarRef = useRef<FullCalendar | null>(null);
+  // const calendarRef = useRef<FullCalendar | null>(null);
   return (
     <>
       <h1 className="text-4xl">トップページ</h1>
-      <NavLink to="/create" end>
+      <NavLink to="/create" end className="btn btn-primary">
         イベントを作成する。
       </NavLink>
-      <FullCalendar
+      {/* <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, interactionPlugin]}
         longPressDelay={200}
@@ -76,15 +75,7 @@ function App() {
         select={(info) => {
           console.log("selected " + info.startStr + " to " + info.endStr);
         }}
-      />
-      <div>
-        <button className="btn" onClick={sampleFetch}>
-          fetch
-        </button>
-        <button className="btn" onClick={sampleEventFetch}>
-          events
-        </button>
-      </div>
+      /> */}
     </>
   );
 }

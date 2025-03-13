@@ -1,8 +1,9 @@
 import express from "express";
 import { Request, Response } from "express";
 import cors from "cors";
-import { User } from "../../common/schema";
 import { PrismaClient } from "@prisma/client";
+import { EventSchema } from "../../common/schema";
+import { z } from "zod";
 
 const prisma = new PrismaClient();
 
@@ -27,14 +28,45 @@ app.get("/", (req: Request, res: Response) => {
   res.json("Hello World!");
 });
 
-app.get("/sample/events", async (req: Request, res: Response) => {
-  const events = await prisma.event.findMany();
-  res.json(events);
+app.post("/event", async (req: Request, res: Response) => {
+  try {
+    // バリデーション
+    console.log("⭐️⭐️⭐️⭐️⭐️⭐️", req.body);
+
+    const parsedData = EventSchema.parse(req.body);
+
+    const isoRanges = parsedData.range.map((r) => ({
+      startTime: new Date(`${parsedData.startDate}T${r.startTime}`), // "2025-03-13T16:11:00"
+      endTime: new Date(`${parsedData.startDate}T${r.endTime}`),
+    }));
+
+    // ✅ Prisma で作成
+    const event = await prisma.event.create({
+      data: {
+        name: parsedData.name,
+        startDate: new Date(`${parsedData.startDate}T00:00:00`),
+        endDate: new Date(`${parsedData.endDate}T23:59:59`),
+        range: {
+          create: isoRanges,
+        },
+      },
+      include: { range: true },
+    });
+
+    res.status(201).json({
+      event,
+    });
+  } catch (err) {
+    console.error("エラー:", err);
+    if (err instanceof z.ZodError) {
+      return res
+        .status(400)
+        .json({ message: "バリデーションエラー", errors: err.errors });
+    }
+    res.status(500).json({ message: "イベント作成時にエラーが発生しました" });
+  }
 });
 
-app.post("/event", (req: Request, res: Response) => {
-  res.json("イベントを作成しました");
-});
 app.post("/events/:eventId/submit", (req, res) => {
   const { eventId } = req.params;
   const { startDate, endDate } = req.body;
@@ -58,11 +90,6 @@ app.post("/events/:eventId/submit", (req, res) => {
 
   // 成功レスポンス
   return res.status(200).json({ message: "登録が完了しました！" });
-});
-
-app.get("/users", (req: Request, res: Response) => {
-  const data: User[] = dummyUsers;
-  res.json(data);
 });
 
 app.listen(port, () => {
