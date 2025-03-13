@@ -3,6 +3,7 @@ import { z } from "zod";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import dayjs from "dayjs";
 import { useRef } from "react";
 
 import { NavLink } from "react-router";
@@ -20,6 +21,52 @@ async function sampleEventFetch() {
   console.log(result);
 }
 
+function addSlots(from: Date, to: Date, calendarRef: React.RefObject<FullCalendar | null>, slotsRef: React.RefObject<{ from: Date; to: Date; }[]>) {
+  if (!calendarRef.current) {
+    console.log("no calendar ref");
+    return;
+  }
+  const calendarApi = calendarRef.current.getApi();
+
+  const start = dayjs(from);
+  const end = dayjs(to);
+
+  const dateDiff = end.startOf("day").diff(start.startOf("day"), "day") + 1
+  const needReverse = start.format("HH:mm") > end.format("HH:mm")
+
+  const startHour = !needReverse ? start.hour() : end.hour()
+  const startMinute = !needReverse ? start.minute() : end.minute()
+  const endHour = !needReverse ? end.hour() : start.hour()
+  const endMinute = !needReverse ? end.minute() : start.minute()
+
+  // 各日付ごとに分解して Slot に追加
+  for (let i = 0; i < dateDiff; i++) {
+    console.log(dateDiff)
+    const base = start.add(i, "day")
+
+    const slotStart = base.hour(startHour).minute(startMinute)
+    const slotEnd = base.hour(endHour).minute(endMinute)
+
+    console.log(slotStart.toDate(), slotEnd.toDate());
+
+    slotsRef.current.push({
+      from: slotStart.toDate(),
+      to: slotEnd.toDate(),
+    });
+
+    calendarApi.addEvent({
+      start: slotStart.toDate(),
+      end: slotEnd.toDate(),
+    });
+  }
+
+  // 選択範囲をクリア
+  const existing = calendarApi.getEventById("selectBox");
+  if (existing) {
+    existing.remove();
+  }
+}
+
 function App() {
   const calendarRef = useRef<FullCalendar | null>(null);
 
@@ -27,60 +74,6 @@ function App() {
     from: Date;
     to: Date;
   }[]>([]);
-
-  function addSlots(from: Date, to: Date) {
-    if (!calendarRef.current) {
-      console.log("no calendar ref");
-      return;
-    }
-    const calendarApi = calendarRef.current.getApi();
-
-    const startDate = from.getDate();
-    const endDate = to.getDate();
-
-    const dateDiff = endDate - startDate + 1;
-
-    // 各日付ごとに分解して Slot に追加
-    for (let i = 0; i < dateDiff; i++) {
-      const base = new Date(
-        from.getFullYear(),
-        from.getMonth(),
-        from.getDate() + i
-      )
-
-      const start = new Date(
-        base.getFullYear(),
-        base.getMonth(),
-        base.getDate(),
-        from.getHours(),
-        from.getMinutes()
-      )
-
-      const end = new Date(
-        base.getFullYear(),
-        base.getMonth(),
-        base.getDate(),
-        to.getHours(),
-        to.getMinutes()
-      )
-
-      slotsRef.current.push({
-        from: start,
-        to: end,
-      });
-
-      calendarApi.addEvent({
-        start,
-        end,
-      });
-    }
-
-    // 選択範囲をクリア
-    const existing = calendarApi.getEventById("selectBox");
-    if (existing) {
-      existing.remove();
-    }
-  }
 
   return (
     <>
@@ -134,7 +127,7 @@ function App() {
           }
         }
         select={(info) => {
-          addSlots(info.start, info.end);
+          addSlots(info.start, info.end, calendarRef, slotsRef);
         }}
       />
       <div>
