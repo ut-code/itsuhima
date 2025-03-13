@@ -53,7 +53,7 @@ model Host {
 model Guest {
   id        String @id @default(uuid())
   name      String
-  browserId String @unique @default(uuid())
+  browserId String
   eventId   String
   event     Event  @relation(fields: [eventId], references: [id])
   slots     Slot[]

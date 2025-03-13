@@ -113,6 +113,7 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
     console.log("登録されたデータ:", data);
     return res.status(201).json({ data });
   } catch (error) {
+    console.error(error);
     return res.status(500).json({ message: "サーバーエラーが発生しました" });
   }
 });

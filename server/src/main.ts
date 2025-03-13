@@ -7,17 +7,6 @@ import userRoutes from "./routes/user";
 
 export const prisma = new PrismaClient();
 
-const dummyUsers = [
-  {
-    name: "太郎",
-    age: 18,
-  },
-  {
-    name: "次郎",
-    age: 15,
-  },
-];
-
 const app = express();
 const port = 3000;
 

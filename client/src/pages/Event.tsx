@@ -1,4 +1,4 @@
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { useEffect, useState } from "react";
 import { EventSchema, GuestSchema, SlotSchema } from "../../../common/schema";
 import { z } from "zod";
@@ -11,6 +11,7 @@ export default function Event() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const [guestName, setGuestName] = useState("");
   const [selectedSlots, setSelectedSlots] = useState<Slot[]>([]);
@@ -73,6 +74,7 @@ export default function Event() {
 
   // -------------------- Guest 登録処理 --------------------
   const handleRegisterGuest = async () => {
+    setLoading(true);
     if (!guestName.trim()) {
       alert("名前を入力してください");
       return;
@@ -107,11 +109,13 @@ export default function Event() {
       if (!res.ok) throw new Error("ゲスト登録に失敗しました");
       const result = await res.json();
       console.log("登録結果:", result.data);
-      alert("登録に成功しました！");
       setSelectedSlots([]);
       setGuestName("");
+      navigate(`./done`);
+      setLoading(false);
     } catch (err: any) {
       alert(`エラー: ${err.message}`);
+      setLoading(false);
     }
   };
 
