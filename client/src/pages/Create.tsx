@@ -61,6 +61,7 @@ export default function Create() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(eventData),
+      credentials: "include",
     });
     const data = await res.json();
     console.log("受信データ", data.event);

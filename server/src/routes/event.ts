@@ -10,10 +10,11 @@ import { prisma } from "../main";
 
 const router = Router();
 type Slot = z.infer<typeof SlotSchema>;
-// /event POST
+
 router.post("/", async (req: Request, res: Response) => {
   try {
     const parsedData = EventSchema.parse(req.body);
+    console.log("Cookieだよ", req.cookies?.browserId);
 
     const event = await prisma.event.create({
       data: {
@@ -26,8 +27,19 @@ router.post("/", async (req: Request, res: Response) => {
       },
       include: { range: true },
     });
-
-    res.status(201).json({ event });
+    const host = await prisma.host.create({
+      data: {
+        browserId: req.cookies?.browserId,
+        event: {
+          connect: { id: event.id },
+        },
+      },
+    });
+    res.cookie("browserId", host.browserId, {
+      httpOnly: true, // クライアント側からアクセスさせない場合
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年間有効
+    });
+    res.status(201).json({ event, host });
   } catch (err) {
     console.error("エラー:", err);
     if (err instanceof z.ZodError) {
@@ -89,7 +101,6 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
   console.log("送信されたゲスト情報:", guest);
   console.log("Cookieだよ", req.cookies);
 
-  // ✅ Zodによるバリデーション
   const parsed = GuestSchema.safeParse(guest);
 
   if (!parsed.success) {
@@ -100,7 +111,6 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
     });
   }
 
-  // ✅ もしeventIdとslot.eventIdが一致しているかチェックする場合
   const invalidSlots = parsed.data.slots!.filter(
     (slot) => slot.eventId !== guest.eventId
   );

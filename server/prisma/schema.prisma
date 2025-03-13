@@ -44,7 +44,6 @@ model Slot {
 
 model Host {
   id        String @id @default(uuid())
-  name      String
   browserId String @unique @default(uuid())
   eventId   String
   event     Event  @relation(fields: [eventId], references: [id])
