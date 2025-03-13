@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { EventSchema } from "../../../common/schema";
 
 export default function Create() {
   const [name, setName] = useState<string>("");
@@ -55,7 +54,6 @@ export default function Create() {
       endDate: endDateTime,
       range: rangeWithDateTime,
     };
-    
 
     console.log("送信データ:", eventData); // デバッグ用確認
 
@@ -65,10 +63,9 @@ export default function Create() {
       body: JSON.stringify(eventData),
     });
     const data = await res.json();
-    const parseData = EventSchema.parse(data.event);
-    console.log("受信データ", parseData);
+    console.log("受信データ", data.event);
 
-    const eventId = parseData.id;
+    const eventId = data.event.id;
 
     if (res.ok) {
       navigate(`./${eventId}/done`);

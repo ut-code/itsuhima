@@ -139,67 +139,146 @@ export default function Event() {
   const dates = getDatesInRange(event.startDate, event.endDate);
 
   return (
-    <div>
-      <h1>イベント詳細</h1>
+    <div className="p-4">
+      <h1 className="text-xl font-bold">イベント詳細</h1>
       <p>イベント名: {event.name}</p>
       <p>
         開催期間: {new Date(event.startDate).toLocaleDateString()} ～{" "}
         {new Date(event.endDate).toLocaleDateString()}
       </p>
 
-      <h2>参加者情報</h2>
+      {/* ----------- 大枠 (Range) ----------- */}
+      <h2 className="text-lg font-semibold mt-4">時間帯の大枠 (Range)</h2>
+      <ul>
+        {event.range.map((r) => (
+          <li key={r.id} className="border p-2 my-2">
+            {new Date(r.startTime).toLocaleString()} ～ {new Date(r.endTime).toLocaleString()}
+          </li>
+        ))}
+      </ul>
+
+      {/* ----------- ホスト (Host) ----------- */}
+      <h2 className="text-lg font-semibold mt-4">ホスト</h2>
+      {event.hosts?.length ? (
+        <ul>
+          {event.hosts.map((host) => (
+            <li key={host.id} className="border p-2 my-2">
+              {host.name} (ID: {host.id})
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>ホストはいません</p>
+      )}
+
+      {/* ----------- ゲスト (Guest) ----------- */}
+      <h2 className="text-lg font-semibold mt-4">ゲスト</h2>
+      {event.guests?.length ? (
+        <ul>
+          {event.guests.map((guest) => (
+            <li key={guest.id} className="border p-2 my-2">
+              {guest.name} (ID: {guest.id})
+              {guest.slots?.length! > 0 && (
+                <ul className="pl-4 mt-1">
+                  {guest.slots!.map((slot) => (
+                    <li key={slot.id}>
+                      {new Date(slot.start).toLocaleString()} ～{" "}
+                      {new Date(slot.end).toLocaleString()}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>ゲストはいません</p>
+      )}
+
+      {/* ----------- スロット (Slot) ----------- */}
+      <h2 className="text-lg font-semibold mt-4">すべての登録済みスロット</h2>
+      {event.slots?.length ? (
+        <ul>
+          {event.slots.map((slot) => (
+            <li key={slot.id} className="border p-2 my-2">
+              {new Date(slot.start).toLocaleString()} ～ {new Date(slot.end).toLocaleString()}{" "}
+              {slot.guestId && <span>(ゲストID: {slot.guestId})</span>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>登録済みスロットはありません</p>
+      )}
+
+      {/* ----------- ゲスト名入力 ----------- */}
+      <h2 className="text-lg font-semibold mt-6">参加者情報</h2>
       <input
         type="text"
         placeholder="あなたの名前"
         value={guestName}
         onChange={(e) => setGuestName(e.target.value)}
-        className="input"
+        className="input input-bordered w-full max-w-xs my-2"
       />
 
-      <h2>希望時間帯を追加</h2>
+      {/* ----------- 希望時間帯の追加 ----------- */}
+      <h2 className="text-lg font-semibold mt-6">希望時間帯を追加</h2>
       {dates.map((date) => (
-        <div key={date}>
-          <h3>{date}</h3>
+        <div key={date} className="mt-4">
+          <h3 className="font-semibold">{date}</h3>
           {event.range.map((r, index) => (
-            <div
-              key={r.id}
-              style={{ marginBottom: "20px", padding: "10px", border: "1px solid gray" }}
-            >
+            <div key={r.id || `range-${index}`} className="border p-2 my-2 rounded">
               <p>
                 大枠: {new Date(r.startTime).toLocaleTimeString()} ~{" "}
                 {new Date(r.endTime).toLocaleTimeString()}
               </p>
-              <input type="time" placeholder="開始時間" id={`start-${date}-${r.id}`} />
-              <input type="time" placeholder="終了時間" id={`end-${date}-${r.id}`} />
-              <button
-                onClick={() =>
-                  handleAddSlot(
-                    date,
-                    { id: r.id || `range-${index}`, startTime: r.startTime, endTime: r.endTime },
-                    (document.getElementById(`start-${date}-${r.id}`) as HTMLInputElement).value,
-                    (document.getElementById(`end-${date}-${r.id}`) as HTMLInputElement).value,
-                  )
-                }
-              >
-                追加
-              </button>
+              <div className="flex gap-2 my-2">
+                <input
+                  type="time"
+                  placeholder="開始時間"
+                  id={`start-${date}-${r.id}`}
+                  className="input input-bordered"
+                />
+                <input
+                  type="time"
+                  placeholder="終了時間"
+                  id={`end-${date}-${r.id}`}
+                  className="input input-bordered"
+                />
+                <button
+                  className="btn btn-outline"
+                  onClick={() =>
+                    handleAddSlot(
+                      date,
+                      { id: r.id || `range-${index}`, startTime: r.startTime, endTime: r.endTime },
+                      (document.getElementById(`start-${date}-${r.id}`) as HTMLInputElement).value,
+                      (document.getElementById(`end-${date}-${r.id}`) as HTMLInputElement).value,
+                    )
+                  }
+                >
+                  追加
+                </button>
+              </div>
             </div>
           ))}
         </div>
       ))}
 
-      <h2>選択中の時間帯</h2>
-      <ul>
+      {/* ----------- 選択中の時間帯 ----------- */}
+      <h2 className="text-lg font-semibold mt-6">選択中の時間帯</h2>
+      <ul className="list-disc pl-6">
         {selectedSlots.map((slot, idx) => (
           <li key={idx}>
-            {new Date(slot.start).toLocaleString()} ~ {new Date(slot.end).toLocaleString()}
+            {new Date(slot.start).toLocaleString()} ～ {new Date(slot.end).toLocaleString()}
           </li>
         ))}
       </ul>
 
-      <button onClick={handleRegisterGuest} className="btn btn-primary">
-        登録
-      </button>
+      {/* ----------- 登録ボタン ----------- */}
+      <div className="mt-6">
+        <button onClick={handleRegisterGuest} className="btn btn-primary">
+          登録
+        </button>
+      </div>
     </div>
   );
 }
