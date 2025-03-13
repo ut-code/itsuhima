@@ -14,13 +14,22 @@ datasource db {
 }
 
 model Event {
-  id     String   @id @default(uuid())
-  name   String
-  start  DateTime
-  end    DateTime
-  slots  Slot[]
-  hosts  Host[]
-  guests Guest[]
+  id        String   @id @default(uuid())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  range     Range[]
+  slots     Slot[]
+  hosts     Host[]
+  guests    Guest[]
+}
+
+model Range {
+  id        String   @id @default(uuid())
+  startTime DateTime
+  endTime   DateTime
+  event     Event    @relation(fields: [eventId], references: [id])
+  eventId   String
 }
 
 model Slot {
