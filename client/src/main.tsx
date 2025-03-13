@@ -15,10 +15,13 @@ createRoot(document.getElementById("root")!).render(
         <Route index element={<App />} />
         <Route path="create">
           <Route index element={<Create />} />
-          <Route path="done" element={<CreateDone />} />
+          <Route path=":eventId">
+            <Route path="done" element={<CreateDone />} />
+          </Route>
         </Route>
         <Route path="events">
-          <Route path=":eventId" element={<Event />}>
+          <Route path=":eventId">
+            <Route index element={<Event />} />
             <Route path="done" element={<EventDone />} />
           </Route>
         </Route>

@@ -1,3 +1,3 @@
 export default function EventDone() {
-  return <div>イベント完了だよ</div>;
+  return <div>完了だよ</div>;
 }

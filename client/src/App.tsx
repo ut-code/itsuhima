@@ -3,6 +3,8 @@
 // import FullCalendar from "@fullcalendar/react";
 // import timeGridPlugin from "@fullcalendar/timegrid";
 
+import { NavLink } from "react-router";
+
 // async function sampleFetch() {
 //   const response = await fetch("http://localhost:3000/users/");
 //   const result = await response.json();
@@ -20,6 +22,9 @@ function App() {
   return (
     <>
       <h1 className="text-4xl">トップページ</h1>
+      <NavLink to="/create" end>
+        イベントを作成する。
+      </NavLink>
       {/* <FullCalendar plugins={[timeGridPlugin]} />
       <div>
         <button className="btn" onClick={sampleFetch}>
