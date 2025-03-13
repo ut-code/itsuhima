@@ -10,7 +10,12 @@ export const prisma = new PrismaClient();
 const app = express();
 const port = 3000;
 
-app.use(cors()); // TODO: configure
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+); // TODO: configure
 app.use(express.json());
 app.use(cookieParser());
 

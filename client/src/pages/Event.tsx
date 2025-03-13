@@ -11,26 +11,44 @@ export default function Event() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
-
   const [guestName, setGuestName] = useState("");
   const [selectedSlots, setSelectedSlots] = useState<Slot[]>([]);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchEvent = async () => {
       try {
-        const res = await fetch(`http://localhost:3000/event/${eventId}`);
+        const res = await fetch(`http://localhost:3000/event/${eventId}`, {
+          credentials: "include",
+        });
         if (!res.ok) throw new Error("イベントが見つかりません");
         const data = await res.json();
-        const parseData = EventSchema.parse(data.event);
-        console.log("受信データ", parseData);
-        setEvent(parseData);
+
+        // event データのパース
+        const parseEvent = EventSchema.parse(data.event);
+        console.log("受信イベントデータ", parseEvent);
+        console.log("受信ゲストデータ", data.guest);
+
+        setEvent(parseEvent);
+
+        if (data.guest) {
+          const parseGuest = GuestSchema.parse(data.guest);
+          const parseSlot = parseGuest.slots?.map((slot: Slot) => SlotSchema.parse(slot)) || [];
+          console.log("受信ゲストデータ", parseGuest);
+          // ゲスト名と選択されたスロットを初期値としてセット
+          setGuestName(parseGuest.name);
+          console.log(parseSlot, "🤩");
+          setSelectedSlots(parseSlot);
+        }
       } catch (err: any) {
+        console.error(err);
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
+
     if (eventId) fetchEvent();
   }, [eventId]);
 
@@ -103,6 +121,7 @@ export default function Event() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(parseData),
+        credentials: "include",
       });
       if (!res.ok) throw new Error("ゲスト登録に失敗しました");
       const result = await res.json();

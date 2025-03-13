@@ -43,8 +43,11 @@ router.post("/", async (req: Request, res: Response) => {
 router.get("/:eventId", async (req: Request, res: Response) => {
   const { eventId } = req.params;
   const id = idSchema.parse(eventId);
+  console.log("Cookieだよ", req.cookies?.browserId);
+  const browserId = req.cookies?.browserId || null;
 
   try {
+    // イベント情報の取得
     const event = await prisma.event.findUnique({
       where: { id },
       include: { range: true, guests: true, slots: true },
@@ -57,17 +60,34 @@ router.get("/:eventId", async (req: Request, res: Response) => {
         .json({ message: "指定されたイベントが見つかりません。" });
     }
 
+    let guest = null;
+
+    // browserId がある場合、該当するゲストがそのイベントに参加しているか確認
+    if (browserId) {
+      guest = await prisma.guest.findFirst({
+        where: {
+          eventId: id,
+          browserId: browserId,
+        },
+        include: {
+          slots: true, // もしそのゲストのslots情報も一緒に返したい場合
+        },
+      });
+    }
+
     // 成功レスポンス
-    res.status(200).json({ event });
+    res.status(200).json({ event, guest });
   } catch (error) {
     console.error("イベント取得エラー:", error);
     res.status(500).json({ message: "イベント取得中にエラーが発生しました。" });
   }
 });
+
 router.post("/:eventId/submit", async (req: Request, res: Response) => {
   const guest = req.body;
   console.log(`イベントID: ${guest.eventId}`);
   console.log("送信されたゲスト情報:", guest);
+  console.log("Cookieだよ", req.cookies);
 
   // ✅ Zodによるバリデーション
   const parsed = GuestSchema.safeParse(guest);
