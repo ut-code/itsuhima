@@ -34,7 +34,7 @@ function App() {
         longPressDelay={200}
         selectable={true}
         selectAllow={
-          // https://github.com/fullcalendar/fullcalendar/issues/4119#issuecomment-875328866
+          // https://github.com/fullcalendar/fullcalendar/issues/4119
           (info) => {
             console.log("selecting " + info.startStr + " to " + info.endStr, calendarRef);
             if (!calendarRef.current) {
@@ -69,6 +69,7 @@ function App() {
               endTime: endTime,
               startRecur: info.start,
               endRecur: info.end,
+              display: "background",
             });
             return false;
           }
