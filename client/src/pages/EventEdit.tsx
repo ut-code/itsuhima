@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-export default function Create() {
+export default function EventEdit() {
   const [name, setName] = useState<string>("");
   const [startDate, setStartDate] = useState<string>(""); // ISO 文字列
   const [endDate, setEndDate] = useState<string>(""); // ISO 文字列
@@ -69,7 +69,7 @@ export default function Create() {
     const eventId = data.event.id;
 
     if (res.ok) {
-      navigate(`/${eventId}`);
+      navigate(`./${eventId}/done`);
       setLoading(false);
     } else {
       alert("送信に失敗しました");

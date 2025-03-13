@@ -23,7 +23,7 @@ function App() {
   return (
     <>
       <h1 className="text-4xl">トップページ</h1>
-      <NavLink to="/create" end className="btn btn-primary">
+      <NavLink to="./new" end className="btn btn-primary">
         イベントを作成する。
       </NavLink>
       {/* <FullCalendar
