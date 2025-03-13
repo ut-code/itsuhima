@@ -28,8 +28,6 @@ function App() {
       <NavLink to="/create" end>
         イベントを作成する。
       </NavLink>
-      <FullCalendar plugins={[timeGridPlugin]} />
-      <h1 className="text-4xl">Vite + React</h1>
       <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, interactionPlugin]}
