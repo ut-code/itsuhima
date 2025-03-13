@@ -97,6 +97,7 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
       data: {
         name: guest.name,
         eventId: eventId,
+        browserId: guest.browserId,
         slots: {
           create: guest.slots.map((slot: Slot) => ({
             start: slot.start,
