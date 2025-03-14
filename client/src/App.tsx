@@ -3,8 +3,8 @@ import { z } from "zod";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import dayjs from "dayjs";
-import { useRef } from "react";
+import dayjs, { Dayjs } from "dayjs";
+import React, { useRef } from "react";
 
 import { NavLink } from "react-router";
 
@@ -21,57 +21,57 @@ async function sampleEventFetch() {
   console.log(result);
 }
 
+/**
+ * 矩形選択した際の左上と右下の頂点を返す。from < to が前提
+ */
+function getVertexes(from: Date, to: Date) {
+  if (from > to) {
+    throw new Error("from < to is required");
+  }
+  const needSwap = dayjs(from).format("HH:mm") > dayjs(to).format("HH:mm");
+  if (!needSwap) {
+    return {from, to}
+  }
+
+  const fromMinute = dayjs(from).hour() * 60 + dayjs(from).minute();
+  const toMinute = dayjs(to).hour() * 60 + dayjs(to).minute();
+
+  return {
+    from: dayjs(from).startOf("day").add(toMinute, "minute").toDate(),
+    to: dayjs(to).startOf("day").add(fromMinute, "minute").toDate()
+  }
+}
+
 function editSlots(
   from: Date,
   to: Date,
+  isDeletion: boolean,
   calendarRef: React.RefObject<FullCalendar | null>,
   slotsRef: React.RefObject<{ from: Date; to: Date }[]>,
-  isDeletion: boolean
+  matrix: React.RefObject<CalendarMatrix>
 ) {
-  if (!calendarRef.current) {
-    console.log("no calendar ref");
-    return;
-  }
+  if (!calendarRef.current) return;
   const calendarApi = calendarRef.current.getApi();
 
-  const start = dayjs(from);
-  const end = dayjs(to);
+  calendarApi.getEvents().forEach((event) => {
+    event.remove();
+  });
+  slotsRef.current = [];
 
-  const dateDiff = end.startOf("day").diff(start.startOf("day"), "day") + 1;
-  const needReverse = start.format("HH:mm") > end.format("HH:mm");
-
-  const startHour = !needReverse ? start.hour() : end.hour();
-  const startMinute = !needReverse ? start.minute() : end.minute();
-  const endHour = !needReverse ? end.hour() : start.hour();
-  const endMinute = !needReverse ? end.minute() : start.minute();
-
-  if (!isDeletion) {
-    // 各日付ごとに分解して Slot に追加
-    for (let i = 0; i < dateDiff; i++) {
-      console.log(dateDiff);
-      const base = start.add(i, "day");
-
-      const slotStart = base.hour(startHour).minute(startMinute);
-      const slotEnd = base.hour(endHour).minute(endMinute);
-
-      console.log(slotStart.toDate(), slotEnd.toDate());
-
-      // TODO: 重複した場合追加を行わない
-      slotsRef.current.push({
-        from: slotStart.toDate(),
-        to: slotEnd.toDate(),
-      });
-
-      calendarApi.addEvent({
-        start: slotStart.toDate(),
-        end: slotEnd.toDate(),
-        display: "background",
-        color: "red",
-      });
-    }
-  } else {
-    // TODO: 削除処理
+  matrix.current.setRange(from, to, !isDeletion);
+  matrix.current.getSlots().forEach((slot) => {
+    calendarApi.addEvent({
+      start: slot.from,
+      end: slot.to,
+      display: "background",
+      color: "orange",
+    });
+    slotsRef.current.push({
+      from: slot.from,
+      to: slot.to,
+    });
   }
+  );
 
   // 選択範囲をクリア
   const existing = calendarApi.getEventById("selectBox");
@@ -80,7 +80,71 @@ function editSlots(
   }
 }
 
+class CalendarMatrix {
+  private matrix: boolean[][];
+  /**
+   * 15 分を 1 セルとしたセルの数 (96 = 24 * 4)
+   */
+  private readonly quarterCount = 96
+  private initialDate: Dayjs;
+
+  constructor(dayCount: number, initialDate: Date) {
+    this.matrix = Array.from({ length: dayCount }, () => Array.from({ length: this.quarterCount }, () => false));
+    this.initialDate = dayjs(initialDate).startOf('day');
+  }
+
+  private getIndex(date: Date) {
+    const totalMinutes = date.getHours() * 60 + date.getMinutes();
+    const dayDiff = dayjs(date).startOf('day').diff(this.initialDate, 'day');
+    console.log(dayDiff, totalMinutes);
+    return [dayDiff, Math.floor(totalMinutes / 15)];
+  }
+
+  getCell(day: number, quarter: number) {
+    return this.matrix[day][quarter];
+  }
+
+  getSlots() {
+    const slots: { from: Date; to: Date }[] = [];
+    for (let day = 0; day < this.matrix.length; day++) {
+      let isEvent = this.matrix[day][0];
+      let start: Date | null = null;
+      for (let q = 0; q < this.matrix[day].length; q++) {
+        const currentCell = this.matrix[day][q];
+        if (isEvent !== currentCell) {
+          if (currentCell) {
+            start = this.initialDate.add(day, 'day').add(q * 15, 'minute').toDate();
+          } else {
+            if (start) {
+              const from = start;
+              const to = this.initialDate.add(day, 'day').add(q * 15, 'minute').toDate();
+              slots.push({ from, to });
+            }
+          }
+          isEvent = currentCell;
+        }
+      }
+    }
+    return slots
+  }
+
+  setRange(from: Date, to: Date, newValue: boolean): void {
+    const [startRow, startCol] = this.getIndex(from);
+    const [endRow, endCol] = this.getIndex(
+      dayjs(to).subtract(1, 'minute').toDate()
+    );
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        this.matrix[r][c] = newValue;
+      }
+    }
+  }
+
+}
+
 function App() {
+  const calendarCells = useRef<CalendarMatrix>(new CalendarMatrix(7, new Date("2025-03-09")));
+
   const calendarRef = useRef<FullCalendar | null>(null);
 
   const slotsRef = useRef<
@@ -95,18 +159,18 @@ function App() {
 
   const handleDragStart = () => {
     if (hoveringEventRef.current) {
-      console.log("✨", "deletionStartRef continued!", hoveringEventRef.current);
+      // console.log("✨", "deletionStartRef continued!", hoveringEventRef.current);
       deletionStartRef.current = { ...hoveringEventRef.current };
     }
   };
 
-  const handleDragEnd = () => {
-    if (deletionStartRef.current && hoveringEventRef.current) {
-      console.log("🧨", "delete", deletionStartRef.current, hoveringEventRef.current);
-    }
-  };
+  // const handleDragEnd = () => {
+  //   if (deletionStartRef.current && hoveringEventRef.current) {
+  //     // console.log("🧨", "delete", deletionStartRef.current, hoveringEventRef.current);
+  //   }
+  // };
   document.onmousedown = handleDragStart;
-  document.onmouseup = handleDragEnd;
+  // document.onmouseup = handleDragEnd;
 
   // TODO: スマホで動かない・・・？
   // document.onpointerdown = handleDragStart;
@@ -131,7 +195,7 @@ function App() {
         eventMouseLeave={() => {
           hoveringEventRef.current = null;
         }}
-        // TODO: 単一セルだとダメかもしれない・・・
+        // TODO: 単一セルだとダメかもしれない・・・ (select が赤にならない)
         selectable={true}
         selectAllow={
           // https://github.com/fullcalendar/fullcalendar/issues/4119
@@ -139,7 +203,7 @@ function App() {
             let selectionColor = "green";
             if (deletionStartRef.current) {
               console.log("🔥", deletionStartRef.current);
-              selectionColor = "blue";
+              selectionColor = "red";
             }
             if (!calendarRef.current) {
               console.log("no calendar ref");
@@ -180,7 +244,8 @@ function App() {
           }
         }
         select={(info) => {
-          editSlots(info.start, info.end, calendarRef, slotsRef, !!deletionStartRef.current);
+          const { from, to } = getVertexes(info.start, info.end)
+          editSlots(from, to, !!deletionStartRef.current,calendarRef, slotsRef, calendarCells);
           deletionStartRef.current = null;
           hoveringEventRef.current = null;
         }}
