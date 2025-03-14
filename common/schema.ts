@@ -20,18 +20,17 @@ export const SlotSchema = z.object({
   guestId: idSchema.optional(),
 });
 
-// ---------- Host (一旦仮の型にしておく) ----------
+// ---------- Host----------
 export const HostSchema: z.ZodType<any> = z.lazy(() =>
   z.object({
     id: idSchema,
-    name: z.string(),
     browserId: idSchema.optional(),
     eventId: idSchema,
-    event: EventSchema.optional(), // ★ ここは lazy されるので安全
+    event: EventSchema.optional(),
   })
 );
 
-// ---------- Guest (一旦仮の型にしておく) ----------
+// ---------- Guest  ----------
 export const GuestSchema: z.ZodType<any> = z.lazy(() =>
   z.object({
     id: idSchema.optional(),
@@ -51,6 +50,6 @@ export const EventSchema = z.object({
   endDate: z.string().datetime(),
   range: z.array(RangeSchema),
   slots: z.array(SlotSchema).optional(),
-  hosts: z.array(HostSchema).optional(), // ★ lazy 済
-  guests: z.array(GuestSchema).optional(), // ★ lazy 済
+  hosts: z.array(HostSchema).optional(),
+  guests: z.array(GuestSchema).optional(),
 });

@@ -11,10 +11,10 @@ import { prisma } from "../main";
 const router = Router();
 type Slot = z.infer<typeof SlotSchema>;
 
+//イベント作成。Hostのみ。Host作成
 router.post("/", async (req: Request, res: Response) => {
   try {
     const parsedData = EventSchema.parse(req.body);
-    console.log("Cookieだよ", req.cookies?.browserId);
 
     const event = await prisma.event.create({
       data: {
@@ -24,22 +24,22 @@ router.post("/", async (req: Request, res: Response) => {
         range: {
           create: parsedData.range,
         },
-      },
-      include: { range: true },
-    });
-    const host = await prisma.host.create({
-      data: {
-        browserId: req.cookies?.browserId,
-        event: {
-          connect: { id: event.id },
+        hosts: {
+          create: {
+            browserId: req.cookies?.browserId || undefined,
+          },
         },
       },
+      include: { hosts: true },
     });
+    const host = event.hosts[0];
+
     res.cookie("browserId", host.browserId, {
-      httpOnly: true, // クライアント側からアクセスさせない場合
-      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年間有効
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
     });
-    res.status(201).json({ event, host });
+
+    res.status(201).json(event.id);
   } catch (err) {
     console.error("エラー:", err);
     if (err instanceof z.ZodError) {
@@ -50,34 +50,23 @@ router.post("/", async (req: Request, res: Response) => {
     res.status(500).json({ message: "イベント作成時にエラーが発生しました" });
   }
 });
-
+// イベント情報の取得 Guestのみ
 router.get("/:eventId", async (req: Request, res: Response) => {
   const { eventId } = req.params;
   const id = idSchema.parse(eventId);
-  console.log("Cookieだよ", req.cookies?.browserId);
   const browserId = req.cookies?.browserId || null;
 
   try {
-    // イベント情報の取得（そのまま返す場合）
     const event = await prisma.event.findUnique({
       where: { id },
       include: {
         range: true,
         guests: {
-          select: {
-            id: true,
-            name: true,
-            eventId: true,
-            slots: {
-              select: {
-                id: true,
-                start: true,
-                end: true,
-              },
-            },
+          include: {
+            slots: true, // slots 全部欲しいなら select より include
           },
         },
-        slots: true, // そのまま返す
+        hosts: true, // 全部欲しいなら select 省略
       },
     });
 
@@ -88,64 +77,56 @@ router.get("/:eventId", async (req: Request, res: Response) => {
         .json({ message: "指定されたイベントが見つかりません。" });
     }
 
-    let guest = null;
-    let host = null;
+    // クッキーのブラウザIDと一致するゲスト・ホストを絞り込む
+    const guest = event.guests.find((g) => g.browserId === browserId) || null;
+    const host = event.hosts.find((h) => h.browserId === browserId) || null;
 
-    // browserId がある場合、該当するゲスト・ホスト情報の取得
-    if (browserId) {
-      guest = await prisma.guest.findFirst({
-        where: {
-          eventId: id,
-          browserId: browserId,
-        },
-        select: {
-          id: true,
-          name: true,
-          eventId: true,
-          slots: {
-            select: {
-              id: true,
-              start: true,
-              end: true,
-            },
-          },
-        },
-      });
+    // browserIdを外した guest と host を整形
+    const filteredGuest = guest
+      ? {
+          id: guest.id,
+          name: guest.name,
+          eventId: guest.eventId,
+          slots: guest.slots,
+        }
+      : null;
 
-      host = await prisma.host.findFirst({
-        where: {
-          browserId: browserId,
-          eventId: eventId,
-        },
-        select: {
-          id: true,
-          eventId: true,
-        },
-      });
-    }
+    const filteredHost = host
+      ? {
+          id: host.id,
+          eventId: host.eventId,
+        }
+      : null;
 
     // 成功レスポンス
-    res.status(200).json({ event, guest, host });
+    res.status(200).json({ event, guest: filteredGuest, host: filteredHost });
   } catch (error) {
     console.error("イベント取得エラー:", error);
     res.status(500).json({ message: "イベント取得中にエラーが発生しました。" });
   }
 });
 
-//Hostのみ すでにguestがいたら時間登録はできない
+//イベント編集 Hostのみ すでにguestがいたら時間登録はできない
 router.put("/:eventId", async (req: Request, res: Response) => {
   const { eventId } = req.params;
   const id = idSchema.parse(eventId);
-  console.log("Cookieだよ", req.cookies?.browserId);
+  const browserId = req.cookies?.browserId;
 
   try {
-    // ホスト認証
-    const host = await prisma.host.findFirst({
-      where: {
-        browserId: req.cookies?.browserId,
-        eventId: eventId,
-      },
-    });
+    const { name, startDate, endDate, range } = EventSchema.parse(req.body);
+
+    // ホスト認証とゲスト存在確認を一括取得
+    const [host, existingGuest] = await Promise.all([
+      prisma.host.findFirst({
+        where: {
+          browserId,
+          eventId: id, // eventIdの統一
+        },
+      }),
+      prisma.guest.findFirst({
+        where: { eventId: id },
+      }),
+    ]);
 
     // ホストが存在しなければ403
     if (!host) {
@@ -154,46 +135,26 @@ router.put("/:eventId", async (req: Request, res: Response) => {
         .json({ message: "認証エラー: アクセス権限がありません。" });
     }
 
-    // リクエストボディのバリデーション
-    const { name, startDate, endDate, range } = EventSchema.parse(req.body);
-
-    // すでにゲストが存在するか確認
-    const existingGuest = await prisma.guest.findFirst({
-      where: { eventId: id },
+    // 更新処理
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data: existingGuest
+        ? { name } // ゲストがいれば名前だけ
+        : {
+            name,
+            startDate,
+            endDate,
+            range: {
+              deleteMany: {}, // 既存削除
+              create: range.map((r) => ({
+                startTime: r.startTime,
+                endTime: r.endTime,
+              })),
+            },
+          },
+      include: { range: true },
     });
 
-    let updatedEvent;
-
-    if (existingGuest) {
-      // ゲストが登録済み → 名前だけ更新
-      console.log("ゲストがいるため、イベント名のみ更新します。");
-      updatedEvent = await prisma.event.update({
-        where: { id },
-        data: { name }, // 名前だけ更新
-        include: { range: true },
-      });
-    } else {
-      // ゲストがいなければ通常通り全更新
-      console.log("ゲストがいないため、イベント全体を更新します。");
-      updatedEvent = await prisma.event.update({
-        where: { id },
-        data: {
-          name,
-          startDate,
-          endDate,
-          range: {
-            deleteMany: {}, // 既存 range 削除
-            create: range.map((r: { startTime: string; endTime: string }) => ({
-              startTime: r.startTime,
-              endTime: r.endTime,
-            })),
-          },
-        },
-        include: { range: true },
-      });
-    }
-
-    // 更新後のデータ返却
     res.status(200).json({ event: updatedEvent });
   } catch (error) {
     console.error("イベント更新エラー:", error);
@@ -201,15 +162,12 @@ router.put("/:eventId", async (req: Request, res: Response) => {
   }
 });
 
-
+//日程提出。Guestのみ。Guest作成
 router.post("/:eventId/submit", async (req: Request, res: Response) => {
-  const guest = req.body;
-  console.log(`イベントID: ${guest.eventId}`);
-  console.log("送信されたゲスト情報:", guest);
-  console.log("Cookieだよ", req.cookies);
+  const { eventId } = req.params;
+  const browserId = req.cookies?.browserId;
 
-  const parsed = GuestSchema.safeParse(guest);
-
+  const parsed = GuestSchema.safeParse(req.body);
   if (!parsed.success) {
     console.error("バリデーションエラー:", parsed.error);
     return res.status(400).json({
@@ -218,59 +176,44 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
     });
   }
 
-  const invalidSlots = parsed.data.slots!.filter(
-    (slot: Slot) => slot.eventId !== guest.eventId
-  );
-  if (invalidSlots.length > 0) {
-    return res
-      .status(400)
-      .json({ message: "一部のスロットのイベントIDが一致していません。" });
-  }
+  const { name, slots } = parsed.data;
 
   try {
-    const data = await prisma.guest.create({
+    const guest = await prisma.guest.create({
       data: {
-        name: guest.name,
-        browserId: req.cookies?.browserId,
+        name,
+        browserId,
+        event: { connect: { id: eventId } },
         slots: {
-          create: guest.slots.map((slot: Slot) => ({
+          create: slots.map((slot: Slot) => ({
             start: slot.start,
             end: slot.end,
-            eventId: slot.eventId,
+            eventId,
           })),
         },
-        event: {
-          connect: { id: guest.eventId },
-        },
       },
-      include: {
-        slots: true,
-      },
+      include: { slots: true },
     });
-    console.log("登録されたデータ:", data);
-    res.cookie("browserId", data.browserId, {
-      httpOnly: true, // クライアント側からアクセスさせない場合
-      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年間有効
+
+    res.cookie("browserId", guest.browserId, {
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
     });
+
+    console.log("登録されたデータ:", guest);
     return res.status(201).json("日時が登録されました！");
   } catch (error) {
-    console.error(error);
+    console.error("登録エラー:", error);
     return res.status(500).json({ message: "サーバーエラーが発生しました" });
   }
 });
 
+//日程編集。Guestのみ
 router.put("/:eventId/submit", async (req: Request, res: Response) => {
-  const guest = req.body;
-  const eventId = req.params.eventId;
+  const { eventId } = req.params;
   const browserId = req.cookies?.browserId;
 
-  console.log(`イベントID: ${eventId}`);
-  console.log("送信されたゲスト情報:", guest);
-  console.log("Cookieだよ", browserId);
-
-  // ゲスト情報のバリデーション
-  const parsed = GuestSchema.safeParse(guest);
-
+  const parsed = GuestSchema.safeParse(req.body);
   if (!parsed.success) {
     console.error("バリデーションエラー:", parsed.error);
     return res.status(400).json({
@@ -279,88 +222,62 @@ router.put("/:eventId/submit", async (req: Request, res: Response) => {
     });
   }
 
+  const { name, slots } = parsed.data;
+
   try {
-    // 既存のゲストを検索
-    let existingGuest = await prisma.guest.findFirst({
-      where: {
-        eventId: eventId,
-        browserId: browserId,
-      },
-      include: {
-        slots: true,
-      },
+    const existingGuest = await prisma.guest.findFirst({
+      where: { eventId, browserId },
+      include: { slots: true },
     });
 
+    const slotData = slots.map((slot: Slot) => ({
+      start: slot.start,
+      end: slot.end,
+      eventId,
+    }));
+
+    let guest;
+
     if (existingGuest) {
-      // 既存ゲストがいれば更新処理
       console.log("既存ゲストを更新します。");
 
-      // まず既存の slots を削除
-      await prisma.slot.deleteMany({
-        where: {
-          guestId: existingGuest.id,
-        },
-      });
+      await prisma.slot.deleteMany({ where: { guestId: existingGuest.id } });
 
-
-      // ゲスト情報を更新
-      const updatedGuest = await prisma.guest.update({
+      // ゲスト情報更新
+      guest = await prisma.guest.update({
         where: { id: existingGuest.id },
         data: {
-          name: guest.name,
-          slots: {
-            create: guest.slots.map((slot: Slot) => ({
-              start: slot.start,
-              end: slot.end,
-              eventId: eventId,
-            })),
-          },
+          name,
+          slots: { create: slotData },
         },
-
-        include: {
-          slots: true,
-        },
-      });
-
-      return res.status(200).json({
-        message: "ゲスト情報が更新されました！",
-        guest: updatedGuest,
+        include: { slots: true },
       });
     } else {
-      // ゲストが存在しなければ新規作成
       console.log("新規ゲストを作成します。");
 
-      const newGuest = await prisma.guest.create({
+      // ゲスト新規作成
+      guest = await prisma.guest.create({
         data: {
-          name: guest.name,
-          browserId: browserId,
-          slots: {
-            create: guest.slots.map((slot: Slot) => ({
-              start: slot.start,
-              end: slot.end,
-              eventId: slot.eventId,
-            })),
-          },
-          event: {
-            connect: { id: eventId },
-          },
+          name,
+          browserId,
+          event: { connect: { id: eventId } },
+          slots: { create: slotData },
         },
-        include: {
-          slots: true,
-        },
+        include: { slots: true },
       });
 
-      // Cookie をセット
-      res.cookie("browserId", newGuest.browserId, {
+      res.cookie("browserId", guest.browserId, {
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
       });
-
-      return res.status(201).json({
-        message: "ゲスト情報が新規作成されました！",
-        guest: newGuest,
-      });
     }
+
+    return res.status(existingGuest ? 200 : 201).json({
+      message: existingGuest
+        ? "ゲスト情報が更新されました！"
+        : "ゲスト情報が新規作成されました！",
+      guest,
+    });
   } catch (error) {
     console.error("処理中のエラー:", error);
     return res.status(500).json({ message: "サーバーエラーが発生しました" });
