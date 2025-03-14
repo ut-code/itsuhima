@@ -5,9 +5,9 @@ import App from "./App.tsx";
 import { BrowserRouter, Route, Routes } from "react-router";
 import EventCreatePage from "./pages/Create.tsx";
 import EventCreateDonePage from "./pages/CreateDone.tsx";
-import EventSubmissionPage from "./pages/Event.tsx";
-import EventSubmissionDonePage from "./pages/EventDone.tsx";
-import EventEditPage from "./pages/EventEdit.tsx";
+import EventSubmissionPage from "./pages/Submission.tsx";
+import EventSubmissionDonePage from "./pages/SubmissionDone.tsx";
+import EventEditPage from "./pages/Edit.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -1,13 +1,56 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router";
+import { EventSchema } from "../../../common/schema";
+import { z } from "zod";
+
+type Event = z.infer<typeof EventSchema>;
 
 export default function EventEdit() {
+  const { eventId } = useParams<{ eventId: string }>();
   const [name, setName] = useState<string>("");
+  const [event, setEvent] = useState<Event | null>(null);
   const [startDate, setStartDate] = useState<string>(""); // ISO 文字列
   const [endDate, setEndDate] = useState<string>(""); // ISO 文字列
   const [ranges, setRanges] = useState<{ startTime: string; endTime: string }[]>([]); // range 配列
   const navigate = useNavigate(); // ページ遷移
   const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        const res = await fetch(`http://localhost:3000/event/${eventId}`, {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("イベントが見つかりません");
+        const data = await res.json();
+
+        // event データのパース
+        const parseEvent = EventSchema.parse(data.event);
+        console.log("受信イベントデータ", parseEvent);
+        console.log("受信ゲストデータ", data.guest);
+        setName(parseEvent.name);
+        setStartDate(parseEvent.startDate.slice(0, 10)); // "YYYY-MM-DD" 形式に整形
+        setEndDate(parseEvent.endDate.slice(0, 10)); // "YYYY-MM-DD" 形式に整形
+
+        // ranges を "HH:MM" 形式に変換（秒部分を除く）
+        const formattedRanges = parseEvent.range.map((range) => ({
+          startTime: range.startTime.slice(11, 16), // "HH:MM"
+          endTime: range.endTime.slice(11, 16), // "HH:MM"
+        }));
+        setRanges(formattedRanges);
+
+        setEvent(parseEvent);
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (eventId) fetchEvent();
+  }, [eventId]);
 
   // range 追加処理
   const handleAddRange = () => {
@@ -57,8 +100,8 @@ export default function EventEdit() {
 
     console.log("送信データ:", eventData); // デバッグ用確認
 
-    const res = await fetch("http://localhost:3000/event", {
-      method: "POST",
+    const res = await fetch(`http://localhost:3000/event/${eventId}`, {
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(eventData),
       credentials: "include",
@@ -66,16 +109,19 @@ export default function EventEdit() {
     const data = await res.json();
     console.log("受信データ", data.event);
 
-    const eventId = data.event.id;
-
     if (res.ok) {
-      navigate(`./${eventId}/done`);
+      navigate(`/${eventId}`);
       setLoading(false);
     } else {
       alert("送信に失敗しました");
       setLoading(false);
     }
   };
+  // -------------------- UI --------------------
+  if (loading) return <p>読み込み中...</p>;
+  if (error) return <p>エラー: {error}</p>;
+  if (!event) return <p>イベントが存在しません。</p>;
+
   return (
     <>
       {loading && (
@@ -83,7 +129,7 @@ export default function EventEdit() {
           <span className="loading loading-spinner loading-lg text-blue"></span>
         </div>
       )}
-      <h1>イベント作成</h1>
+      <h1>イベント編集</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

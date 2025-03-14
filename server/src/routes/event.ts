@@ -95,6 +95,41 @@ router.get("/:eventId", async (req: Request, res: Response) => {
   }
 });
 
+router.put("/:eventId", async (req: Request, res: Response) => {
+  const { eventId } = req.params;
+  const id = idSchema.parse(eventId); // イベントIDのバリデーション
+  console.log("Cookieだよ", req.cookies?.browserId);
+
+  try {
+    // リクエストボディのバリデーション
+    const { name, startDate, endDate, range } = EventSchema.parse(req.body);
+
+    // イベント情報の更新
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data: {
+        name,
+        startDate,
+        endDate,
+        range: {
+          deleteMany: {}, // 既存のrangeを削除
+          create: range.map((r: { startTime: string; endTime: string }) => ({
+            startTime: r.startTime,
+            endTime: r.endTime,
+          })),
+        },
+      },
+      include: { range: true },
+    });
+
+    // 更新後のイベントデータを返す
+    res.status(200).json({ event: updatedEvent });
+  } catch (error) {
+    console.error("イベント更新エラー:", error);
+    res.status(500).json({ message: "イベント更新中にエラーが発生しました。" });
+  }
+});
+
 router.post("/:eventId/submit", async (req: Request, res: Response) => {
   const guest = req.body;
   console.log(`イベントID: ${guest.eventId}`);
