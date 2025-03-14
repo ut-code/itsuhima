@@ -14,6 +14,8 @@ export default function Event() {
   const [guestName, setGuestName] = useState("");
   const [selectedSlots, setSelectedSlots] = useState<Slot[]>([]);
   const [isHost, setIsHost] = useState(false);
+  const [alreadyGuest, setAlreadyGuest] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,6 +32,8 @@ export default function Event() {
         console.log("受信イベントデータ", parseEvent);
         console.log("受信ゲストデータ", data.guest);
         console.log("受信ホストデータ", data.host);
+        if (data.guest) setAlreadyGuest(true);
+
         if (data.host) setIsHost(true);
 
         setEvent(parseEvent);
@@ -119,15 +123,25 @@ export default function Event() {
 
     try {
       const parseData = GuestSchema.parse(guest);
-      const res = await fetch(`http://localhost:3000/event/${eventId}/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parseData),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("ゲスト登録に失敗しました");
-      const result = await res.json();
-      console.log("登録結果:", result.data);
+      if (alreadyGuest) {
+        const res = await fetch(`http://localhost:3000/event/${eventId}/submit`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(parseData),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("ゲスト登録に失敗しました");
+        console.log(await res.json());
+      } else {
+        const res = await fetch(`http://localhost:3000/event/${eventId}/submit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(parseData),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("ゲスト登録に失敗しました");
+        console.log(await res.json());
+      }
       setSelectedSlots([]);
       setGuestName("");
       navigate(`./done`);
