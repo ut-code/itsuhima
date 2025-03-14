@@ -2,6 +2,7 @@ import { NavLink, useNavigate, useParams } from "react-router";
 import { Calendar } from "../../../components/Calendar";
 import { Project, projectResSchema } from "../../../../../common/schema";
 import { useData } from "../../../hooks";
+import { useCallback, useState } from "react";
 
 export default function SubmissionPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -11,7 +12,8 @@ export default function SubmissionPage() {
     error,
   } = useData<Project>(`http://localhost:3000/event/${eventId}`, projectResSchema);
 
-  // const [guestName, setGuestName] = useState("");
+  const [guestName, setGuestName] = useState("");
+
   // const [isHost, setIsHost] = useState(false);
   // const [alreadyGuest, setAlreadyGuest] = useState(false);
 
@@ -123,10 +125,10 @@ export default function SubmissionPage() {
   //   return dates;
   // };
 
-  const postAvailability = async (slots: { start: Date; end: Date }[]) => {
+  const postAvailability = useCallback(async (slots: { start: Date; end: Date }[]) => {
     const payload = {
-      name: "たろう",
-      eventId: project?.id, // TODO:
+      name: guestName,
+      eventId, // TODO:
       slots,
     };
     try {
@@ -141,7 +143,7 @@ export default function SubmissionPage() {
       body: JSON.stringify(payload),
       credentials: "include",
     });
-  };
+  }, [guestName, eventId]);
 
   // -------------------- UI --------------------
   if (loading) return <p>読み込み中...</p>;
@@ -153,19 +155,17 @@ export default function SubmissionPage() {
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold">イベント詳細</h1>
+      <p>イベント名: {project.name}</p>
+      {/* TODO: guestName の更新ごとに Calendar が再描画され、コストが大きい*/}
       <Calendar project={project} onSubmit={postAvailability} />
       {/* {isHost && (
         <NavLink to={`/${eventId}/edit`} className="block hover:underline">
           イベントを編集する
         </NavLink>
       )} */}
-      <p>イベント名: {project.name}</p>
-      {/* <p>
-        開催期間: {new Date(project.startDate).toLocaleDateString()} ～{" "}
-        {new Date(project.endDate).toLocaleDateString()}
-      </p> */}
-
+      
       {/* ----------- 大枠 (Range) ----------- */}
+      {/* TODO: カレンダーにグレー枠で表示など */}
       {/* <h2 className="text-lg font-semibold mt-4">時間帯の大枠 (Range)</h2>
       <ul>
         {project.range.map((r) => (
@@ -176,6 +176,7 @@ export default function SubmissionPage() {
       </ul> */}
 
       {/* ----------- ゲスト (Guest) ----------- */}
+      {/* TODO: カレンダーに人数を表示など */}
       {/* <h2 className="text-lg font-semibold mt-4">ゲスト</h2>
       {project.guests?.length ? (
         <ul>
@@ -199,83 +200,16 @@ export default function SubmissionPage() {
         <p>ゲストはいません</p>
       )} */}
 
-      {/* ----------- スロット (Slot) ----------- */}
-      {/* <h2 className="text-lg font-semibold mt-4">すべての登録済みスロット</h2>
-      {project.slots?.length ? (
-        <ul>
-          {project.slots.map((slot) => (
-            <li key={slot.id} className="border p-2 my-2">
-              {new Date(slot.start).toLocaleString()} ～ {new Date(slot.end).toLocaleString()}{" "}
-              {slot.guestId && <span>(ゲストID: {slot.guestId})</span>}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>登録済みスロットはありません</p>
-      )} */}
-
       {/* ----------- ゲスト名入力 ----------- */}
-      {/* <h2 className="text-lg font-semibold mt-6">参加者情報</h2>
+      <h2 className="text-lg font-semibold mt-6">参加者情報</h2>
       <input
         type="text"
         placeholder="あなたの名前"
         value={guestName}
         onChange={(e) => setGuestName(e.target.value)}
         className="input input-bordered w-full max-w-xs my-2"
-      /> */}
+      />
 
-      {/* ----------- 希望時間帯の追加 ----------- */}
-      {/* <h2 className="text-lg font-semibold mt-6">希望時間帯を追加</h2>
-      {dates.map((date) => (
-        <div key={date} className="mt-4">
-          <h3 className="font-semibold">{date}</h3>
-          {event.range.map((r, index) => (
-            <div key={r.id || `range-${index}`} className="border p-2 my-2 rounded">
-              <p>
-                大枠: {new Date(r.startTime).toLocaleTimeString()} ~{" "}
-                {new Date(r.endTime).toLocaleTimeString()}
-              </p>
-              <div className="flex gap-2 my-2">
-                <input
-                  type="time"
-                  placeholder="開始時間"
-                  id={`start-${date}-${r.id}`}
-                  className="input input-bordered"
-                />
-                <input
-                  type="time"
-                  placeholder="終了時間"
-                  id={`end-${date}-${r.id}`}
-                  className="input input-bordered"
-                />
-                <button
-                  className="btn btn-outline"
-                  onClick={() =>
-                    handleAddSlot(
-                      date,
-                      { id: r.id || `range-${index}`, startTime: r.startTime, endTime: r.endTime },
-                      (document.getElementById(`start-${date}-${r.id}`) as HTMLInputElement).value,
-                      (document.getElementById(`end-${date}-${r.id}`) as HTMLInputElement).value,
-                    )
-                  }
-                >
-                  追加
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      ))} */}
-
-      {/* ----------- 登録ボタン ----------- */}
-      {/* <div className="mt-6">
-        <button onClick={
-
-          handleRegisterGuest
-        } className="btn btn-primary">
-          登録
-        </button>
-      </div> */}
     </div>
   );
 }
