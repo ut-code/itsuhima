@@ -16,24 +16,51 @@ router.get("/", async (req: Request, res: Response) => {
   }
 
   try {
-    // Host から検索
+    // Host から検索（browserId を除外）
     const hosts = await prisma.host.findMany({
       where: { browserId },
-      include: { event: true }, // 必要に応じて関連情報も
+      select: {
+        id: true,
+        eventId: true,
+        event: {
+          select: {
+            id: true,
+            name: true,
+            startDate: true,
+            endDate: true,
+          },
+        },
+      },
     });
 
-    // Guest から検索
+    // Guest から検索（browserId を除外）
     const guests = await prisma.guest.findMany({
       where: { browserId },
-      include: { event: true }, // 必要に応じて関連情報も
+      select: {
+        id: true,
+        name: true,
+        eventId: true,
+        event: {
+          select: {
+            id: true,
+            name: true,
+            startDate: true,
+            endDate: true,
+          },
+        },
+        slots: true, // slots はそのまま返す場合
+      },
     });
-    if (!hosts && !guests) {
-      // Host も Guest も見つからなければ 404
+
+    // Host も Guest も両方いない場合
+    if (hosts.length === 0 && guests.length === 0) {
       return res
         .status(404)
         .json({ message: "該当するユーザーが見つかりません。" });
     }
-    return res.status(201).json({ hosts, guests });
+
+    // 200 OK に変更（データ取得なので）
+    return res.status(200).json({ hosts, guests });
   } catch (error) {
     console.error("ユーザー検索エラー:", error);
     return res

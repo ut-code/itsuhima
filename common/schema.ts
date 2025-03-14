@@ -16,7 +16,7 @@ export const SlotSchema = z.object({
   id: idSchema.optional(),
   start: z.string().datetime(),
   end: z.string().datetime(),
-  eventId: idSchema,
+  eventId: idSchema.optional(),
   guestId: idSchema.optional(),
 });
 

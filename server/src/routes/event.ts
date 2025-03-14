@@ -58,10 +58,27 @@ router.get("/:eventId", async (req: Request, res: Response) => {
   const browserId = req.cookies?.browserId || null;
 
   try {
-    // イベント情報の取得
+    // イベント情報の取得（そのまま返す場合）
     const event = await prisma.event.findUnique({
       where: { id },
-      include: { range: true, guests: true, slots: true },
+      include: {
+        range: true,
+        guests: {
+          select: {
+            id: true,
+            name: true,
+            eventId: true,
+            slots: {
+              select: {
+                id: true,
+                start: true,
+                end: true,
+              },
+            },
+          },
+        },
+        slots: true, // そのまま返す
+      },
     });
 
     // イベントが存在しない場合
@@ -74,22 +91,35 @@ router.get("/:eventId", async (req: Request, res: Response) => {
     let guest = null;
     let host = null;
 
-    // browserId がある場合、該当するゲストがそのイベントに参加しているか確認
+    // browserId がある場合、該当するゲスト・ホスト情報の取得
     if (browserId) {
-      //TODO: browserIdを他のユーザーに見える状態になっている。
       guest = await prisma.guest.findFirst({
         where: {
           eventId: id,
           browserId: browserId,
         },
-        include: {
-          slots: true, // もしそのゲストのslots情報も一緒に返したい場合
+        select: {
+          id: true,
+          name: true,
+          eventId: true,
+          slots: {
+            select: {
+              id: true,
+              start: true,
+              end: true,
+            },
+          },
         },
       });
+
       host = await prisma.host.findFirst({
         where: {
-          browserId: req.cookies?.browserId,
+          browserId: browserId,
           eventId: eventId,
+        },
+        select: {
+          id: true,
+          eventId: true,
         },
       });
     }
@@ -168,7 +198,7 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
   }
 
   const invalidSlots = parsed.data.slots!.filter(
-    (slot) => slot.eventId !== guest.eventId
+    (slot: Slot) => slot.eventId !== guest.eventId
   );
   if (invalidSlots.length > 0) {
     return res
