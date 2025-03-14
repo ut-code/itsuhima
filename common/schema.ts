@@ -70,6 +70,13 @@ export const projectResSchema = project.extend({
 
 export type Project = z.infer<typeof projectResSchema>;
 
+export const involvedProjectsResSchema = z.object({
+  asHost: z.array(project),
+  asGuest: z.array(project),
+})
+
+export type InvolvedProjects = z.infer<typeof involvedProjectsResSchema>;
+
 // export const GuestSchema = z.object({
 //   id: z.string.optional(),
 //   name: z.string(),
