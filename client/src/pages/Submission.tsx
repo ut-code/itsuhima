@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router";
+import { NavLink, useNavigate, useParams } from "react-router";
 import { useEffect, useState } from "react";
 import { EventSchema, GuestSchema, SlotSchema } from "../../../common/schema";
 import { z } from "zod";
@@ -13,7 +13,7 @@ export default function Event() {
   const [error, setError] = useState<string | null>(null);
   const [guestName, setGuestName] = useState("");
   const [selectedSlots, setSelectedSlots] = useState<Slot[]>([]);
-
+  const [isHost, setIsHost] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,6 +29,8 @@ export default function Event() {
         const parseEvent = EventSchema.parse(data.event);
         console.log("受信イベントデータ", parseEvent);
         console.log("受信ゲストデータ", data.guest);
+        console.log("受信ゲストデータ", data.host);
+        if (data.host) setIsHost(true);
 
         setEvent(parseEvent);
 
@@ -158,6 +160,11 @@ export default function Event() {
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold">イベント詳細</h1>
+      {isHost && (
+        <NavLink to={`/${eventId}/edit`} className="block hover:underline">
+          イベントを編集する
+        </NavLink>
+      )}
       <p>イベント名: {event.name}</p>
       <p>
         開催期間: {new Date(event.startDate).toLocaleDateString()} ～{" "}
@@ -197,7 +204,7 @@ export default function Event() {
               {guest.name} (ID: {guest.id})
               {guest.slots && guest.slots.length > 0 && (
                 <ul className="pl-4 mt-1">
-                  {guest.slots!.map((slot) => (
+                  {guest.slots!.map((slot: Slot) => (
                     <li key={slot.id}>
                       {new Date(slot.start).toLocaleString()} ～{" "}
                       {new Date(slot.end).toLocaleString()}
