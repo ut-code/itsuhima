@@ -29,6 +29,8 @@ export default function EventEdit() {
         const parseEvent = EventSchema.parse(data.event);
         console.log("受信イベントデータ", parseEvent);
         console.log("受信ゲストデータ", data.guest);
+        console.log("受信ホストデータ", data.host);
+        if (!data.host) return navigate(`/${eventId}/submit`); //hostじゃないので、リダイレクト
         setName(parseEvent.name);
         setStartDate(parseEvent.startDate.slice(0, 10)); // "YYYY-MM-DD" 形式に整形
         setEndDate(parseEvent.endDate.slice(0, 10)); // "YYYY-MM-DD" 形式に整形
@@ -113,7 +115,11 @@ export default function EventEdit() {
       navigate(`/${eventId}`);
       setLoading(false);
     } else {
-      alert("送信に失敗しました");
+      if (res.status === 403) {
+        alert("認証に失敗しました。");
+      } else {
+        alert("送信に失敗しました");
+      }
       setLoading(false);
     }
   };

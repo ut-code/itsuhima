@@ -51,7 +51,6 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
-// 特定のイベント取得
 router.get("/:eventId", async (req: Request, res: Response) => {
   const { eventId } = req.params;
   const id = idSchema.parse(eventId);
@@ -73,9 +72,11 @@ router.get("/:eventId", async (req: Request, res: Response) => {
     }
 
     let guest = null;
+    let host = null;
 
     // browserId がある場合、該当するゲストがそのイベントに参加しているか確認
     if (browserId) {
+      //TODO: browserIdを他のユーザーに見える状態になっている。
       guest = await prisma.guest.findFirst({
         where: {
           eventId: id,
@@ -85,22 +86,42 @@ router.get("/:eventId", async (req: Request, res: Response) => {
           slots: true, // もしそのゲストのslots情報も一緒に返したい場合
         },
       });
+      host = await prisma.host.findFirst({
+        where: {
+          browserId: req.cookies?.browserId,
+          eventId: eventId,
+        },
+      });
     }
 
     // 成功レスポンス
-    res.status(200).json({ event, guest });
+    res.status(200).json({ event, guest, host });
   } catch (error) {
     console.error("イベント取得エラー:", error);
     res.status(500).json({ message: "イベント取得中にエラーが発生しました。" });
   }
 });
 
+//Hostのみ
 router.put("/:eventId", async (req: Request, res: Response) => {
   const { eventId } = req.params;
-  const id = idSchema.parse(eventId); // イベントIDのバリデーション
+  const id = idSchema.parse(eventId);
   console.log("Cookieだよ", req.cookies?.browserId);
 
   try {
+    const host = await prisma.host.findFirst({
+      where: {
+        browserId: req.cookies?.browserId,
+        eventId: eventId,
+      },
+    });
+
+    // host が存在しなければ認証エラー
+    if (!host) {
+      return res
+        .status(403)
+        .json({ message: "認証エラー: アクセス権限がありません。" });
+    }
     // リクエストボディのバリデーション
     const { name, startDate, endDate, range } = EventSchema.parse(req.body);
 
