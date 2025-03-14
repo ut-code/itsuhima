@@ -32,6 +32,11 @@ export default function Create() {
       setLoading(false);
       return;
     }
+    if (startDate >= endDate) {
+      alert("時間の形式が間違っています。");
+      setLoading(false);
+      return;
+    }
 
     // startDate, endDate は "2025-03-13T00:00:00.000Z" 形式に変換
     const startDateTime = new Date(startDate + "T00:00:00.000Z").toISOString();
@@ -63,10 +68,8 @@ export default function Create() {
       body: JSON.stringify(eventData),
       credentials: "include",
     });
-    const data = await res.json();
-    console.log("受信データ", data.event);
-
-    const eventId = data.event.id;
+    const eventId = await res.json();
+    console.log("受信データ", eventId);
 
     if (res.ok) {
       navigate(`/${eventId}`);

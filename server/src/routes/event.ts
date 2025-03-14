@@ -14,7 +14,6 @@ type Slot = z.infer<typeof SlotSchema>;
 router.post("/", async (req: Request, res: Response) => {
   try {
     const parsedData = EventSchema.parse(req.body);
-    console.log("Cookieだよ", req.cookies?.browserId);
 
     const event = await prisma.event.create({
       data: {
@@ -24,22 +23,22 @@ router.post("/", async (req: Request, res: Response) => {
         range: {
           create: parsedData.range,
         },
-      },
-      include: { range: true },
-    });
-    const host = await prisma.host.create({
-      data: {
-        browserId: req.cookies?.browserId,
-        event: {
-          connect: { id: event.id },
+        hosts: {
+          create: {
+            browserId: req.cookies?.browserId || undefined,
+          },
         },
       },
+      include: { hosts: true },
     });
+    const host = event.hosts[0];
+
     res.cookie("browserId", host.browserId, {
-      httpOnly: true, // クライアント側からアクセスさせない場合
-      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年間有効
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
     });
-    res.status(201).json({ event, host });
+
+    res.status(201).json(event.id);
   } catch (err) {
     console.error("エラー:", err);
     if (err instanceof z.ZodError) {
@@ -201,7 +200,6 @@ router.put("/:eventId", async (req: Request, res: Response) => {
   }
 });
 
-
 router.post("/:eventId/submit", async (req: Request, res: Response) => {
   const guest = req.body;
   console.log(`イベントID: ${guest.eventId}`);
@@ -301,7 +299,6 @@ router.put("/:eventId/submit", async (req: Request, res: Response) => {
           guestId: existingGuest.id,
         },
       });
-
 
       // ゲスト情報を更新
       const updatedGuest = await prisma.guest.update({
