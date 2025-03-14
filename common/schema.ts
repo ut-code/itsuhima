@@ -30,17 +30,14 @@ export const HostSchema: z.ZodType<any> = z.lazy(() =>
   })
 );
 
-// ---------- Guest  ----------
-export const GuestSchema: z.ZodType<any> = z.lazy(() =>
-  z.object({
+// ---------- Guest (一旦仮の型にしておく) ----------
+export const GuestSchema = z.object({
     id: idSchema.optional(),
     name: z.string(),
     browserId: idSchema.optional(),
     eventId: idSchema,
-    event: EventSchema.optional(), // ★
     slots: z.array(SlotSchema).optional(),
-  })
-);
+  });
 
 // ---------- Event ----------
 export const EventSchema = z.object({

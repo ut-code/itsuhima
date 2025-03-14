@@ -185,7 +185,7 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
         browserId,
         event: { connect: { id: eventId } },
         slots: {
-          create: slots.map((slot: Slot) => ({
+          create: slots?.map((slot: Slot) => ({
             start: slot.start,
             end: slot.end,
             eventId,
@@ -230,7 +230,7 @@ router.put("/:eventId/submit", async (req: Request, res: Response) => {
       include: { slots: true },
     });
 
-    const slotData = slots.map((slot: Slot) => ({
+    const slotData = slots?.map((slot: Slot) => ({
       start: slot.start,
       end: slot.end,
       eventId,
@@ -263,7 +263,6 @@ router.put("/:eventId/submit", async (req: Request, res: Response) => {
           event: { connect: { id: eventId } },
           slots: { create: slotData },
         },
-        include: { slots: true },
       });
 
       res.cookie("browserId", guest.browserId, {
