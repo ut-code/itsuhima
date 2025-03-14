@@ -3,10 +3,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import dayjs, { Dayjs } from "dayjs";
 import React, { useRef } from "react";
-import { z } from "zod";
-import { EventSchema } from "../../common/schema";
-
-type Event = z.infer<typeof EventSchema>;
+import { Project } from "../../common/schema";
 
 class CalendarMatrix {
   private matrix: boolean[][];
@@ -140,11 +137,11 @@ function getVertexes(from: Date, to: Date) {
 }
 
 type Props = {
-  event: Event;
+  project: Project;
   onSubmit: (slots: { start: Date, end: Date }[]) => void;
 }
 
-export const Calendar = ({ event, onSubmit }: Props) => {
+export const Calendar = ({ project, onSubmit }: Props) => {
 
 
 
@@ -192,7 +189,8 @@ export const Calendar = ({ event, onSubmit }: Props) => {
     });
     slotsRef.current = [];
 
-    event.slots?.forEach((slot) => {
+    const slots = project.guests.flatMap((guest) => guest.slots);
+    slots.forEach((slot) => {
       const { from, to } = getVertexes(new Date(slot.start), new Date(slot.end));
       matrix.setRange(from, to, true);
     });

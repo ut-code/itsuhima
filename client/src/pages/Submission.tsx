@@ -1,56 +1,58 @@
 import { NavLink, useNavigate, useParams } from "react-router";
 import { useEffect, useState } from "react";
-import { EventSchema, GuestSchema, SlotSchema } from "../../../common/schema";
-import { z } from "zod";
+// import { EventSchema, GuestSchema, SlotSchema } from "../../../common/schema";
+// import { z } from "zod";
 import { Calendar } from "../Calendar";
+import { Project, projectResSchema } from "../../../common/schema";
 
-type Event = z.infer<typeof EventSchema>;
-type Slot = z.infer<typeof SlotSchema>;
+// type Event = z.infer<typeof EventSchema>;
+// type Slot = z.infer<typeof SlotSchema>;
 
 export default function SubmissionPage() {
   const { eventId } = useParams<{ eventId: string }>();
-  const [event, setEvent] = useState<Event | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [guestName, setGuestName] = useState("");
+
+  // const [guestName, setGuestName] = useState("");
   // const [selectedSlots, setSelectedSlots] = useState<Slot[]>([]);
-  const [isHost, setIsHost] = useState(false);
-  const [alreadyGuest, setAlreadyGuest] = useState(false);
+  // const [isHost, setIsHost] = useState(false);
+  // const [alreadyGuest, setAlreadyGuest] = useState(false);
 
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
+  // TODO: hook
   useEffect(() => {
-    const fetchEvent = async () => {
+    const fetchEvent = async (eventId: string) => {
       try {
         const res = await fetch(`http://localhost:3000/event/${eventId}`, {
           credentials: "include",
         });
         if (!res.ok) throw new Error("イベントが見つかりません");
         const data = await res.json();
+        const parsedProject = projectResSchema.parse(data);
+        console.log(parsedProject)
 
-        // event データのパース
-        const parseEvent = EventSchema.parse(data.event);
-        if (data.guest) setAlreadyGuest(true);
+        // if (data.guest) setAlreadyGuest(true);
+        // if (data.host) setIsHost(true);
+        setProject(parsedProject);
 
-        if (data.host) setIsHost(true);
-
-        setEvent(parseEvent);
-
-        if (data.guest) {
-          const parseGuest = GuestSchema.parse(data.guest);
-          const parseSlot = parseGuest.slots?.map((slot: Slot) => SlotSchema.parse(slot)) || [];
-          setGuestName(parseGuest.name);
-          // setSelectedSlots(parseSlot);
-        }
+        // if (data.guest) {
+        //   const parseGuest = GuestSchema.parse(data.guest);
+        //   const parseSlot = parseGuest.slots?.map((slot: Slot) => SlotSchema.parse(slot)) || [];
+        //   setGuestName(parseGuest.name);
+        //   // setSelectedSlots(parseSlot);
+        // }
       } catch (err) {
         console.error(err);
-        // setError(err.message);
+        setError((err as Error).message);
       } finally {
         setLoading(false);
       }
     };
 
-    if (eventId) fetchEvent();
+    if (!eventId) return;
+    fetchEvent(eventId);
   }, [eventId]);
 
   // -------------------- Slot 追加処理 --------------------
@@ -91,61 +93,61 @@ export default function SubmissionPage() {
   // };
 
   // -------------------- Guest 登録処理 --------------------
-  const handleRegisterGuest = async () => {
-    setLoading(true);
-    if (!guestName.trim()) {
-      alert("名前を入力してください");
-      return;
-    }
+  // const handleRegisterGuest = async () => {
+  //   setLoading(true);
+  //   if (!guestName.trim()) {
+  //     alert("名前を入力してください");
+  //     return;
+  //   }
 
-    // Slotバリデーション
-    // for (const slot of selectedSlots) {
-    //   try {
-    //     SlotSchema.parse(slot);
-    //   } catch (err: any) {
-    //     alert(`Slotの形式が不正です: ${err.message}`);
-    //     return;
-    //   }
-    // }
+  //   // Slotバリデーション
+  //   // for (const slot of selectedSlots) {
+  //   //   try {
+  //   //     SlotSchema.parse(slot);
+  //   //   } catch (err: any) {
+  //   //     alert(`Slotの形式が不正です: ${err.message}`);
+  //   //     return;
+  //   //   }
+  //   // }
 
-    // Guestオブジェクト
-    const guest = {
-      name: guestName,
-      slots: selectedSlots,
-      eventId: eventId,
-    };
-    // console.log("送信情報", guest);
+  //   // Guestオブジェクト
+  //   const guest = {
+  //     name: guestName,
+  //     slots: selectedSlots,
+  //     eventId: eventId,
+  //   };
+  //   // console.log("送信情報", guest);
 
-    try {
-      const parseData = GuestSchema.parse(guest);
-      if (alreadyGuest) {
-        const res = await fetch(`http://localhost:3000/event/${eventId}/submit`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(parseData),
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("ゲスト登録に失敗しました");
-        console.log(await res.json());
-      } else {
-        const res = await fetch(`http://localhost:3000/event/${eventId}/submit`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(parseData),
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("ゲスト登録に失敗しました");
-        console.log(await res.json());
-      }
-      // setSelectedSlots([]);
-      setGuestName("");
-      navigate(`./done`);
-      setLoading(false);
-    } catch (err: any) {
-      alert(`エラー: ${err.message}`);
-      setLoading(false);
-    }
-  };
+  //   try {
+  //     const parseData = GuestSchema.parse(guest);
+  //     if (alreadyGuest) {
+  //       const res = await fetch(`http://localhost:3000/event/${eventId}/submit`, {
+  //         method: "PUT",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify(parseData),
+  //         credentials: "include",
+  //       });
+  //       if (!res.ok) throw new Error("ゲスト登録に失敗しました");
+  //       console.log(await res.json());
+  //     } else {
+  //       const res = await fetch(`http://localhost:3000/event/${eventId}/submit`, {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify(parseData),
+  //         credentials: "include",
+  //       });
+  //       if (!res.ok) throw new Error("ゲスト登録に失敗しました");
+  //       console.log(await res.json());
+  //     }
+  //     // setSelectedSlots([]);
+  //     setGuestName("");
+  //     navigate(`./done`);
+  //     setLoading(false);
+  //   } catch (err: any) {
+  //     alert(`エラー: ${err.message}`);
+  //     setLoading(false);
+  //   }
+  // };
 
   // -------------------- 日付一覧生成 --------------------
   // const getDatesInRange = (startDate: string, endDate: string) => {
@@ -159,57 +161,63 @@ export default function SubmissionPage() {
   //   return dates;
   // };
 
+  const postAvailability = async (slots: { start: Date, end: Date }[]) => {
+    const payload = {
+      name: "たろう",
+      eventId: project?.id, // TODO:
+      slots,
+    };
+    try {
+      // submitReqSchema.parse(payload) TODO:
+    } catch (err) {
+      console.error(err);
+      return;
+    }
+    await fetch(`http://localhost:3000/event/${eventId}/submit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "include",
+    });
+  }
+
   // -------------------- UI --------------------
   if (loading) return <p>読み込み中...</p>;
   if (error) return <p>エラー: {error}</p>;
-  if (!event) return <p>イベントが存在しません。</p>;
+  if (!project) return <p>イベントが存在しません。</p>;
 
   // const dates = getDatesInRange(event.startDate, event.endDate);
 
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold">イベント詳細</h1>
-      <Calendar event={event} onSubmit={
-        async (slots: { start: Date, end: Date }[]) => {
-          await fetch(`http://localhost:3000/event/${eventId}/submit`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: "たろう",
-              eventId: event.id,
-              slots,
-            }),
-            credentials: "include",
-          });
-        }
-
-      } />
-      {isHost && (
+      <Calendar project={project} onSubmit={postAvailability} />
+      {/* {isHost && (
         <NavLink to={`/${eventId}/edit`} className="block hover:underline">
           イベントを編集する
         </NavLink>
-      )}
-      <p>イベント名: {event.name}</p>
-      <p>
-        開催期間: {new Date(event.startDate).toLocaleDateString()} ～{" "}
-        {new Date(event.endDate).toLocaleDateString()}
-      </p>
+      )} */}
+      <p>イベント名: {project.name}</p>
+      {/* <p>
+        開催期間: {new Date(project.startDate).toLocaleDateString()} ～{" "}
+        {new Date(project.endDate).toLocaleDateString()}
+      </p> */}
 
       {/* ----------- 大枠 (Range) ----------- */}
-      <h2 className="text-lg font-semibold mt-4">時間帯の大枠 (Range)</h2>
+      {/* <h2 className="text-lg font-semibold mt-4">時間帯の大枠 (Range)</h2>
       <ul>
-        {event.range.map((r) => (
+        {project.range.map((r) => (
           <li key={r.id} className="border p-2 my-2">
             {new Date(r.startTime).toLocaleString()} ～ {new Date(r.endTime).toLocaleString()}
           </li>
         ))}
-      </ul>
+      </ul> */}
 
       {/* ----------- ゲスト (Guest) ----------- */}
-      <h2 className="text-lg font-semibold mt-4">ゲスト</h2>
-      {event.guests?.length ? (
+      {/* <h2 className="text-lg font-semibold mt-4">ゲスト</h2>
+      {project.guests?.length ? (
         <ul>
-          {event.guests.map((guest) => (
+          {project.guests.map((guest) => (
             <li key={guest.id} className="border p-2 my-2">
               {guest.name} (ID: {guest.id})
               {guest.slots && guest.slots.length > 0 && (
@@ -227,13 +235,13 @@ export default function SubmissionPage() {
         </ul>
       ) : (
         <p>ゲストはいません</p>
-      )}
+      )} */}
 
       {/* ----------- スロット (Slot) ----------- */}
-      <h2 className="text-lg font-semibold mt-4">すべての登録済みスロット</h2>
-      {event.slots?.length ? (
+      {/* <h2 className="text-lg font-semibold mt-4">すべての登録済みスロット</h2>
+      {project.slots?.length ? (
         <ul>
-          {event.slots.map((slot) => (
+          {project.slots.map((slot) => (
             <li key={slot.id} className="border p-2 my-2">
               {new Date(slot.start).toLocaleString()} ～ {new Date(slot.end).toLocaleString()}{" "}
               {slot.guestId && <span>(ゲストID: {slot.guestId})</span>}
@@ -242,17 +250,17 @@ export default function SubmissionPage() {
         </ul>
       ) : (
         <p>登録済みスロットはありません</p>
-      )}
+      )} */}
 
       {/* ----------- ゲスト名入力 ----------- */}
-      <h2 className="text-lg font-semibold mt-6">参加者情報</h2>
+      {/* <h2 className="text-lg font-semibold mt-6">参加者情報</h2>
       <input
         type="text"
         placeholder="あなたの名前"
         value={guestName}
         onChange={(e) => setGuestName(e.target.value)}
         className="input input-bordered w-full max-w-xs my-2"
-      />
+      /> */}
 
       {/* ----------- 希望時間帯の追加 ----------- */}
       {/* <h2 className="text-lg font-semibold mt-6">希望時間帯を追加</h2>
@@ -308,14 +316,14 @@ export default function SubmissionPage() {
       </ul> */}
 
       {/* ----------- 登録ボタン ----------- */}
-      <div className="mt-6">
+      {/* <div className="mt-6">
         <button onClick={
 
           handleRegisterGuest
         } className="btn btn-primary">
           登録
         </button>
-      </div>
+      </div> */}
     </div>
   );
 }

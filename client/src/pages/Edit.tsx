@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { EventSchema } from "../../../common/schema";
-import { z } from "zod";
+// import { EventSchema } from "../../../common/schema";
+// import { z } from "zod";
+import { Project, projectResSchema } from "../../../common/schema";
 
-type Event = z.infer<typeof EventSchema>;
+// type Event = z.infer<typeof EventSchema>;
 
 export default function EventEdit() {
   const { eventId } = useParams<{ eventId: string }>();
   const [name, setName] = useState<string>("");
-  const [event, setEvent] = useState<Event | null>(null);
+  const [event, setEvent] = useState<Project | null>(null);
   const [startDate, setStartDate] = useState<string>(""); // ISO 文字列
   const [endDate, setEndDate] = useState<string>(""); // ISO 文字列
   const [ranges, setRanges] = useState<{ startTime: string; endTime: string }[]>([]); // range 配列
@@ -27,8 +28,8 @@ export default function EventEdit() {
         const data = await res.json();
 
         // event データのパース
-        const parseEvent = EventSchema.parse(data.event);
-        console.log("受信イベントデータ", parseEvent);
+        const parsedProject = projectResSchema.parse(data.event);
+        console.log("受信イベントデータ", parsedProject);
         console.log("受信ゲストデータ", data.guest);
         if (data.guest) setAlreadyGuest(true);
         console.log("受信ホストデータ", data.host);
@@ -36,16 +37,16 @@ export default function EventEdit() {
         if (!data.host) return navigate(`/${eventId}/submit`); // hostじゃないので、リダイレクト
 
         // 日付をローカル（現地）時間に変換
-        setName(parseEvent.name);
+        setName(parsedProject.name);
         setStartDate(
-          new Date(parseEvent.startDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
+          new Date(parsedProject.startDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
         );
         setEndDate(
-          new Date(parseEvent.endDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
+          new Date(parsedProject.endDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
         );
 
         // 範囲 (時間) もローカル時間に変換
-        const formattedRanges = parseEvent.range.map((range) => ({
+        const formattedRanges = parsedProject.ranges.map((range) => ({
           startTime: new Date(range.startTime).toLocaleTimeString("en-GB", {
             hour: "2-digit",
             minute: "2-digit",
@@ -57,7 +58,7 @@ export default function EventEdit() {
         }));
         setRanges(formattedRanges);
 
-        setEvent(parseEvent);
+        setEvent(parsedProject);
       } catch (err: any) {
         console.error(err);
         setError(err.message);
