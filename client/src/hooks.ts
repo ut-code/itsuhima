@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { ZodType } from "zod";
 
-export function useData<T>(url: string, schema: ZodType<T, any, any>): { // TODO: any
+export function useData<T>(
+  url: string,
+  schema: ZodType<T, any, any>,
+): {
+  // TODO: any
   data: T | null;
   loading: boolean;
   error: string | null;

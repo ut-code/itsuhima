@@ -15,8 +15,12 @@ export default function EditPage() {
   // const [error, setError] = useState<string | null>(null);
   // const [alreadyGuest, setAlreadyGuest] = useState<boolean>(false);
 
-  const { data: project, loading, error } = useData<Project>(`http://localhost:3000/event/${eventId}`, projectResSchema);
-    //       // 日付をローカル（現地）時間に変換
+  const {
+    data: project,
+    loading,
+    error,
+  } = useData<Project>(`http://localhost:3000/event/${eventId}`, projectResSchema);
+  //       // 日付をローカル（現地）時間に変換
   //       setName(project.name);
   //       setStartDate(
   //         new Date(project.startDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
@@ -107,7 +111,6 @@ export default function EditPage() {
       setLoading(false);
     }
   };
-
 
   // if (!parsedProject.host) return navigate(`/${eventId}/submit`); // hostじゃないので、リダイレクト TODO:
 

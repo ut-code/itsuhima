@@ -5,7 +5,11 @@ import { useData } from "../../../hooks";
 
 export default function SubmissionPage() {
   const { eventId } = useParams<{ eventId: string }>();
-  const { data: project, loading, error } = useData<Project>(`http://localhost:3000/event/${eventId}`, projectResSchema);
+  const {
+    data: project,
+    loading,
+    error,
+  } = useData<Project>(`http://localhost:3000/event/${eventId}`, projectResSchema);
 
   // const [guestName, setGuestName] = useState("");
   // const [isHost, setIsHost] = useState(false);
@@ -119,7 +123,7 @@ export default function SubmissionPage() {
   //   return dates;
   // };
 
-  const postAvailability = async (slots: { start: Date, end: Date }[]) => {
+  const postAvailability = async (slots: { start: Date; end: Date }[]) => {
     const payload = {
       name: "たろう",
       eventId: project?.id, // TODO:
@@ -137,7 +141,7 @@ export default function SubmissionPage() {
       body: JSON.stringify(payload),
       credentials: "include",
     });
-  }
+  };
 
   // -------------------- UI --------------------
   if (loading) return <p>読み込み中...</p>;

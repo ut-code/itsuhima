@@ -3,12 +3,20 @@ import { InvolvedProjects, involvedProjectsResSchema } from "../../../common/sch
 import { useData } from "../hooks";
 
 export default function RootPage() {
-  const { data: involvedProjects, loading, error } = useData<InvolvedProjects>("http://localhost:3000/user", involvedProjectsResSchema);
+  const {
+    data: involvedProjects,
+    loading,
+    error,
+  } = useData<InvolvedProjects>("http://localhost:3000/user", involvedProjectsResSchema);
 
   if (loading) return <p>読み込み中...</p>;
   if (error) return <p>エラーが発生しました: {error}</p>;
 
-  return involvedProjects ? <Preview asHost={involvedProjects.asHost} asGuest={involvedProjects.asGuest} /> : <Landing />;
+  return involvedProjects ? (
+    <Preview asHost={involvedProjects.asHost} asGuest={involvedProjects.asGuest} />
+  ) : (
+    <Landing />
+  );
 }
 
 function Preview({ asHost: hostingProjects, asGuest: guestingProjects }: InvolvedProjects) {
@@ -26,7 +34,8 @@ function Preview({ asHost: hostingProjects, asGuest: guestingProjects }: Involve
               <NavLink to={`/${p.id}/submit`} className="block hover:underline">
                 <div>イベント名: {p.name}</div>
                 <div>
-                  日付: {formatDate(p.startDate.toLocaleDateString())} ～ {formatDate(p.endDate.toLocaleDateString())}
+                  日付: {formatDate(p.startDate.toLocaleDateString())} ～{" "}
+                  {formatDate(p.endDate.toLocaleDateString())}
                 </div>
                 <div>イベントID: {p.id}</div>
               </NavLink>
@@ -45,7 +54,8 @@ function Preview({ asHost: hostingProjects, asGuest: guestingProjects }: Involve
               <NavLink to={`/${p.id}/submit`} className="block hover:underline">
                 <div>イベント名: {p.name}</div>
                 <div>
-                  日付: {formatDate(p.startDate.toLocaleDateString())} ～ {formatDate(p.endDate.toLocaleDateString())}
+                  日付: {formatDate(p.startDate.toLocaleDateString())} ～{" "}
+                  {formatDate(p.endDate.toLocaleDateString())}
                 </div>
                 <div>イベントID: {p.id}</div>
               </NavLink>

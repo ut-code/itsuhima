@@ -138,13 +138,10 @@ function getVertexes(from: Date, to: Date) {
 
 type Props = {
   project: Project;
-  onSubmit: (slots: { start: Date, end: Date }[]) => void;
-}
+  onSubmit: (slots: { start: Date; end: Date }[]) => void;
+};
 
 export const Calendar = ({ project, onSubmit }: Props) => {
-
-
-
   const calendarCells = useRef<CalendarMatrix>(new CalendarMatrix(7, new Date("2025-03-09")));
 
   const calendarRef = useRef<FullCalendar | null>(null);
@@ -178,8 +175,7 @@ export const Calendar = ({ project, onSubmit }: Props) => {
   // document.onpointerdown = handleDragStart;
   // document.onpointerup = handleDragEnd;
 
-
-  // init 
+  // init
   const calendarApi = calendarRef.current?.getApi();
   const matrix = calendarCells.current;
 
@@ -206,7 +202,6 @@ export const Calendar = ({ project, onSubmit }: Props) => {
         to: slot.to,
       });
     });
-
   }
 
   return (
@@ -282,9 +277,11 @@ export const Calendar = ({ project, onSubmit }: Props) => {
       <div>
         <button
           onClick={() => {
-            onSubmit(slotsRef.current.map((slot) => {
-              return { start: slot.from, end: slot.to };
-            }));
+            onSubmit(
+              slotsRef.current.map((slot) => {
+                return { start: slot.from, end: slot.to };
+              }),
+            );
           }}
         >
           イベントを表示
