@@ -97,12 +97,12 @@ export type Project = z.infer<typeof projectResSchema>;
 
 // // ---------- Event ----------
 // export const EventSchema = z.object({
-//   // id: idSchema.optional(),
-//   // name: z.string(),
-//   // startDate: z.string().datetime(),
-//   // endDate: z.string().datetime(),
-//   // range: z.array(RangeSchema),
-//   // slots: z.array(SlotSchema).optional(),
-//   // hosts: z.array(HostRes).optional(),
-//   // guests: z.array(GuestSchema).optional(),
+//   id: idSchema.optional(),
+//   name: z.string(),
+//   startDate: z.string().datetime(),
+//   endDate: z.string().datetime(),
+//   range: z.array(RangeSchema),
+//   slots: z.array(SlotSchema).optional(),
+//   hosts: z.array(HostRes).optional(),
+//   guests: z.array(GuestSchema).optional(),
 // });

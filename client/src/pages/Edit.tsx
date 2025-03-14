@@ -1,74 +1,42 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-// import { EventSchema } from "../../../common/schema";
-// import { z } from "zod";
 import { Project, projectResSchema } from "../../../common/schema";
-
-// type Event = z.infer<typeof EventSchema>;
+import { useData } from "../hooks";
 
 export default function EventEdit() {
   const { eventId } = useParams<{ eventId: string }>();
   const [name, setName] = useState<string>("");
-  const [event, setEvent] = useState<Project | null>(null);
+  // const [project, setProject] = useState<Project | null>(null);
   const [startDate, setStartDate] = useState<string>(""); // ISO 文字列
   const [endDate, setEndDate] = useState<string>(""); // ISO 文字列
   const [ranges, setRanges] = useState<{ startTime: string; endTime: string }[]>([]); // range 配列
   const navigate = useNavigate(); // ページ遷移
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [alreadyGuest, setAlreadyGuest] = useState<boolean>(false);
+  // const [loading, setLoading] = useState<boolean>(false);
+  // const [error, setError] = useState<string | null>(null);
+  // const [alreadyGuest, setAlreadyGuest] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        const res = await fetch(`http://localhost:3000/event/${eventId}`, {
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("イベントが見つかりません");
-        const data = await res.json();
+  const { data: project, loading, error } = useData<Project>(`http://localhost:3000/event/${eventId}`, projectResSchema);
+    //       // 日付をローカル（現地）時間に変換
+  //       setName(project.name);
+  //       setStartDate(
+  //         new Date(project.startDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
+  //       );
+  //       setEndDate(
+  //         new Date(project.endDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
+  //       );
 
-        // event データのパース
-        const parsedProject = projectResSchema.parse(data.event);
-        console.log("受信イベントデータ", parsedProject);
-        console.log("受信ゲストデータ", data.guest);
-        if (data.guest) setAlreadyGuest(true);
-        console.log("受信ホストデータ", data.host);
-
-        if (!data.host) return navigate(`/${eventId}/submit`); // hostじゃないので、リダイレクト
-
-        // 日付をローカル（現地）時間に変換
-        setName(parsedProject.name);
-        setStartDate(
-          new Date(parsedProject.startDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
-        );
-        setEndDate(
-          new Date(parsedProject.endDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
-        );
-
-        // 範囲 (時間) もローカル時間に変換
-        const formattedRanges = parsedProject.ranges.map((range) => ({
-          startTime: new Date(range.startTime).toLocaleTimeString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }), // "HH:MM"
-          endTime: new Date(range.endTime).toLocaleTimeString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }), // "HH:MM"
-        }));
-        setRanges(formattedRanges);
-
-        setEvent(parsedProject);
-      } catch (err: any) {
-        console.error(err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (eventId) fetchEvent();
-  }, [eventId]);
+  //       // 範囲 (時間) もローカル時間に変換
+  //       const formattedRanges = project.ranges.map((range) => ({
+  //         startTime: new Date(range.startTime).toLocaleTimeString("en-GB", {
+  //           hour: "2-digit",
+  //           minute: "2-digit",
+  //         }), // "HH:MM"
+  //         endTime: new Date(range.endTime).toLocaleTimeString("en-GB", {
+  //           hour: "2-digit",
+  //           minute: "2-digit",
+  //         }), // "HH:MM"
+  //       }));
+  //       setRanges(formattedRanges);
 
   // range 追加処理
   const handleAddRange = () => {
@@ -139,10 +107,14 @@ export default function EventEdit() {
       setLoading(false);
     }
   };
+
+
+  // if (!parsedProject.host) return navigate(`/${eventId}/submit`); // hostじゃないので、リダイレクト TODO:
+
   // -------------------- UI --------------------
   if (loading) return <p>読み込み中...</p>;
   if (error) return <p>エラー: {error}</p>;
-  if (!event) return <p>イベントが存在しません。</p>;
+  if (!project) return <p>イベントが存在しません。</p>;
 
   return (
     <>
@@ -166,7 +138,7 @@ export default function EventEdit() {
           />
         </div>
 
-        {!alreadyGuest ? (
+        {!project.guests ? (
           <>
             {" "}
             <div>

@@ -1,59 +1,17 @@
 import { NavLink, useNavigate, useParams } from "react-router";
-import { useEffect, useState } from "react";
-// import { EventSchema, GuestSchema, SlotSchema } from "../../../common/schema";
-// import { z } from "zod";
 import { Calendar } from "../Calendar";
 import { Project, projectResSchema } from "../../../common/schema";
-
-// type Event = z.infer<typeof EventSchema>;
-// type Slot = z.infer<typeof SlotSchema>;
+import { useData } from "../hooks";
 
 export default function SubmissionPage() {
   const { eventId } = useParams<{ eventId: string }>();
-  const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: project, loading, error } = useData<Project>(`http://localhost:3000/event/${eventId}`, projectResSchema);
 
   // const [guestName, setGuestName] = useState("");
-  // const [selectedSlots, setSelectedSlots] = useState<Slot[]>([]);
   // const [isHost, setIsHost] = useState(false);
   // const [alreadyGuest, setAlreadyGuest] = useState(false);
 
   // const navigate = useNavigate();
-
-  // TODO: hook
-  useEffect(() => {
-    const fetchEvent = async (eventId: string) => {
-      try {
-        const res = await fetch(`http://localhost:3000/event/${eventId}`, {
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("イベントが見つかりません");
-        const data = await res.json();
-        const parsedProject = projectResSchema.parse(data);
-        console.log(parsedProject)
-
-        // if (data.guest) setAlreadyGuest(true);
-        // if (data.host) setIsHost(true);
-        setProject(parsedProject);
-
-        // if (data.guest) {
-        //   const parseGuest = GuestSchema.parse(data.guest);
-        //   const parseSlot = parseGuest.slots?.map((slot: Slot) => SlotSchema.parse(slot)) || [];
-        //   setGuestName(parseGuest.name);
-        //   // setSelectedSlots(parseSlot);
-        // }
-      } catch (err) {
-        console.error(err);
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (!eventId) return;
-    fetchEvent(eventId);
-  }, [eventId]);
 
   // -------------------- Slot 追加処理 --------------------
   // const handleAddSlot = (
@@ -304,16 +262,6 @@ export default function SubmissionPage() {
           ))}
         </div>
       ))} */}
-
-      {/* ----------- 選択中の時間帯 ----------- */}
-      {/* <h2 className="text-lg font-semibold mt-6">選択中の時間帯</h2>
-      <ul className="list-disc pl-6">
-        {selectedSlots.map((slot, idx) => (
-          <li key={idx}>
-            {new Date(slot.start).toLocaleString()} ～ {new Date(slot.end).toLocaleString()}
-          </li>
-        ))}
-      </ul> */}
 
       {/* ----------- 登録ボタン ----------- */}
       {/* <div className="mt-6">
