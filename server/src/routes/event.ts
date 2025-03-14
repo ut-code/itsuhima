@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { Project, submitReqSchema } from "../../../common/schema";
+import { Project, projectReqSchema, submitReqSchema } from "../../../common/schema";
 import { z } from "zod";
 import { prisma } from "../main";
 
@@ -8,56 +8,53 @@ const router = Router();
 
 // TODO: response type
 
-//イベント作成。Hostのみ。Host作成
-// router.post("/",
-//   (req, res, next) => {
-//     const parseResult = tmpSchema.safeParse(req.body);
-//     if (!parseResult.success) {
-//       return res.status(400).json({ message: "バリデーションエラー", errors: parseResult.error.errors });
-//     }
-//     req.body = parseResult.data;
-//     next();
-//   },
-//   async (req: Request, res: Response) => {
-//   try {
-//     // const data = EventSchema.parse(req.body);
+// イベント作成。Hostのみ。Host作成
+router.post("/",
+  // (req, res, next) => {
+  //   const parseResult = tmpSchema.safeParse(req.body);
+  //   if (!parseResult.success) {
+  //     return res.status(400).json({ message: "バリデーションエラー", errors: parseResult.error.errors });
+  //   }
+  //   req.body = parseResult.data;
+  //   next();
+  // },
+  async (req: Request, res: Response) => {
+  try {
+    const data = projectReqSchema.parse(req.body);
+    const event = await prisma.event.create({
+      data: {
+        name: data.name,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        range: {
+          create: data.ranges,
+        },
+        hosts: {
+          create: {
+            browserId: req.cookies?.browserId || undefined,
+          },
+        },
+      },
+      include: { hosts: true },
+    });
+    const host = event.hosts[0];
 
-//     const data = req.body; // TODO: え〜〜
+    res.cookie("browserId", host.browserId, {
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
+    });
 
-//     const event = await prisma.event.create({
-//       data: {
-//         name: data.name,
-//         startDate: data.startDate,
-//         endDate: data.endDate,
-//         range: {
-//           create: data.range,
-//         },
-//         hosts: {
-//           create: {
-//             browserId: req.cookies?.browserId || undefined,
-//           },
-//         },
-//       },
-//       include: { hosts: true },
-//     });
-//     const host = event.hosts[0];
-
-//     res.cookie("browserId", host.browserId, {
-//       httpOnly: true,
-//       maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
-//     });
-
-//     res.status(201).json(event.id);
-//   } catch (err) {
-//     console.error("エラー:", err);
-//     if (err instanceof z.ZodError) {
-//       return res
-//         .status(400)
-//         .json({ message: "バリデーションエラー", errors: err.errors });
-//     }
-//     res.status(500).json({ message: "イベント作成時にエラーが発生しました" });
-//   }
-// });
+    res.status(201).json(event.id);
+  } catch (err) {
+    console.error("エラー:", err);
+    if (err instanceof z.ZodError) {
+      return res
+        .status(400)
+        .json({ message: "バリデーションエラー", errors: err.errors });
+    }
+    res.status(500).json({ message: "イベント作成時にエラーが発生しました" });
+  }
+});
 
 // イベント情報の取得 Guestのみ
 router.get("/:projectId", async (req: Request<{ projectId: string }>, res: Response<Project>) => {

@@ -57,7 +57,7 @@ export default function Create() {
       name,
       startDate: startDateTime,
       endDate: endDateTime,
-      range: rangeWithDateTime,
+      ranges: rangeWithDateTime,
     };
 
     console.log("送信データ:", eventData); // デバッグ用確認

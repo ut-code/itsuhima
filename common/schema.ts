@@ -48,6 +48,16 @@ export const submitReqSchema = z.object({
 export type SubmitReq = z.infer<typeof submitReqSchema>;
 
 // ---------- Guest (一旦仮の型にしておく) ----------
+export const projectReqSchema = z.object({
+  name: z.string(),
+  startDate: z.string().datetime(),
+  endDate: z.string().datetime(),
+  ranges: z.array(z.object({
+    startTime: z.string().datetime(),
+    endTime: z.string().datetime(),
+  })),
+});
+
 export const projectResSchema = project.extend({
   ranges: z.array(range),
   hosts: z.array(host),
