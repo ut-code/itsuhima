@@ -1,7 +1,7 @@
 import { NavLink, useNavigate, useParams } from "react-router";
-import { Calendar } from "../Calendar";
-import { Project, projectResSchema } from "../../../common/schema";
-import { useData } from "../hooks";
+import { Calendar } from "../../../components/Calendar";
+import { Project, projectResSchema } from "../../../../../common/schema";
+import { useData } from "../../../hooks";
 
 export default function SubmissionPage() {
   const { eventId } = useParams<{ eventId: string }>();

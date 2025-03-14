@@ -1,6 +1,6 @@
 import { useParams } from "react-router";
 
-export default function CreateDone() {
+export default function CreateDonePage() {
   const { eventId } = useParams<{ eventId: string }>();
   return (
     <div>

@@ -3,7 +3,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import dayjs, { Dayjs } from "dayjs";
 import React, { useRef } from "react";
-import { Project } from "../../common/schema";
+import { Project } from "../../../common/schema";
 
 class CalendarMatrix {
   private matrix: boolean[][];

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { Project, projectResSchema } from "../../../common/schema";
-import { useData } from "../hooks";
+import { Project, projectResSchema } from "../../../../common/schema";
+import { useData } from "../../hooks";
 
-export default function EventEdit() {
+export default function EditPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const [name, setName] = useState<string>("");
   // const [project, setProject] = useState<Project | null>(null);
