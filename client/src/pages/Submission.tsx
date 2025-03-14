@@ -26,6 +26,7 @@ export default function Event() {
         });
         if (!res.ok) throw new Error("イベントが見つかりません");
         const data = await res.json();
+        console.log("⭐️",data.event)
 
         // event データのパース
         const parseEvent = EventSchema.parse(data.event);

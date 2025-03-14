@@ -11,6 +11,7 @@ import { prisma } from "../main";
 const router = Router();
 type Slot = z.infer<typeof SlotSchema>;
 
+//イベント作成。Hostのみ。Host作成
 router.post("/", async (req: Request, res: Response) => {
   try {
     const parsedData = EventSchema.parse(req.body);
@@ -49,15 +50,13 @@ router.post("/", async (req: Request, res: Response) => {
     res.status(500).json({ message: "イベント作成時にエラーが発生しました" });
   }
 });
-
+// イベント情報の取得 Guest
 router.get("/:eventId", async (req: Request, res: Response) => {
   const { eventId } = req.params;
   const id = idSchema.parse(eventId);
-  console.log("Cookieだよ", req.cookies?.browserId);
   const browserId = req.cookies?.browserId || null;
 
   try {
-    // イベント情報の取得（そのまま返す場合）
     const event = await prisma.event.findUnique({
       where: { id },
       include: {
@@ -67,6 +66,7 @@ router.get("/:eventId", async (req: Request, res: Response) => {
             id: true,
             name: true,
             eventId: true,
+            browserId: true, // 追加: 判定のため
             slots: {
               select: {
                 id: true,
@@ -76,7 +76,14 @@ router.get("/:eventId", async (req: Request, res: Response) => {
             },
           },
         },
-        slots: true, // そのまま返す
+        slots: true,
+        hosts: {
+          select: {
+            id: true,
+            eventId: true,
+            browserId: true, // 追加: 判定のため
+          },
+        },
       },
     });
 
@@ -87,44 +94,29 @@ router.get("/:eventId", async (req: Request, res: Response) => {
         .json({ message: "指定されたイベントが見つかりません。" });
     }
 
-    let guest = null;
-    let host = null;
+    // クッキーのブラウザIDと一致するゲスト・ホストを絞り込む
+    const guest = event.guests.find((g) => g.browserId === browserId) || null;
+    const host = event.hosts.find((h) => h.browserId === browserId) || null;
 
-    // browserId がある場合、該当するゲスト・ホスト情報の取得
-    if (browserId) {
-      guest = await prisma.guest.findFirst({
-        where: {
-          eventId: id,
-          browserId: browserId,
-        },
-        select: {
-          id: true,
-          name: true,
-          eventId: true,
-          slots: {
-            select: {
-              id: true,
-              start: true,
-              end: true,
-            },
-          },
-        },
-      });
+    // browserIdを外した guest と host を整形
+    const filteredGuest = guest
+      ? {
+          id: guest.id,
+          name: guest.name,
+          eventId: guest.eventId,
+          slots: guest.slots,
+        }
+      : null;
 
-      host = await prisma.host.findFirst({
-        where: {
-          browserId: browserId,
-          eventId: eventId,
-        },
-        select: {
-          id: true,
-          eventId: true,
-        },
-      });
-    }
+    const filteredHost = host
+      ? {
+          id: host.id,
+          eventId: host.eventId,
+        }
+      : null;
 
     // 成功レスポンス
-    res.status(200).json({ event, guest, host });
+    res.status(200).json({ event, guest: filteredGuest, host: filteredHost });
   } catch (error) {
     console.error("イベント取得エラー:", error);
     res.status(500).json({ message: "イベント取得中にエラーが発生しました。" });
