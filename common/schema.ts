@@ -6,8 +6,8 @@ export const idSchema = z.string().uuid();
 // ---------- Range ----------
 export const RangeSchema = z.object({
   id: idSchema.optional(),
-  startTime: z.string().datetime(), // 修正: time() → datetime()
-  endTime: z.string().datetime(), // 修正: time() → datetime()
+  startTime: z.string().datetime(),
+  endTime: z.string().datetime(),
   eventId: idSchema.optional(),
 });
 
@@ -20,31 +20,37 @@ export const SlotSchema = z.object({
   guestId: idSchema.optional(),
 });
 
-// ---------- Host ----------
-export const HostSchema = z.object({
-  id: idSchema,
-  name: z.string(),
-  browserId: idSchema.optional(),
-  eventId: idSchema,
-});
+// ---------- Host (一旦仮の型にしておく) ----------
+export const HostSchema: z.ZodType<any> = z.lazy(() =>
+  z.object({
+    id: idSchema,
+    name: z.string(),
+    browserId: idSchema.optional(),
+    eventId: idSchema,
+    event: EventSchema.optional(), // ★ ここは lazy されるので安全
+  })
+);
 
-// ---------- Guest ----------
-export const GuestSchema = z.object({
-  id: idSchema.optional(),
-  name: z.string(),
-  browserId: idSchema.optional(),
-  eventId: idSchema,
-  slots: z.array(SlotSchema).optional(),
-});
+// ---------- Guest (一旦仮の型にしておく) ----------
+export const GuestSchema: z.ZodType<any> = z.lazy(() =>
+  z.object({
+    id: idSchema.optional(),
+    name: z.string(),
+    browserId: idSchema.optional(),
+    eventId: idSchema,
+    event: EventSchema.optional(), // ★
+    slots: z.array(SlotSchema).optional(),
+  })
+);
 
 // ---------- Event ----------
 export const EventSchema = z.object({
   id: idSchema.optional(),
   name: z.string(),
-  startDate: z.string().datetime(), // 修正: date() → datetime()
-  endDate: z.string().datetime(), // 修正: date() → datetime()
+  startDate: z.string().datetime(),
+  endDate: z.string().datetime(),
   range: z.array(RangeSchema),
   slots: z.array(SlotSchema).optional(),
-  hosts: z.array(HostSchema).optional(),
-  guests: z.array(GuestSchema).optional(),
+  hosts: z.array(HostSchema).optional(), // ★ lazy 済
+  guests: z.array(GuestSchema).optional(), // ★ lazy 済
 });

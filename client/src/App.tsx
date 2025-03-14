@@ -1,82 +1,114 @@
-// import FullCalendar from "@fullcalendar/react";
-// import timeGridPlugin from "@fullcalendar/timegrid";
-// import interactionPlugin from "@fullcalendar/interaction";
-// import { useRef } from "react";
-
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router";
+import { GuestSchema, HostSchema } from "../../common/schema";
+import { z } from "zod";
 
-// async function sampleFetch() {
-//   const response = await fetch("http://localhost:3000/users/");
-//   const result = await response.json();
-//   const data = z.array(UserSchema).parse(result);
-//   data.forEach((item) => console.log("name: ", item.name, "age: ", item.age));
-// }
+type Host = z.infer<typeof HostSchema>;
+type Guest = z.infer<typeof GuestSchema>;
+// type Event = z.infer<typeof EventSchema>;
+// ---------- App ----------
+export default function App() {
+  const [userData, setUserData] = useState<{ hosts: Host[]; guests: Guest[] } | null>(null);
+  const [loading, setLoading] = useState<boolean>(true); // 読み込み中判定
 
-// async function sampleEventFetch() {
-//   const response = await fetch("http://localhost:3000/sample/events");
-//   const result = await response.json();
-//   console.log(result);
-// }
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`http://localhost:3000/user`, {
+          credentials: "include",
+        });
 
-function App() {
-  // const calendarRef = useRef<FullCalendar | null>(null);
-  return (
-    <>
-      <h1 className="text-4xl">トップページ</h1>
-      <NavLink to="./new" end className="btn btn-primary">
-        イベントを作成する。
-      </NavLink>
-      {/* <FullCalendar
-        ref={calendarRef}
-        plugins={[timeGridPlugin, interactionPlugin]}
-        longPressDelay={200}
-        selectable={true}
-        selectAllow={
-          // https://github.com/fullcalendar/fullcalendar/issues/4119#issuecomment-875328866
-          (info) => {
-            console.log("selecting " + info.startStr + " to " + info.endStr, calendarRef);
-            if (!calendarRef.current) {
-              console.log("no calendar ref");
-              return false;
-            }
-            const calendarApi = calendarRef.current.getApi();
-            const existing = calendarApi.getEventById("selectBox");
-            if (existing) {
-              existing.remove();
-            }
-            let startTime = info.start.toLocaleTimeString("ja-JP", {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-            let endTime = info.end.toLocaleTimeString("ja-JP", {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
+        if (res.ok) {
+          const data = await res.json();
+          console.log("ユーザーデータ", data);
 
-            if (
-              info.start.getHours() > info.end.getHours() ||
-              (info.start.getHours() === info.end.getHours() &&
-                info.start.getMinutes() > info.end.getMinutes())
-            ) {
-              [startTime, endTime] = [endTime, startTime];
-            }
-
-            calendarApi.addEvent({
-              id: "selectBox",
-              startTime: startTime,
-              endTime: endTime,
-              startRecur: info.start,
-              endRecur: info.end,
-            });
-            return false;
+          if (data && (data.hosts.length > 0 || data.guests.length > 0)) {
+            setUserData(data); // データがあればセット
+          } else {
+            setUserData(null); // 空データならnull
           }
+        } else {
+          setUserData(null);
         }
-        select={(info) => {
-          console.log("selected " + info.startStr + " to " + info.endStr);
-        }}
-      /> */}
-    </>
+      } catch (error) {
+        console.error("ユーザー取得エラー:", error);
+        setUserData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  // 読み込み中表示
+  if (loading) return <p>読み込み中...</p>;
+
+  // データがあれば Preview、なければ Landing
+  return userData ? <Preview hosts={userData.hosts} guests={userData.guests} /> : <Landing />;
+}
+
+// ---------- Preview ----------
+function Preview({ hosts, guests }: { hosts: Host[]; guests: Guest[] }) {
+  return (
+    <div className="space-y-6 p-4">
+      <h2 className="text-2xl font-bold">あなたがホストのイベント一覧</h2>
+      {hosts.length > 0 ? (
+        <ul className="list-disc pl-5 space-y-2">
+          {hosts.map((host) => (
+            <li key={host.id} className="border p-2 rounded">
+              <NavLink to={`/${host.event.id}/submit`} className="block hover:underline">
+                <div>イベント名: {host.event.name}</div>
+                <div>
+                  日付: {formatDate(host.event.startDate)} ～ {formatDate(host.event.endDate)}
+                </div>
+                <div>イベントID: {host.event.id}</div>
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>ホストしているイベントはありません。</p>
+      )}
+
+      <h2 className="text-2xl font-bold">あなたがゲストのイベント一覧</h2>
+      {guests.length > 0 ? (
+        <ul className="list-disc pl-5 space-y-2">
+          {guests.map((guest) => (
+            <li key={guest.id} className="border p-2 rounded">
+              <NavLink to={`/${guest.event.id}/submit`} className="block hover:underline">
+                <div>イベント名: {guest.event.name}</div>
+                <div>
+                  日付: {formatDate(guest.event.startDate)} ～ {formatDate(guest.event.endDate)}
+                </div>
+                <div>あなたの名前: {guest.name}</div>
+                <div>イベントID: {guest.event.id}</div>
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>参加しているイベントはありません。</p>
+      )}
+    </div>
   );
 }
 
-export default App;
+// ---------- Landing ----------
+function Landing() {
+  return (
+    <div className="p-4">
+      <h1 className="text-4xl mb-4">トップページ</h1>
+      <NavLink to="./new" end className="btn btn-primary">
+        イベントを作成する。
+      </NavLink>
+      <div className="mt-4">ランディングページ</div>
+    </div>
+  );
+}
+
+// ---------- Utility ----------
+const formatDate = (isoDate: string) => {
+  const date = new Date(isoDate);
+  return date.toLocaleDateString("ja-JP");
+};
