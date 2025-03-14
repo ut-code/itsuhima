@@ -132,13 +132,14 @@ router.get("/:eventId", async (req: Request, res: Response) => {
   }
 });
 
-//Hostのみ
+//Hostのみ すでにguestがいたら時間登録はできない
 router.put("/:eventId", async (req: Request, res: Response) => {
   const { eventId } = req.params;
   const id = idSchema.parse(eventId);
   console.log("Cookieだよ", req.cookies?.browserId);
 
   try {
+    // ホスト認証
     const host = await prisma.host.findFirst({
       where: {
         browserId: req.cookies?.browserId,
@@ -146,40 +147,60 @@ router.put("/:eventId", async (req: Request, res: Response) => {
       },
     });
 
-    // host が存在しなければ認証エラー
+    // ホストが存在しなければ403
     if (!host) {
       return res
         .status(403)
         .json({ message: "認証エラー: アクセス権限がありません。" });
     }
+
     // リクエストボディのバリデーション
     const { name, startDate, endDate, range } = EventSchema.parse(req.body);
 
-    // イベント情報の更新
-    const updatedEvent = await prisma.event.update({
-      where: { id },
-      data: {
-        name,
-        startDate,
-        endDate,
-        range: {
-          deleteMany: {}, // 既存のrangeを削除
-          create: range.map((r: { startTime: string; endTime: string }) => ({
-            startTime: r.startTime,
-            endTime: r.endTime,
-          })),
-        },
-      },
-      include: { range: true },
+    // すでにゲストが存在するか確認
+    const existingGuest = await prisma.guest.findFirst({
+      where: { eventId: id },
     });
 
-    // 更新後のイベントデータを返す
+    let updatedEvent;
+
+    if (existingGuest) {
+      // ゲストが登録済み → 名前だけ更新
+      console.log("ゲストがいるため、イベント名のみ更新します。");
+      updatedEvent = await prisma.event.update({
+        where: { id },
+        data: { name }, // 名前だけ更新
+        include: { range: true },
+      });
+    } else {
+      // ゲストがいなければ通常通り全更新
+      console.log("ゲストがいないため、イベント全体を更新します。");
+      updatedEvent = await prisma.event.update({
+        where: { id },
+        data: {
+          name,
+          startDate,
+          endDate,
+          range: {
+            deleteMany: {}, // 既存 range 削除
+            create: range.map((r: { startTime: string; endTime: string }) => ({
+              startTime: r.startTime,
+              endTime: r.endTime,
+            })),
+          },
+        },
+        include: { range: true },
+      });
+    }
+
+    // 更新後のデータ返却
     res.status(200).json({ event: updatedEvent });
   } catch (error) {
     console.error("イベント更新エラー:", error);
     res.status(500).json({ message: "イベント更新中にエラーが発生しました。" });
   }
 });
+
 
 router.post("/:eventId/submit", async (req: Request, res: Response) => {
   const guest = req.body;

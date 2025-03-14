@@ -15,6 +15,7 @@ export default function EventEdit() {
   const navigate = useNavigate(); // ページ遷移
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [alreadyGuest, setAlreadyGuest] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -29,16 +30,30 @@ export default function EventEdit() {
         const parseEvent = EventSchema.parse(data.event);
         console.log("受信イベントデータ", parseEvent);
         console.log("受信ゲストデータ", data.guest);
+        if (data.guest) setAlreadyGuest(true);
         console.log("受信ホストデータ", data.host);
-        if (!data.host) return navigate(`/${eventId}/submit`); //hostじゃないので、リダイレクト
-        setName(parseEvent.name);
-        setStartDate(parseEvent.startDate.slice(0, 10)); // "YYYY-MM-DD" 形式に整形
-        setEndDate(parseEvent.endDate.slice(0, 10)); // "YYYY-MM-DD" 形式に整形
 
-        // ranges を "HH:MM" 形式に変換（秒部分を除く）
+        if (!data.host) return navigate(`/${eventId}/submit`); // hostじゃないので、リダイレクト
+
+        // 日付をローカル（現地）時間に変換
+        setName(parseEvent.name);
+        setStartDate(
+          new Date(parseEvent.startDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
+        );
+        setEndDate(
+          new Date(parseEvent.endDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
+        );
+
+        // 範囲 (時間) もローカル時間に変換
         const formattedRanges = parseEvent.range.map((range) => ({
-          startTime: range.startTime.slice(11, 16), // "HH:MM"
-          endTime: range.endTime.slice(11, 16), // "HH:MM"
+          startTime: new Date(range.startTime).toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }), // "HH:MM"
+          endTime: new Date(range.endTime).toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }), // "HH:MM"
         }));
         setRanges(formattedRanges);
 
@@ -150,58 +165,65 @@ export default function EventEdit() {
           />
         </div>
 
-        <div>
-          <label>開始日</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="input input-bordered w-full"
-            required
-          />
-        </div>
-
-        <div>
-          <label>終了日</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="input input-bordered w-full"
-            required
-          />
-        </div>
-
-        <div>
-          <label>範囲 (range)</label>
-          {ranges.map((range, index) => (
-            <div key={index} className="space-y-2 p-2 border rounded mb-2">
-              <div>
-                <label>開始時刻</label>
-                <input
-                  type="time"
-                  value={range.startTime}
-                  onChange={(e) => handleRangeChange(index, "startTime", `${e.target.value}:00`)}
-                  className="input input-bordered w-full"
-                  required
-                />
-              </div>
-              <div>
-                <label>終了時刻</label>
-                <input
-                  type="time"
-                  value={range.endTime}
-                  onChange={(e) => handleRangeChange(index, "endTime", `${e.target.value}:00`)}
-                  className="input input-bordered w-full"
-                  required
-                />
-              </div>
+        {!alreadyGuest ? (
+          <>
+            {" "}
+            <div>
+              <label>開始日</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="input input-bordered w-full"
+                required
+              />
             </div>
-          ))}
-          <button type="button" onClick={handleAddRange} className="btn btn-secondary">
-            範囲を追加
-          </button>
-        </div>
+            <div>
+              <label>終了日</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="input input-bordered w-full"
+                required
+              />
+            </div>
+            <div>
+              <label>範囲 (range)</label>
+              {ranges.map((range, index) => (
+                <div key={index} className="space-y-2 p-2 border rounded mb-2">
+                  <div>
+                    <label>開始時刻</label>
+                    <input
+                      type="time"
+                      value={range.startTime}
+                      onChange={(e) =>
+                        handleRangeChange(index, "startTime", `${e.target.value}:00`)
+                      }
+                      className="input input-bordered w-full"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label>終了時刻</label>
+                    <input
+                      type="time"
+                      value={range.endTime}
+                      onChange={(e) => handleRangeChange(index, "endTime", `${e.target.value}:00`)}
+                      className="input input-bordered w-full"
+                      required
+                    />
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={handleAddRange} className="btn btn-secondary">
+                範囲を追加
+              </button>
+            </div>
+          </>
+        ) : (
+          <p>すでにデータを登録したユーザーがいるため、日時の編集はできません。</p>
+        )}
 
         <button type="submit" className="btn btn-primary w-full">
           送信
