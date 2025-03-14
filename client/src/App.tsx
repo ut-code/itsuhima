@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink } from "react-router";
 import { GuestSchema, HostSchema } from "../../common/schema";
 import { z } from "zod";
+import { Calendar } from "./Calendar";
 
 type Host = z.infer<typeof HostSchema>;
 type Guest = z.infer<typeof GuestSchema>;
@@ -106,6 +107,7 @@ function Landing() {
       <NavLink to="./new" end className="btn btn-primary">
         イベントを作成する。
       </NavLink>
+      <Calendar />
       <div className="mt-4">ランディングページ</div>
     </div>
   );
