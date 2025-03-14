@@ -62,30 +62,14 @@ router.get("/:eventId", async (req: Request, res: Response) => {
       include: {
         range: true,
         guests: {
-          select: {
-            id: true,
-            name: true,
-            eventId: true,
-            browserId: true, // 追加: 判定のため
-            slots: {
-              select: {
-                id: true,
-                start: true,
-                end: true,
-              },
-            },
+          include: {
+            slots: true, // slots 全部欲しいなら select より include
           },
         },
-        slots: true,
-        hosts: {
-          select: {
-            id: true,
-            eventId: true,
-            browserId: true, // 追加: 判定のため
-          },
-        },
+        hosts: true, // 全部欲しいなら select 省略
       },
     });
+    
 
     // イベントが存在しない場合
     if (!event) {
