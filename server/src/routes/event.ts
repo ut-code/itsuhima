@@ -106,7 +106,7 @@ router.get("/:eventId", async (req: Request, res: Response) => {
   }
 });
 
-//Hostのみ すでにguestがいたら時間登録はできない
+//イベント編集 Hostのみ すでにguestがいたら時間登録はできない
 router.put("/:eventId", async (req: Request, res: Response) => {
   const { eventId } = req.params;
   const id = idSchema.parse(eventId);
@@ -162,10 +162,12 @@ router.put("/:eventId", async (req: Request, res: Response) => {
   }
 });
 
+//日程提出。Guestのみ。Guest作成
 router.post("/:eventId/submit", async (req: Request, res: Response) => {
-  const guest = req.body;
-  const parsed = GuestSchema.safeParse(guest);
+  const { eventId } = req.params;
+  const browserId = req.cookies?.browserId;
 
+  const parsed = GuestSchema.safeParse(req.body);
   if (!parsed.success) {
     console.error("バリデーションエラー:", parsed.error);
     return res.status(400).json({
@@ -174,43 +176,34 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
     });
   }
 
-  const invalidSlots = parsed.data.slots!.filter(
-    (slot: Slot) => slot.eventId !== guest.eventId
-  );
-  if (invalidSlots.length > 0) {
-    return res
-      .status(400)
-      .json({ message: "一部のスロットのイベントIDが一致していません。" });
-  }
+  const { name, slots } = parsed.data;
 
   try {
-    const data = await prisma.guest.create({
+    const guest = await prisma.guest.create({
       data: {
-        name: guest.name,
-        browserId: req.cookies?.browserId,
+        name,
+        browserId,
+        event: { connect: { id: eventId } },
         slots: {
-          create: guest.slots.map((slot: Slot) => ({
+          create: slots.map((slot: Slot) => ({
             start: slot.start,
             end: slot.end,
-            eventId: slot.eventId,
+            eventId,
           })),
         },
-        event: {
-          connect: { id: guest.eventId },
-        },
       },
-      include: {
-        slots: true,
-      },
+      include: { slots: true },
     });
-    console.log("登録されたデータ:", data);
-    res.cookie("browserId", data.browserId, {
-      httpOnly: true, // クライアント側からアクセスさせない場合
-      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年間有効
+
+    res.cookie("browserId", guest.browserId, {
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
     });
+
+    console.log("登録されたデータ:", guest);
     return res.status(201).json("日時が登録されました！");
   } catch (error) {
-    console.error(error);
+    console.error("登録エラー:", error);
     return res.status(500).json({ message: "サーバーエラーが発生しました" });
   }
 });
