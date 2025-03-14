@@ -195,20 +195,6 @@ export default function Event() {
         ))}
       </ul>
 
-      {/* ----------- ホスト (Host) ----------- */}
-      <h2 className="text-lg font-semibold mt-4">ホスト</h2>
-      {event.hosts?.length ? (
-        <ul>
-          {event.hosts.map((host) => (
-            <li key={host.id} className="border p-2 my-2">
-              {host.name} (ID: {host.id})
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>ホストはいません</p>
-      )}
-
       {/* ----------- ゲスト (Guest) ----------- */}
       <h2 className="text-lg font-semibold mt-4">ゲスト</h2>
       {event.guests?.length ? (

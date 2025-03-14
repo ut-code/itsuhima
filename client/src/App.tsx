@@ -52,6 +52,10 @@ export default function App() {
 function Preview({ hosts, guests }: { hosts: Host[]; guests: Guest[] }) {
   return (
     <div className="space-y-6 p-4">
+      <h1 className="text-4xl mb-4">トップページ</h1>
+      <NavLink to="./new" end className="btn btn-primary">
+        イベントを作成する。
+      </NavLink>
       <h2 className="text-2xl font-bold">あなたがホストのイベント一覧</h2>
       {hosts.length > 0 ? (
         <ul className="list-disc pl-5 space-y-2">
