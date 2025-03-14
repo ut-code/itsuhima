@@ -26,13 +26,9 @@ export default function Event() {
         });
         if (!res.ok) throw new Error("イベントが見つかりません");
         const data = await res.json();
-        console.log("⭐️",data.event)
 
         // event データのパース
         const parseEvent = EventSchema.parse(data.event);
-        console.log("受信イベントデータ", parseEvent);
-        console.log("受信ゲストデータ", data.guest);
-        console.log("受信ホストデータ", data.host);
         if (data.guest) setAlreadyGuest(true);
 
         if (data.host) setIsHost(true);
@@ -42,10 +38,7 @@ export default function Event() {
         if (data.guest) {
           const parseGuest = GuestSchema.parse(data.guest);
           const parseSlot = parseGuest.slots?.map((slot: Slot) => SlotSchema.parse(slot)) || [];
-          console.log("リザルトゲストデータ", parseGuest);
-          // ゲスト名と選択されたスロットを初期値としてセット
           setGuestName(parseGuest.name);
-          console.log(parseSlot, "🤩");
           setSelectedSlots(parseSlot);
         }
       } catch (err: any) {
