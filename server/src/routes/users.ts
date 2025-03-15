@@ -67,7 +67,10 @@ router.get(
 
     if (!browserId) {
       // return res.status(401).json({ message: "認証情報がありません。" }); TODO: a
-      return res.status(401).json();
+      return res.status(200).json({
+        asHost: [],
+        asGuest: [],
+      });
     }
 
     try {
