@@ -15,13 +15,13 @@ export default function EditPage() {
     data: project,
     loading: projectLoading,
     error: projectError,
-  } = useData<Project>(`http://localhost:3000/event/${eventId}`, projectResSchema);
+  } = useData<Project>(`http://localhost:3000/projects/${eventId}`, projectResSchema);
 
   const {
     data: me,
     loading: meLoading,
     error: meError,
-  } = useData<Me>("http://localhost:3000/user/me", meResSchema);
+  } = useData<Me>("http://localhost:3000/users/me", meResSchema);
 
   const isHost = me?.hosts.some((h) => h.eventId === eventId);
 
@@ -74,7 +74,7 @@ export default function EditPage() {
 
     console.log("送信データ:", eventData); // デバッグ用確認
 
-    const res = await fetch(`http://localhost:3000/event/${eventId}`, {
+    const res = await fetch(`http://localhost:3000/projects/${eventId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(eventData),

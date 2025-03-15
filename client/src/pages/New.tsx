@@ -62,7 +62,7 @@ export default function NewPage() {
 
     console.log("送信データ:", eventData); // デバッグ用確認
 
-    const res = await fetch("http://localhost:3000/event", {
+    const res = await fetch("http://localhost:3000/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(eventData),

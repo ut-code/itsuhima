@@ -10,13 +10,13 @@ export default function SubmissionPage() {
     data: project,
     loading: projectLoading,
     error: projectError,
-  } = useData<Project>(`http://localhost:3000/event/${eventId}`, projectResSchema);
+  } = useData<Project>(`http://localhost:3000/projects/${eventId}`, projectResSchema);
 
   const {
     data: me,
     loading: meLoading,
     error: meError,
-  } = useData<Me>("http://localhost:3000/user/me", meResSchema);
+  } = useData<Me>("http://localhost:3000/users/me", meResSchema);
 
   const loading = projectLoading || meLoading;
   const error = (projectError ?? "") + (meError ?? "");
@@ -40,14 +40,14 @@ export default function SubmissionPage() {
         return;
       }
       if (!myGuestId) {
-        await fetch(`http://localhost:3000/event/${eventId}/submit`, {
+        await fetch(`http://localhost:3000/projects/${eventId}/submit`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
           credentials: "include",
         });
       } else {
-        await fetch(`http://localhost:3000/event/${eventId}/submit`, {
+        await fetch(`http://localhost:3000/projects/${eventId}/submit`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

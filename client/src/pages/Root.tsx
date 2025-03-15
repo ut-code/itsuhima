@@ -7,7 +7,7 @@ export default function RootPage() {
     data: involvedProjects,
     loading,
     error,
-  } = useData<InvolvedProjects>("http://localhost:3000/user", involvedProjectsResSchema);
+  } = useData<InvolvedProjects>("http://localhost:3000/users", involvedProjectsResSchema);
 
   if (loading) return <p>読み込み中...</p>;
   if (error) return <p>エラーが発生しました: {error}</p>;

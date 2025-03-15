@@ -2,8 +2,8 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { PrismaClient } from "@prisma/client";
-import eventRoutes from "./routes/event";
-import userRoutes from "./routes/user";
+import projectsRoutes from "./routes/projects";
+import usersRoutes from "./routes/users";
 
 export const prisma = new PrismaClient();
 
@@ -24,9 +24,8 @@ app.get("/", (req, res) => {
   res.json("Hello World!");
 });
 
-// ルート分割
-app.use("/event", eventRoutes);
-app.use("/user", userRoutes);
+app.use("/projects", projectsRoutes);
+app.use("/users", usersRoutes);
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
