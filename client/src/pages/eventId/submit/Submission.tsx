@@ -3,6 +3,7 @@ import { Calendar } from "../../../components/Calendar";
 import { Me, meResSchema, Project, projectResSchema } from "../../../../../common/schema";
 import { useData } from "../../../hooks";
 import { useCallback, useState } from "react";
+import dayjs from "dayjs";
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
@@ -67,6 +68,7 @@ export default function SubmissionPage() {
     <div className="p-4">
       <h1 className="text-xl font-bold">イベント詳細</h1>
       <p>イベント名: {project.name}</p>
+      <p>時間: {dayjs(project.startDate).format("YYYY/MM/DD")} 〜 {dayjs(project.endDate).format("YYYY/MM/DD")}</p>
       {/*  FIXME: guestName の更新ごとに Calendar が再描画され、コストが大きい*/}
       <Calendar project={project} onSubmit={postAvailability} myGuestId={myGuestId ?? ""} />
       {isHost && (
