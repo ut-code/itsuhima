@@ -13,25 +13,29 @@ export default function RootPage() {
   if (loading) return <p>読み込み中...</p>;
   if (error) return <p>エラーが発生しました: {error}</p>;
 
-  return involvedProjects ? (
+  return (
     <>
       <Header />
-      <Preview asHost={involvedProjects.asHost} asGuest={involvedProjects.asGuest} />
+      <div className="container p-4 mx-auto flex flex-col gap-4 justify-center items-center">
+        <div className="flex flex-col items-center">
+          <img src="/logo.png" alt="logo" width="200px" />
+          {/* TODO: 文面 */}
+          <p>イツヒマは、日程調整アプリです。</p>
+        </div>
+        <div className="flex justify-center">
+          <NavLink to="./new" end className="btn btn-lg btn-primary">
+            イベントを作成
+          </NavLink>
+        </div>
+        {involvedProjects ? <Preview asHost={involvedProjects.asHost} asGuest={involvedProjects.asGuest} /> : <Landing />}
+      </div>
     </>
-  ) : (
-    <Landing />
-  );
+  )
 }
 
 function Preview({ asHost: hostingProjects, asGuest: guestingProjects }: InvolvedProjects) {
   return (
-    <div className="space-y-6 p-4">
-      <h1 className="text-4xl mb-4">トップページ</h1>
-      <div className="flex justify-center">
-        <NavLink to="./new" end className="btn btn-lg btn-primary">
-          イベントを作成
-        </NavLink>
-      </div>
+    <div className="mt-4">
       <h2 className="text-2xl font-bold">あなたがホストのイベント一覧</h2>
       {hostingProjects.length > 0 ? (
         <ul className="list-disc pl-5 space-y-2">
@@ -75,14 +79,9 @@ function Preview({ asHost: hostingProjects, asGuest: guestingProjects }: Involve
   );
 }
 
-// ---------- Landing ----------
 function Landing() {
   return (
     <div className="p-4">
-      <h1 className="text-4xl mb-4">トップページ</h1>
-      <NavLink to="./new" end className="btn btn-primary">
-        イベントを作成する。
-      </NavLink>
       <div className="mt-4">ランディングページ</div>
     </div>
   );
