@@ -77,6 +77,13 @@ export const involvedProjectsResSchema = z.object({
 
 export type InvolvedProjects = z.infer<typeof involvedProjectsResSchema>;
 
+export const meResSchema = z.object({
+  guests: z.array(guest),
+  hosts: z.array(host),
+})
+
+export type Me = z.infer<typeof meResSchema>;
+
 // export const GuestSchema = z.object({
 //   id: z.string.optional(),
 //   name: z.string(),

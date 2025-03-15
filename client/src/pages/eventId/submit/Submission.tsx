@@ -1,6 +1,6 @@
 import { NavLink, useNavigate, useParams } from "react-router";
 import { Calendar } from "../../../components/Calendar";
-import { Project, projectResSchema } from "../../../../../common/schema";
+import { Me, meResSchema, Project, projectResSchema } from "../../../../../common/schema";
 import { useData } from "../../../hooks";
 import { useCallback, useState } from "react";
 
@@ -8,11 +8,22 @@ export default function SubmissionPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const {
     data: project,
-    loading,
-    error,
+    loading: projectLoading,
+    error: projectError,
   } = useData<Project>(`http://localhost:3000/event/${eventId}`, projectResSchema);
 
+  const {
+    data: me,
+    loading: meLoading,
+    error: meError,
+  } = useData<Me>("http://localhost:3000/user/me", meResSchema);
+
+  const loading = projectLoading || meLoading;
+  const error = (projectError ?? "") + (meError ?? "");
+
   const [guestName, setGuestName] = useState("");
+
+  const myGuestId = me?.guests.find((g) => g.eventId === eventId)?.id;
 
   // const [isHost, setIsHost] = useState(false);
   // const [alreadyGuest, setAlreadyGuest] = useState(false);
@@ -125,45 +136,57 @@ export default function SubmissionPage() {
   //   return dates;
   // };
 
-  const postAvailability = useCallback(async (slots: { start: Date; end: Date }[]) => {
-    const payload = {
-      name: guestName,
-      eventId, // TODO:
-      slots,
-    };
-    try {
-      // submitReqSchema.parse(payload) TODO:
-    } catch (err) {
-      console.error(err);
-      return;
+  const postAvailability = useCallback(
+    async (slots: { start: Date; end: Date }[], myGuestId: string) => {
+      const payload = {
+        name: guestName,
+        eventId,
+        slots,
+      };
+      try {
+        // submitReqSchema.parse(payload) TODO:
+      } catch (err) {
+        console.error(err);
+        return;
+      }
+      if (!myGuestId) {
+      await fetch(`http://localhost:3000/event/${eventId}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        credentials: "include",
+      });
+    } else {
+      await fetch(`http://localhost:3000/event/${eventId}/submit`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        credentials: "include",
+      });
     }
-    await fetch(`http://localhost:3000/event/${eventId}/submit`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      credentials: "include",
-    });
-  }, [guestName, eventId]);
+      
+    },
+    [guestName, eventId],
+  );
 
   // -------------------- UI --------------------
   if (loading) return <p>読み込み中...</p>;
   if (error) return <p>エラー: {error}</p>;
   if (!project) return <p>イベントが存在しません。</p>;
-
-  // const dates = getDatesInRange(event.startDate, event.endDate);
+  if (!me) return <p>ユーザー情報が取得できませんでした。</p>;
 
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold">イベント詳細</h1>
       <p>イベント名: {project.name}</p>
-      {/* TODO: guestName の更新ごとに Calendar が再描画され、コストが大きい*/}
-      <Calendar project={project} onSubmit={postAvailability} />
+      {/*  FIXME: guestName の更新ごとに Calendar が再描画され、コストが大きい*/}
+      <Calendar project={project} onSubmit={postAvailability} myGuestId={myGuestId ?? ""}/>
       {/* {isHost && (
         <NavLink to={`/${eventId}/edit`} className="block hover:underline">
           イベントを編集する
         </NavLink>
       )} */}
-      
+
       {/* ----------- 大枠 (Range) ----------- */}
       {/* TODO: カレンダーにグレー枠で表示など */}
       {/* <h2 className="text-lg font-semibold mt-4">時間帯の大枠 (Range)</h2>
@@ -209,7 +232,6 @@ export default function SubmissionPage() {
         onChange={(e) => setGuestName(e.target.value)}
         className="input input-bordered w-full max-w-xs my-2"
       />
-
     </div>
   );
 }

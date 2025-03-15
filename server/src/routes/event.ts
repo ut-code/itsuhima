@@ -171,6 +171,12 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
   const { eventId } = req.params;
   const browserId = req.cookies?.browserId;
 
+  const existingGuest = await prisma.guest.findFirst({
+    where: { eventId, browserId }});
+  if (existingGuest) {
+    return res.status(403).json({ message: "すでに登録済みです" });
+  }
+
   const parsed = submitReqSchema.safeParse(req.body);
   if (!parsed.success) {
     console.error("バリデーションエラー:", parsed.error);
@@ -213,76 +219,56 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
 });
 
 //日程編集。Guestのみ
-// router.put("/:eventId/submit", async (req: Request, res: Response) => {
-//   const { eventId } = req.params;
-//   const browserId = req.cookies?.browserId;
+router.put("/:eventId/submit", async (req: Request, res: Response) => {
+  const { eventId } = req.params;
+  const browserId = req.cookies?.browserId;
 
-//   const parsed = GuestSchema.safeParse(req.body);
-//   if (!parsed.success) {
-//     console.error("バリデーションエラー:", parsed.error);
-//     return res.status(400).json({
-//       message: "送信データの形式が不正です",
-//       errors: parsed.error.errors,
-//     });
-//   }
+  const parsed = submitReqSchema.safeParse(req.body); // TODO:
+  if (!parsed.success) {
+    console.error("バリデーションエラー:", parsed.error);
+    return res.status(400).json({
+      message: "送信データの形式が不正です",
+      errors: parsed.error.errors,
+    });
+  }
 
-//   const { name, slots } = parsed.data;
+  const { slots } = parsed.data;
 
-//   try {
-//     const existingGuest = await prisma.guest.findFirst({
-//       where: { eventId, browserId },
-//       include: { slots: true },
-//     });
+  try {
+    const existingGuest = await prisma.guest.findFirst({
+      where: { eventId, browserId },
+      include: { slots: true },
+    });
 
-//     const slotData = slots?.map((slot: Slot) => ({
-//       start: slot.start,
-//       end: slot.end,
-//       eventId,
-//     }));
+    const slotData = slots?.map((slot) => ({
+      start: slot.start,
+      end: slot.end,
+      eventId,
+    }));
 
-//     let guest;
+    let guest;
 
-//     if (existingGuest) {
-//       console.log("既存ゲストを更新します。");
+    if (existingGuest) {
+      await prisma.slot.deleteMany({ where: { guestId: existingGuest.id } });
 
-//       await prisma.slot.deleteMany({ where: { guestId: existingGuest.id } });
+      // ゲスト情報更新
+      guest = await prisma.guest.update({
+        where: { id: existingGuest.id },
+        data: {
+          slots: { create: slotData },
+        },
+        include: { slots: true },
+      });
+    } 
 
-//       // ゲスト情報更新
-//       guest = await prisma.guest.update({
-//         where: { id: existingGuest.id },
-//         data: {
-//           name,
-//           slots: { create: slotData },
-//         },
-//         include: { slots: true },
-//       });
-//     } else {
-//       console.log("新規ゲストを作成します。");
-
-//       // ゲスト新規作成
-//       guest = await prisma.guest.create({
-//         data: {
-//           name,
-//           browserId,
-//           event: { connect: { id: eventId } },
-//           slots: { create: slotData },
-//         },
-//       });
-
-//       res.cookie("browserId", guest.browserId, {
-//         httpOnly: true,
-//         maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
-//       });
-//     }
-
-//     return res.status(existingGuest ? 200 : 201).json({
-//       message: existingGuest ? "ゲスト情報が更新されました！" : "ゲスト情報が新規作成されました！",
-//       guest,
-//     });
-//   } catch (error) {
-//     console.error("処理中のエラー:", error);
-//     return res.status(500).json({ message: "サーバーエラーが発生しました" });
-//   }
-// });
+    return res.status(existingGuest ? 200 : 201).json({
+      message: existingGuest ? "ゲスト情報が更新されました！" : "ゲスト情報が新規作成されました！",
+      guest,
+    });
+  } catch (error) {
+    console.error("処理中のエラー:", error);
+    return res.status(500).json({ message: "サーバーエラーが発生しました" });
+  }
+});
 
 export default router;
