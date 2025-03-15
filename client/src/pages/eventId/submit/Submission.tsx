@@ -5,12 +5,12 @@ import { useData } from "../../../hooks";
 import { useCallback, useState } from "react";
 
 export default function SubmissionPage() {
-  const { eventId } = useParams<{ eventId: string }>();
+  const { eventId: projectId } = useParams<{ eventId: string }>();
   const {
     data: project,
     loading: projectLoading,
     error: projectError,
-  } = useData<Project>(`http://localhost:3000/projects/${eventId}`, projectResSchema);
+  } = useData<Project>(`http://localhost:3000/projects/${projectId}`, projectResSchema);
 
   const {
     data: me,
@@ -23,14 +23,14 @@ export default function SubmissionPage() {
 
   const [guestName, setGuestName] = useState("");
 
-  const myGuestId = me?.guests.find((g) => g.eventId === eventId)?.id;
-  const isHost = me?.hosts.some((h) => h.eventId === eventId);
+  const myGuestId = me?.guests.find((g) => g.projectId === projectId)?.id;
+  const isHost = me?.hosts.some((h) => h.projectId === projectId);
 
   const postAvailability = useCallback(
     async (slots: { start: Date; end: Date }[], myGuestId: string) => {
       const payload = {
         name: guestName,
-        eventId,
+        projectId,
         slots,
       };
       try {
@@ -40,14 +40,14 @@ export default function SubmissionPage() {
         return;
       }
       if (!myGuestId) {
-        await fetch(`http://localhost:3000/projects/${eventId}/submit`, {
+        await fetch(`http://localhost:3000/projects/${projectId}/submit`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
           credentials: "include",
         });
       } else {
-        await fetch(`http://localhost:3000/projects/${eventId}/submit`, {
+        await fetch(`http://localhost:3000/projects/${projectId}/submit`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -55,7 +55,7 @@ export default function SubmissionPage() {
         });
       }
     },
-    [guestName, eventId],
+    [guestName, projectId],
   );
 
   // -------------------- UI --------------------
@@ -71,7 +71,7 @@ export default function SubmissionPage() {
       {/*  FIXME: guestName の更新ごとに Calendar が再描画され、コストが大きい*/}
       <Calendar project={project} onSubmit={postAvailability} myGuestId={myGuestId ?? ""} />
       {isHost && (
-        <NavLink to={`/${eventId}/edit`} className="block hover:underline">
+        <NavLink to={`/${projectId}/edit`} className="block hover:underline">
           イベントを編集する
         </NavLink>
       )}

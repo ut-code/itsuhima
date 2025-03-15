@@ -21,13 +21,13 @@ router.post("/",
   async (req: Request, res: Response) => {
   try {
     const data = projectReqSchema.parse(req.body);
-    const event = await prisma.event.create({
+    const event = await prisma.project.create({
       data: {
         name: data.name,
         startDate: data.startDate,
         endDate: data.endDate,
-        range: {
-          create: data.ranges,
+        restrictions: {
+          create: data.restrictions,
         },
         hosts: {
           create: {
@@ -62,10 +62,10 @@ router.get("/:projectId", async (req: Request<{ projectId: string }>, res: Respo
     const { projectId } = req.params;
     const id = z.string().uuid().parse(projectId);
     const browserId = req.cookies?.browserId || null;
-    const project = await prisma.event.findUnique({
+    const project = await prisma.project.findUnique({
       where: { id },
       include: {
-        range: true,
+        restrictions: true,
         guests: {
           include: {
             slots: true, // slots 全部欲しいなら select より include
@@ -103,7 +103,6 @@ router.get("/:projectId", async (req: Request<{ projectId: string }>, res: Respo
 
     res.status(200).json({ 
       ...project,
-      ranges: project.range, // TODO:
      });
   } catch (error) {
     console.error("イベント取得エラー:", error);
@@ -167,12 +166,12 @@ router.get("/:projectId", async (req: Request<{ projectId: string }>, res: Respo
 // });
 
 //日程提出。Guestのみ。Guest作成
-router.post("/:eventId/submit", async (req: Request, res: Response) => {
-  const { eventId } = req.params;
+router.post("/:projectId/submit", async (req: Request, res: Response) => {
+  const { projectId } = req.params;
   const browserId = req.cookies?.browserId;
 
   const existingGuest = await prisma.guest.findFirst({
-    where: { eventId, browserId }});
+    where: { projectId, browserId }});
   if (existingGuest) {
     return res.status(403).json({ message: "すでに登録済みです" });
   }
@@ -193,12 +192,12 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
       data: {
         name,
         browserId,
-        event: { connect: { id: eventId } },
+        project: { connect: { id: projectId } },
         slots: {
           create: slots?.map((slot) => ({
-            start: slot.start,
-            end: slot.end,
-            eventId,
+            from: slot.start,
+            to: slot.end,
+            projectId,
           })),
         },
       },
@@ -219,8 +218,8 @@ router.post("/:eventId/submit", async (req: Request, res: Response) => {
 });
 
 //日程編集。Guestのみ
-router.put("/:eventId/submit", async (req: Request, res: Response) => {
-  const { eventId } = req.params;
+router.put("/:projectId/submit", async (req: Request, res: Response) => {
+  const { eventId: projectId } = req.params;
   const browserId = req.cookies?.browserId;
 
   const parsed = submitReqSchema.safeParse(req.body); // TODO:
@@ -236,14 +235,14 @@ router.put("/:eventId/submit", async (req: Request, res: Response) => {
 
   try {
     const existingGuest = await prisma.guest.findFirst({
-      where: { eventId, browserId },
+      where: { projectId, browserId },
       include: { slots: true },
     });
 
     const slotData = slots?.map((slot) => ({
-      start: slot.start,
-      end: slot.end,
-      eventId,
+      from: slot.start,
+      to: slot.end,
+      projectId,
     }));
 
     let guest;
@@ -251,7 +250,7 @@ router.put("/:eventId/submit", async (req: Request, res: Response) => {
     if (existingGuest) {
       await prisma.slot.deleteMany({ where: { guestId: existingGuest.id } });
 
-      // ゲスト情報更新
+      // ゲスト情報更新 // FIXME: project is missing??
       guest = await prisma.guest.update({
         where: { id: existingGuest.id },
         data: {

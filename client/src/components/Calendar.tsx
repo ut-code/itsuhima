@@ -77,7 +77,7 @@ export const Calendar = ({ project, onSubmit, myGuestId }: Props) => {
 
     const slots = project.guests.flatMap((guest) => guest.slots);
     slots.forEach((slot) => {
-      const { from, to } = getVertexes(new Date(slot.start), new Date(slot.end));
+      const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
       if (slot.guestId === myGuestId) {
         console.log("🔵", from, to);
         myMatrix.setRange(from, to, true);

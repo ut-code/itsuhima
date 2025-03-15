@@ -19,8 +19,8 @@ router.get("/me", async (req, res) => {
       where: { browserId },
       select: {
         id: true,
-        eventId: true,
-        event: {
+        projectId: true,
+        project: {
           select: {
             id: true,
             name: true,
@@ -37,8 +37,8 @@ router.get("/me", async (req, res) => {
       select: {
         id: true,
         name: true,
-        eventId: true,
-        event: {
+        projectId: true,
+        project: {
           select: {
             id: true,
             name: true,
@@ -71,7 +71,7 @@ router.get(
     }
 
     try {
-      const hostingProjects = await prisma.event.findMany({
+      const hostingProjects = await prisma.project.findMany({
         where: { hosts: { some: { browserId } } },
         select: {
           id: true,
@@ -81,7 +81,7 @@ router.get(
         },
       });
 
-      const guestingProjects = await prisma.event.findMany({
+      const guestingProjects = await prisma.project.findMany({
         where: { guests: { some: { browserId } } },
         select: {
           id: true,

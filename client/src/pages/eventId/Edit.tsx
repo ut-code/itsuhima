@@ -23,7 +23,7 @@ export default function EditPage() {
     error: meError,
   } = useData<Me>("http://localhost:3000/users/me", meResSchema);
 
-  const isHost = me?.hosts.some((h) => h.eventId === eventId);
+  const isHost = me?.hosts.some((h) => h.projectId === eventId);
 
   const loading = projectLoading || meLoading;
   const error = (projectError ?? "") + (meError ?? "");

@@ -5,13 +5,13 @@ const isoStrToDate = z.string().datetime().transform((str) => new Date(str));
 
 const host = z.object({
   id: z.string().uuid(),
-  eventId: z.string().uuid(),
+  projectId: z.string().uuid(),
 });
 
 const guest = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  eventId: z.string().uuid(),
+  projectId: z.string().uuid(),
 });
 
 const project = z.object({
@@ -21,24 +21,24 @@ const project = z.object({
   endDate: isoStrToDate,
 });
 
-const range = z.object({
+const restriction = z.object({
   id: z.string().uuid(),
-  eventId: z.string().uuid(),
+  projectId: z.string().uuid(),
   startTime: isoStrToDate,
   endTime: isoStrToDate,
 });
 
 const slot = z.object({
   id: z.string().uuid(),
-  eventId: z.string().uuid(),
+  projectId: z.string().uuid(),
   guestId: z.string().uuid(),
-  start: isoStrToDate,
-  end: isoStrToDate,
+  from: isoStrToDate,
+  to: isoStrToDate,
 });
 
 export const submitReqSchema = z.object({
   name: z.string(),
-  eventId: z.string().uuid(),
+  projectId: z.string().uuid(),
   slots: z.array(z.object({
     start: isoStrToDate,
     end: isoStrToDate,
@@ -52,14 +52,14 @@ export const projectReqSchema = z.object({
   name: z.string(),
   startDate: z.string().datetime(),
   endDate: z.string().datetime(),
-  ranges: z.array(z.object({
+  restrictions: z.array(z.object({
     startTime: z.string().datetime(),
     endTime: z.string().datetime(),
   })),
 });
 
 export const projectResSchema = project.extend({
-  ranges: z.array(range),
+  restrictions: z.array(restriction),
   hosts: z.array(host),
   guests: z.array(
     guest.extend({

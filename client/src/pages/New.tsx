@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { projectReqSchema } from "../../../common/schema";
+import { z } from "zod";
 
 export default function NewPage() {
   const [name, setName] = useState<string>("");
@@ -57,8 +59,8 @@ export default function NewPage() {
       name,
       startDate: startDateTime,
       endDate: endDateTime,
-      ranges: rangeWithDateTime,
-    };
+      restrictions: rangeWithDateTime,
+    } satisfies z.infer<typeof projectReqSchema>;
 
     console.log("送信データ:", eventData); // デバッグ用確認
 
