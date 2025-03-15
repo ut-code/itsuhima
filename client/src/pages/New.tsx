@@ -4,6 +4,8 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { projectReqSchema } from "../../../common/schema";
 import { z } from "zod";
+import Header from "../components/Header";
+import { API_ENDPOINT } from "../utils";
 
 // スキーマに基づく型定義
 type ProjectFormValues = z.infer<typeof projectReqSchema>;
@@ -57,7 +59,7 @@ export default function NewPage() {
 
     console.log("送信データ:", eventData);
 
-    const res = await fetch("http://localhost:3000/projects", {
+    const res = await fetch(`${API_ENDPOINT}/projects`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(eventData),
@@ -77,78 +79,81 @@ export default function NewPage() {
 
   return (
     <>
-      {loading && (
-        <div className="fixed inset-0 bg-opacity-50 flex justify-center items-center z-50">
-          <span className="loading loading-spinner loading-lg text-blue"></span>
-        </div>
-      )}
-      <h1>イベント作成</h1>
+      <Header />
+      <div className="container p-4 mx-auto">
+        {loading && (
+          <div className="fixed inset-0 bg-opacity-50 flex justify-center items-center z-50">
+            <span className="loading loading-spinner loading-lg text-blue"></span>
+          </div>
+        )}
+        <h1>イベント作成</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <label>イベント名</label>
-          <input
-            {...register("name")}
-            className="input input-bordered w-full"
-            placeholder="イベント名"
-          />
-          {errors.name && <p className="text-red-500">{errors.name.message}</p>}
-        </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <label>イベント名</label>
+            <input
+              {...register("name")}
+              className="input input-bordered w-full"
+              placeholder="イベント名"
+            />
+            {errors.name && <p className="text-red-500">{errors.name.message}</p>}
+          </div>
 
-        <div>
-          <label>開始日</label>
-          <input type="date" {...register("startDate")} className="input input-bordered w-full" />
-          {errors.startDate && <p className="text-red-500">{errors.startDate.message}</p>}
-        </div>
+          <div>
+            <label>開始日</label>
+            <input type="date" {...register("startDate")} className="input input-bordered w-full" />
+            {errors.startDate && <p className="text-red-500">{errors.startDate.message}</p>}
+          </div>
 
-        <div>
-          <label>終了日</label>
-          <input type="date" {...register("endDate")} className="input input-bordered w-full" />
-          {errors.endDate && <p className="text-red-500">{errors.endDate.message}</p>}
-        </div>
+          <div>
+            <label>終了日</label>
+            <input type="date" {...register("endDate")} className="input input-bordered w-full" />
+            {errors.endDate && <p className="text-red-500">{errors.endDate.message}</p>}
+          </div>
 
-        <div>
-          <label>範囲 (range)</label>
-          {fields.map((field, index) => (
-            <div key={field.id} className="space-y-2 p-2 border rounded mb-2">
-              <div>
-                <label>開始時刻</label>
-                <input
-                  type="time"
-                  {...register(`allowedRanges.${index}.startTime`)}
-                  className="input input-bordered w-full"
-                />
-                {errors.allowedRanges?.[index]?.startTime && (
-                  <p className="text-red-500">{errors.allowedRanges[index].startTime?.message}</p>
-                )}
+          <div>
+            <label>範囲 (range)</label>
+            {fields.map((field, index) => (
+              <div key={field.id} className="space-y-2 p-2 border rounded mb-2">
+                <div>
+                  <label>開始時刻</label>
+                  <input
+                    type="time"
+                    {...register(`allowedRanges.${index}.startTime`)}
+                    className="input input-bordered w-full"
+                  />
+                  {errors.allowedRanges?.[index]?.startTime && (
+                    <p className="text-red-500">{errors.allowedRanges[index].startTime?.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label>終了時刻</label>
+                  <input
+                    type="time"
+                    {...register(`allowedRanges.${index}.endTime`)}
+                    className="input input-bordered w-full"
+                  />
+                  {errors.allowedRanges?.[index]?.endTime && (
+                    <p className="text-red-500">{errors.allowedRanges[index].endTime?.message}</p> //TODO: なぜかエラーが表示されないが
+                  )}
+                </div>
               </div>
-              <div>
-                <label>終了時刻</label>
-                <input
-                  type="time"
-                  {...register(`allowedRanges.${index}.endTime`)}
-                  className="input input-bordered w-full"
-                />
-                {errors.allowedRanges?.[index]?.endTime && (
-                  <p className="text-red-500">{errors.allowedRanges[index].endTime?.message}</p> //TODO: なぜかエラーが表示されないが
-                )}
-              </div>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => append({ startTime: "", endTime: "" })}
-            className="btn btn-secondary"
-          >
-            範囲を追加
+            ))}
+            <button
+              type="button"
+              onClick={() => append({ startTime: "", endTime: "" })}
+              className="btn btn-secondary"
+            >
+              範囲を追加
+            </button>
+            {errors.allowedRanges && <p className="text-red-500">{errors.allowedRanges.message}</p>}
+          </div>
+
+          <button type="submit" className="btn btn-primary w-full" disabled={!isValid}>
+            送信
           </button>
-          {errors.allowedRanges && <p className="text-red-500">{errors.allowedRanges.message}</p>}
-        </div>
-
-        <button type="submit" className="btn btn-primary w-full" disabled={!isValid}>
-          送信
-        </button>
-      </form>
+        </form>
+      </div>
     </>
   );
 }
