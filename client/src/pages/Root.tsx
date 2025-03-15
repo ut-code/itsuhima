@@ -5,6 +5,7 @@ import Header from "../components/Header";
 import { API_ENDPOINT } from "../utils";
 
 export default function RootPage() {
+  console.log("🤩",API_ENDPOINT)
   const {
     data: involvedProjects,
     loading,

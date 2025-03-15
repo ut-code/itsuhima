@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -10,9 +12,11 @@ export const prisma = new PrismaClient();
 const app = express();
 const port = 3000;
 
+const allowedOrigins = process.env.CORS_ALLOW_ORIGINS?.split(",") || [];
+
 app.use(
   cors({
-    origin: "CORS_ALLOW_ORIGINS",
+    origin: allowedOrigins,
     credentials: true,
   })
 ); // TODO: configure
