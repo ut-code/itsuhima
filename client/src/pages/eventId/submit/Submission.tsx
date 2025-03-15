@@ -68,7 +68,10 @@ export default function SubmissionPage() {
     <div className="p-4">
       <h1 className="text-xl font-bold">イベント詳細</h1>
       <p>イベント名: {project.name}</p>
-      <p>時間: {dayjs(project.startDate).format("YYYY/MM/DD")} 〜 {dayjs(project.endDate).format("YYYY/MM/DD")}</p>
+      <p>
+        日程範囲: {dayjs(project.startDate).format("YYYY/MM/DD")} 〜{" "}
+        {dayjs(project.endDate).format("YYYY/MM/DD")}
+      </p>
       {/*  FIXME: guestName の更新ごとに Calendar が再描画され、コストが大きい*/}
       <Calendar project={project} onSubmit={postAvailability} myGuestId={myGuestId ?? ""} />
       {isHost && (
