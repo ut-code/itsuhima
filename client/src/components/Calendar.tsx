@@ -23,10 +23,16 @@ const SELECT_EVENT_ID = "selectBox";
 export const Calendar = ({ project, onSubmit, myGuestId }: Props) => {
   console.log("📅");
   // TODO: 横幅の挙動がおかしいので修正 (1 日少ないような・・)
-  // const countDays = dayjs(project.endDate).startOf("day").diff(dayjs(project.startDate).startOf("day"), "day") + 1;
-  // console.log("📅", countDays);
+  const countDays =
+    dayjs(project.endDate).startOf("day").diff(dayjs(project.startDate).startOf("day"), "day") + 1;
   const myMatrixRef = useRef<CalendarMatrix>(new CalendarMatrix(7, project.startDate));
   const othersMatrixRef = useRef<CalendarMatrix>(new CalendarMatrix(7, project.startDate));
+
+  // TODO: 現在は最初の選択範囲のみ。FullCalendar の制約により、複数の allowedRanges には対応できないため、のちに selectAllow などで独自実装が必要
+  const tmpAllowedRange = project.allowedRanges[0] ?? {
+    startTime: dayjs(new Date()).set("hour", 0).set("minute", 0),
+    endTime: dayjs(new Date()).set("hour", 23).set("minute", 59),
+  };
 
   const mySlotsRef = useRef<
     {
@@ -120,6 +126,27 @@ export const Calendar = ({ project, onSubmit, myGuestId }: Props) => {
         plugins={[timeGridPlugin, interactionPlugin]}
         longPressDelay={200}
         slotDuration={"00:15:00"}
+        allDaySlot={false}
+        initialDate={project.startDate}
+        slotMinTime={dayjs(tmpAllowedRange.startTime).format("HH:mm:ss")}
+        slotMaxTime={dayjs(tmpAllowedRange.endTime).format("HH:mm:ss")}
+        headerToolbar={false}
+        views={{
+          timeGrid: {
+            type: "timeGrid",
+            duration: { days: countDays },
+            // TODO: not working..?
+            // visibleRange: {
+            //   start: project.startDate,
+            //   end: project.endDate,
+            // },
+            validRange: {
+              start: project.startDate,
+              end: project.endDate,
+            },
+          },
+        }}
+        initialView="timeGrid"
         eventMouseEnter={(info) => {
           if (info.event.start && info.event.end) {
             hoveringEventRef.current = { from: info.event.start, to: info.event.end };
