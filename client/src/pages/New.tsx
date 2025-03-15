@@ -25,13 +25,13 @@ export default function NewPage() {
       name: "",
       startDate: "",
       endDate: "",
-      restrictions: [{ startTime: "", endTime: "" }],
+      allowedRanges: [{ startTime: "", endTime: "" }],
     },
   });
 
   const { fields, append } = useFieldArray({
     control,
-    name: "restrictions",
+    name: "allowedRanges",
   });
 
   // 送信処理
@@ -43,7 +43,7 @@ export default function NewPage() {
     const endDateTime = new Date(data.endDate + "T23:59:59.999Z").toISOString();
 
     // range もISO形式に変換
-    const rangeWithDateTime = data.restrictions.map((range) => ({
+    const rangeWithDateTime = data.allowedRanges.map((range) => ({
       startTime: new Date(`${data.startDate}T${range.startTime}:00`).toISOString(),
       endTime: new Date(`${data.startDate}T${range.endTime}:00`).toISOString(),
     }));
@@ -52,8 +52,8 @@ export default function NewPage() {
       name: data.name,
       startDate: startDateTime,
       endDate: endDateTime,
-      restrictions: rangeWithDateTime,
-    };
+      allowedRanges: rangeWithDateTime,
+    } satisfies z.infer<typeof projectReqSchema>;
 
     console.log("送信データ:", eventData);
 
@@ -115,22 +115,22 @@ export default function NewPage() {
                 <label>開始時刻</label>
                 <input
                   type="time"
-                  {...register(`restrictions.${index}.startTime`)}
+                  {...register(`allowedRanges.${index}.startTime`)}
                   className="input input-bordered w-full"
                 />
-                {errors.restrictions?.[index]?.startTime && (
-                  <p className="text-red-500">{errors.restrictions[index].startTime?.message}</p>
+                {errors.allowedRanges?.[index]?.startTime && (
+                  <p className="text-red-500">{errors.allowedRanges[index].startTime?.message}</p>
                 )}
               </div>
               <div>
                 <label>終了時刻</label>
                 <input
                   type="time"
-                  {...register(`restrictions.${index}.endTime`)}
+                  {...register(`allowedRanges.${index}.endTime`)}
                   className="input input-bordered w-full"
                 />
-                {errors.restrictions?.[index]?.endTime && (
-                  <p className="text-red-500">{errors.restrictions[index].endTime?.message}</p>
+                {errors.allowedRanges?.[index]?.endTime && (
+                  <p className="text-red-500">{errors.allowedRanges[index].endTime?.message}</p>
                 )}
               </div>
             </div>
@@ -142,7 +142,7 @@ export default function NewPage() {
           >
             範囲を追加
           </button>
-          {errors.restrictions && <p className="text-red-500">{errors.restrictions.message}</p>}
+          {errors.allowedRanges && <p className="text-red-500">{errors.allowedRanges.message}</p>}
         </div>
 
         <button type="submit" className="btn btn-primary w-full" disabled={!isValid}>

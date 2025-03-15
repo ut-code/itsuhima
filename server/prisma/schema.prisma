@@ -14,17 +14,17 @@ datasource db {
 }
 
 model Project {
-  id           String        @id @default(uuid())
-  name         String
-  startDate    DateTime
-  endDate      DateTime
-  restrictions Restriction[]
-  slots        Slot[]
-  hosts        Host[]
-  guests       Guest[]
+  id            String         @id @default(uuid())
+  name          String
+  startDate     DateTime
+  endDate       DateTime
+  allowedRanges AllowedRange[]
+  slots         Slot[]
+  hosts         Host[]
+  guests        Guest[]
 }
 
-model Restriction {
+model AllowedRange {
   id        String   @id @default(uuid())
   startTime DateTime
   endTime   DateTime

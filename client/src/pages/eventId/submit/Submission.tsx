@@ -40,14 +40,14 @@ export default function SubmissionPage() {
         return;
       }
       if (!myGuestId) {
-        await fetch(`http://localhost:3000/projects/${projectId}/submit`, {
+        await fetch(`http://localhost:3000/projects/${projectId}/availabilities`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
           credentials: "include",
         });
       } else {
-        await fetch(`http://localhost:3000/projects/${projectId}/submit`, {
+        await fetch(`http://localhost:3000/projects/${projectId}/availabilities`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -62,7 +62,6 @@ export default function SubmissionPage() {
   if (loading) return <p>読み込み中...</p>;
   if (error) return <p>エラー: {error}</p>;
   if (!project) return <p>イベントが存在しません。</p>;
-  if (!me) return <p>ユーザー情報が取得できませんでした。</p>;
 
   return (
     <div className="p-4">

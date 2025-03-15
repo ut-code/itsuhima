@@ -9,7 +9,8 @@ const router = Router();
 // TODO: response type
 
 // イベント作成。Hostのみ。Host作成
-router.post("/",
+router.post(
+  "/",
   // (req, res, next) => {
   //   const parseResult = tmpSchema.safeParse(req.body);
   //   if (!parseResult.success) {
@@ -19,42 +20,41 @@ router.post("/",
   //   next();
   // },
   async (req: Request, res: Response) => {
-  try {
-    const data = projectReqSchema.parse(req.body);
-    const event = await prisma.project.create({
-      data: {
-        name: data.name,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        restrictions: {
-          create: data.restrictions,
-        },
-        hosts: {
-          create: {
-            browserId: req.cookies?.browserId || undefined,
+    try {
+      const data = projectReqSchema.parse(req.body);
+      const event = await prisma.project.create({
+        data: {
+          name: data.name,
+          startDate: data.startDate,
+          endDate: data.endDate,
+          allowedRanges: {
+            create: data.allowedRanges,
+          },
+          hosts: {
+            create: {
+              browserId: req.cookies?.browserId || undefined,
+            },
           },
         },
-      },
-      include: { hosts: true },
-    });
-    const host = event.hosts[0];
+        include: { hosts: true },
+      });
+      const host = event.hosts[0];
 
-    res.cookie("browserId", host.browserId, {
-      httpOnly: true,
-      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
-    });
+      res.cookie("browserId", host.browserId, {
+        httpOnly: true,
+        maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
+      });
 
-    res.status(201).json(event.id);
-  } catch (err) {
-    console.error("エラー:", err);
-    if (err instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({ message: "バリデーションエラー", errors: err.errors });
+      res.status(201).json(event.id);
+    } catch (err) {
+      console.error("エラー:", err);
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: "バリデーションエラー", errors: err.errors });
+      }
+      res.status(500).json({ message: "イベント作成時にエラーが発生しました" });
     }
-    res.status(500).json({ message: "イベント作成時にエラーが発生しました" });
   }
-});
+);
 
 // イベント情報の取得 Guestのみ
 router.get("/:projectId", async (req: Request<{ projectId: string }>, res: Response<Project>) => {
@@ -65,7 +65,7 @@ router.get("/:projectId", async (req: Request<{ projectId: string }>, res: Respo
     const project = await prisma.project.findUnique({
       where: { id },
       include: {
-        restrictions: true,
+        allowedRanges: true,
         guests: {
           include: {
             slots: true, // slots 全部欲しいなら select より include
@@ -101,9 +101,9 @@ router.get("/:projectId", async (req: Request<{ projectId: string }>, res: Respo
     //     }
     //   : null;
 
-    res.status(200).json({ 
+    res.status(200).json({
       ...project,
-     });
+    });
   } catch (error) {
     console.error("イベント取得エラー:", error);
     // TODO:
@@ -166,12 +166,13 @@ router.get("/:projectId", async (req: Request<{ projectId: string }>, res: Respo
 // });
 
 //日程提出。Guestのみ。Guest作成
-router.post("/:projectId/submit", async (req: Request, res: Response) => {
+router.post("/:projectId/availabilities", async (req: Request, res: Response) => {
   const { projectId } = req.params;
   const browserId = req.cookies?.browserId;
 
   const existingGuest = await prisma.guest.findFirst({
-    where: { projectId, browserId }});
+    where: { projectId, browserId },
+  });
   if (existingGuest) {
     return res.status(403).json({ message: "すでに登録済みです" });
   }
@@ -218,8 +219,8 @@ router.post("/:projectId/submit", async (req: Request, res: Response) => {
 });
 
 //日程編集。Guestのみ
-router.put("/:projectId/submit", async (req: Request, res: Response) => {
-  const { eventId: projectId } = req.params;
+router.put("/:projectId/availabilities", async (req: Request, res: Response) => {
+  const { projectId } = req.params;
   const browserId = req.cookies?.browserId;
 
   const parsed = submitReqSchema.safeParse(req.body); // TODO:
@@ -258,7 +259,7 @@ router.put("/:projectId/submit", async (req: Request, res: Response) => {
         },
         include: { slots: true },
       });
-    } 
+    }
 
     return res.status(existingGuest ? 200 : 201).json({
       message: existingGuest ? "ゲスト情報が更新されました！" : "ゲスト情報が新規作成されました！",
