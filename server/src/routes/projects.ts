@@ -27,8 +27,8 @@ router.post(
           name: data.name,
           startDate: data.startDate,
           endDate: data.endDate,
-          restrictions: {
-            create: data.restrictions,
+          allowedRanges: {
+            create: data.allowedRanges,
           },
           hosts: {
             create: {
@@ -65,7 +65,7 @@ router.get("/:projectId", async (req: Request<{ projectId: string }>, res: Respo
     const project = await prisma.project.findUnique({
       where: { id },
       include: {
-        restrictions: true,
+        allowedRanges: true,
         guests: {
           include: {
             slots: true, // slots 全部欲しいなら select より include

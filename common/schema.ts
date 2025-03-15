@@ -21,7 +21,7 @@ const project = z.object({
   endDate: isoStrToDate,
 });
 
-const restriction = z.object({
+const allowedRange = z.object({
   id: z.string().uuid(),
   projectId: z.string().uuid(),
   startTime: isoStrToDate,
@@ -52,14 +52,14 @@ export const projectReqSchema = z.object({
   name: z.string(),
   startDate: z.string().datetime(),
   endDate: z.string().datetime(),
-  restrictions: z.array(z.object({
+  allowedRanges: z.array(z.object({
     startTime: z.string().datetime(),
     endTime: z.string().datetime(),
   })),
 });
 
 export const projectResSchema = project.extend({
-  restrictions: z.array(restriction),
+  allowedRanges: z.array(allowedRange),
   hosts: z.array(host),
   guests: z.array(
     guest.extend({

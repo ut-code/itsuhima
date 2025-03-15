@@ -59,7 +59,7 @@ export default function NewPage() {
       name,
       startDate: startDateTime,
       endDate: endDateTime,
-      restrictions: rangeWithDateTime,
+      allowedRanges: rangeWithDateTime,
     } satisfies z.infer<typeof projectReqSchema>;
 
     console.log("送信データ:", eventData); // デバッグ用確認
