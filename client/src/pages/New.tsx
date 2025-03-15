@@ -1,68 +1,61 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { projectReqSchema } from "../../../common/schema";
 import { z } from "zod";
 
+// スキーマに基づく型定義
+type ProjectFormValues = z.infer<typeof projectReqSchema>;
+
 export default function NewPage() {
-  const [name, setName] = useState<string>("");
-  const [startDate, setStartDate] = useState<string>(""); // ISO 文字列
-  const [endDate, setEndDate] = useState<string>(""); // ISO 文字列
-  const [ranges, setRanges] = useState<{ startTime: string; endTime: string }[]>([]); // range 配列
-  const navigate = useNavigate(); // ページ遷移
+  const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(false);
 
-  // range 追加処理
-  const handleAddRange = () => {
-    setRanges([...ranges, { startTime: "", endTime: "" }]);
-  };
+  // フォーム管理
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors, isValid },
+  } = useForm<ProjectFormValues>({
+    resolver: zodResolver(projectReqSchema),
+    mode: "onChange",
+    defaultValues: {
+      name: "",
+      startDate: "",
+      endDate: "",
+      allowedRanges: [{ startTime: "", endTime: "" }],
+    },
+  });
 
-  // range 更新処理
-  const handleRangeChange = (index: number, field: "startTime" | "endTime", value: string) => {
-    const newRanges = [...ranges];
-    newRanges[index][field] = value;
-    setRanges(newRanges);
-  };
+  const { fields, append } = useFieldArray({
+    control,
+    name: "allowedRanges",
+  });
 
   // 送信処理
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onSubmit = async (data: ProjectFormValues) => {
     setLoading(true);
 
-    // 日付部分が空の場合は送信させない
-    if (!startDate || !endDate || !ranges) {
-      alert("開始日と終了日を入力してください");
-      setLoading(false);
-      return;
-    }
-    if (startDate >= endDate) {
-      alert("時間の形式が間違っています。");
-      setLoading(false);
-      return;
-    }
+    // 日付をISO形式に変換
+    const startDateTime = new Date(data.startDate + "T00:00:00.000Z").toISOString();
+    const endDateTime = new Date(data.endDate + "T23:59:59.999Z").toISOString();
 
-    // startDate, endDate は "2025-03-13T00:00:00.000Z" 形式に変換
-    const startDateTime = new Date(startDate + "T00:00:00.000Z").toISOString();
-    const endDateTime = new Date(endDate + "T00:00:00.000Z").toISOString(); // 終日のため最後の瞬間
+    // range もISO形式に変換
+    const rangeWithDateTime = data.allowedRanges.map((range) => ({
+      startTime: new Date(`${data.startDate}T${range.startTime}:00`).toISOString(),
+      endTime: new Date(`${data.startDate}T${range.endTime}:00`).toISOString(),
+    }));
 
-    // range も "startDate" を基準にして日時結合
-    const rangeWithDateTime = ranges.map((range) => {
-      const start = new Date(`${startDate}T${range.startTime}`).toISOString();
-      const end = new Date(`${startDate}T${range.endTime}`).toISOString(); // 同日の時間帯として送信
-      return {
-        startTime: start,
-        endTime: end,
-      };
-    });
-
-    // 最終送信データ
     const eventData = {
-      name,
+      name: data.name,
       startDate: startDateTime,
       endDate: endDateTime,
       allowedRanges: rangeWithDateTime,
     } satisfies z.infer<typeof projectReqSchema>;
 
-    console.log("送信データ:", eventData); // デバッグ用確認
+    console.log("送信データ:", eventData);
 
     const res = await fetch("http://localhost:3000/projects", {
       method: "POST",
@@ -70,17 +63,18 @@ export default function NewPage() {
       body: JSON.stringify(eventData),
       credentials: "include",
     });
+
     const eventId = await res.json();
     console.log("受信データ", eventId);
 
+    setLoading(false);
     if (res.ok) {
       navigate(`/${eventId}`);
-      setLoading(false);
     } else {
       alert("送信に失敗しました");
-      setLoading(false);
     }
   };
+
   return (
     <>
       {loading && (
@@ -90,73 +84,68 @@ export default function NewPage() {
       )}
       <h1>イベント作成</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
           <label>イベント名</label>
           <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            {...register("name")}
             className="input input-bordered w-full"
-            required
             placeholder="イベント名"
           />
+          {errors.name && <p className="text-red-500">{errors.name.message}</p>}
         </div>
 
         <div>
           <label>開始日</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="input input-bordered w-full"
-            required
-          />
+          <input type="date" {...register("startDate")} className="input input-bordered w-full" />
+          {errors.startDate && <p className="text-red-500">{errors.startDate.message}</p>}
         </div>
 
         <div>
           <label>終了日</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="input input-bordered w-full"
-            required
-          />
+          <input type="date" {...register("endDate")} className="input input-bordered w-full" />
+          {errors.endDate && <p className="text-red-500">{errors.endDate.message}</p>}
         </div>
 
         <div>
           <label>範囲 (range)</label>
-          {ranges.map((range, index) => (
-            <div key={index} className="space-y-2 p-2 border rounded mb-2">
+          {fields.map((field, index) => (
+            <div key={field.id} className="space-y-2 p-2 border rounded mb-2">
               <div>
                 <label>開始時刻</label>
                 <input
                   type="time"
-                  value={range.startTime}
-                  onChange={(e) => handleRangeChange(index, "startTime", `${e.target.value}:00`)}
+                  {...register(`allowedRanges.${index}.startTime`)}
                   className="input input-bordered w-full"
-                  required
                 />
+                {errors.allowedRanges?.[index]?.startTime && (
+                  <p className="text-red-500">{errors.allowedRanges[index].startTime?.message}</p>
+                )}
               </div>
               <div>
                 <label>終了時刻</label>
                 <input
                   type="time"
-                  value={range.endTime}
-                  onChange={(e) => handleRangeChange(index, "endTime", `${e.target.value}:00`)}
+                  {...register(`allowedRanges.${index}.endTime`)}
                   className="input input-bordered w-full"
-                  required
                 />
+                {errors.allowedRanges?.[index]?.endTime && (
+                  <p className="text-red-500">{errors.allowedRanges[index].endTime?.message}</p> //TODO: なぜかエラーが表示されないが
+                )}
               </div>
             </div>
           ))}
-          <button type="button" onClick={handleAddRange} className="btn btn-secondary">
+          <button
+            type="button"
+            onClick={() => append({ startTime: "", endTime: "" })}
+            className="btn btn-secondary"
+          >
             範囲を追加
           </button>
+          {errors.allowedRanges && <p className="text-red-500">{errors.allowedRanges.message}</p>}
         </div>
 
-        <button type="submit" className="btn btn-primary w-full">
+        <button type="submit" className="btn btn-primary w-full" disabled={!isValid}>
           送信
         </button>
       </form>
