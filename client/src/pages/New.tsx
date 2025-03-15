@@ -130,7 +130,7 @@ export default function NewPage() {
                   className="input input-bordered w-full"
                 />
                 {errors.allowedRanges?.[index]?.endTime && (
-                  <p className="text-red-500">{errors.allowedRanges[index].endTime?.message}</p>
+                  <p className="text-red-500">{errors.allowedRanges[index].endTime?.message}</p> //TODO: なぜかエラーが表示されないが
                 )}
               </div>
             </div>

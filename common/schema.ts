@@ -81,7 +81,7 @@ export const projectReqSchema = z
     },
     {
       message: "開始日は終了日より前に設定してください",
-      path: ["endDate"], // `endDate` にエラーを関連付ける
+      path: ["endDate"],
     }
   );
 
