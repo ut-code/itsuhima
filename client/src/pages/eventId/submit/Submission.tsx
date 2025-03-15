@@ -18,7 +18,6 @@ export default function SubmissionPage() {
   const {
     data: me,
     loading: meLoading,
-    error: meError,
   } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
 
   const loading = projectLoading || meLoading;
