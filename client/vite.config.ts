@@ -8,4 +8,5 @@ export default defineConfig({
     allowedHosts: ["front-dev.naka-12.com"],
   },
   plugins: [react(), tailwindcss()],
+  base: '/itsuhima/'
 });
