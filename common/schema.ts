@@ -1,7 +1,10 @@
 import { z } from "zod";
 
 // TODO: Is this the best way?
-const isoStrToDate = z.string().datetime().transform((str) => new Date(str));
+const isoStrToDate = z
+  .string()
+  .datetime()
+  .transform((str) => new Date(str));
 
 const host = z.object({
   id: z.string().uuid(),
@@ -39,24 +42,48 @@ const slot = z.object({
 export const submitReqSchema = z.object({
   name: z.string(),
   projectId: z.string().uuid(),
-  slots: z.array(z.object({
-    start: isoStrToDate,
-    end: isoStrToDate,
-  })), // TODO: should rename
-})
+  slots: z.array(
+    z.object({
+      start: isoStrToDate,
+      end: isoStrToDate,
+    })
+  ), // TODO: should rename
+});
 
 export type SubmitReq = z.infer<typeof submitReqSchema>;
 
-// ---------- Guest (一旦仮の型にしておく) ----------
-export const projectReqSchema = z.object({
-  name: z.string(),
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
-  restrictions: z.array(z.object({
-    startTime: z.string().datetime(),
-    endTime: z.string().datetime(),
-  })),
-});
+export const projectReqSchema = z
+  .object({
+    name: z.string().min(1, "イベント名を入力してください"),
+    startDate: z.string().min(1, "開始日を入力してください"),
+    endDate: z.string().min(1, "終了日を入力してください"),
+    restrictions: z
+      .array(
+        z.object({
+          startTime: z.string(),
+          endTime: z.string(),
+        })
+      )
+      .refine(
+        (ranges) =>
+          ranges.every(({ startTime, endTime }) => startTime < endTime),
+        {
+          message: "開始時刻は終了時刻より前でなければなりません",
+        }
+      ),
+  })
+  .refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        return data.startDate < data.endDate;
+      }
+      return true;
+    },
+    {
+      message: "開始日は終了日より前に設定してください",
+      path: ["endDate"], // `endDate` にエラーを関連付ける
+    }
+  );
 
 export const projectResSchema = project.extend({
   restrictions: z.array(restriction),
@@ -73,14 +100,14 @@ export type Project = z.infer<typeof projectResSchema>;
 export const involvedProjectsResSchema = z.object({
   asHost: z.array(project),
   asGuest: z.array(project),
-})
+});
 
 export type InvolvedProjects = z.infer<typeof involvedProjectsResSchema>;
 
 export const meResSchema = z.object({
   guests: z.array(guest),
   hosts: z.array(host),
-})
+});
 
 export type Me = z.infer<typeof meResSchema>;
 

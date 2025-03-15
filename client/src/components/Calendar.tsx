@@ -195,6 +195,7 @@ export const Calendar = ({ project, onSubmit, myGuestId }: Props) => {
               myGuestId,
             );
           }}
+          className="btn btn-primary"
         >
           イベントを提出
         </button>
