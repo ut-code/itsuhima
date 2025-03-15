@@ -4,9 +4,9 @@ import {
   Project,
   projectReqSchema,
   submitReqSchema,
-} from "../../../common/schema";
+} from "../../../common/schema.js";
 import { z } from "zod";
-import { prisma } from "../main";
+import { prisma } from "../main.js";
 
 const router = Router();
 // type Slot = z.infer<typeof SlotSchema>;
