@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
-import { InvolvedProjects } from "../../../common/schema";
+import { InvolvedProjects } from "../../../common/schema.js";
 
 const router = Router();
 const prisma = new PrismaClient();

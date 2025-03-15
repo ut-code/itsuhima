@@ -2,8 +2,8 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { PrismaClient } from "@prisma/client";
-import projectsRoutes from "./routes/projects";
-import usersRoutes from "./routes/users";
+import projectsRoutes from "./routes/projects.js";
+import usersRoutes from "./routes/users.js";
 
 export const prisma = new PrismaClient();
 
@@ -12,7 +12,7 @@ const port = 3000;
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "CORS_ALLOW_ORIGINS",
     credentials: true,
   })
 ); // TODO: configure

@@ -43,38 +43,38 @@ export default function EditPage() {
   };
 
   // 送信処理
+  // 送信処理
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // 日付部分が空の場合は送信させない
-    if (!startDate || !endDate || !ranges) {
-      alert("開始日と終了日を入力してください");
-      return;
+    let eventData;
+    if (project && project.guests) {
+      // すでにデータを登録したユーザーがいる場合、名前のみ編集可能
+      eventData = { name };
+    } else {
+      // 通常の編集
+      if (!startDate || !endDate || !ranges.length) {
+        alert("開始日と終了日を入力してください");
+        return;
+      }
+
+      const startDateTime = new Date(startDate + "T00:00:00.000Z").toISOString();
+      const endDateTime = new Date(endDate + "T00:00:00.000Z").toISOString();
+
+      const rangeWithDateTime = ranges.map((range) => ({
+        startTime: new Date(`${startDate}T${range.startTime}`).toISOString(),
+        endTime: new Date(`${startDate}T${range.endTime}`).toISOString(),
+      }));
+
+      eventData = {
+        name,
+        startDate: startDateTime,
+        endDate: endDateTime,
+        range: rangeWithDateTime,
+      };
     }
 
-    // startDate, endDate は "2025-03-13T00:00:00.000Z" 形式に変換
-    const startDateTime = new Date(startDate + "T00:00:00.000Z").toISOString();
-    const endDateTime = new Date(endDate + "T00:00:00.000Z").toISOString(); // 終日のため最後の瞬間
-
-    // range も "startDate" を基準にして日時結合
-    const rangeWithDateTime = ranges.map((range) => {
-      const start = new Date(`${startDate}T${range.startTime}`).toISOString();
-      const end = new Date(`${startDate}T${range.endTime}`).toISOString(); // 同日の時間帯として送信
-      return {
-        startTime: start,
-        endTime: end,
-      };
-    });
-
-    // 最終送信データ
-    const eventData = {
-      name,
-      startDate: startDateTime,
-      endDate: endDateTime,
-      range: rangeWithDateTime,
-    };
-
-    console.log("送信データ:", eventData); // デバッグ用確認
+    console.log("送信データ:", eventData);
 
     const res = await fetch(`${API_ENDPOINT}/projects/${eventId}`, {
       method: "PUT",
@@ -82,17 +82,17 @@ export default function EditPage() {
       body: JSON.stringify(eventData),
       credentials: "include",
     });
+
     const data = await res.json();
     console.log("受信データ", data.event);
 
     if (res.ok) {
+      if (project) {
+        alert(project.guests ? "イベント名が更新されました。" : "イベント情報が更新されました。");
+      }
       navigate(`/${eventId}`);
     } else {
-      if (res.status === 403) {
-        alert("認証に失敗しました。");
-      } else {
-        alert("送信に失敗しました");
-      }
+      alert(res.status === 403 ? "認証に失敗しました。" : "更新に失敗しました。");
     }
   };
 
