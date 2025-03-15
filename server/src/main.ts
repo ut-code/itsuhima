@@ -12,7 +12,7 @@ const port = 3000;
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "CORS_ALLOW_ORIGINS",
     credentials: true,
   })
 ); // TODO: configure
