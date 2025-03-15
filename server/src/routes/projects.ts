@@ -219,7 +219,7 @@ router.post("/:projectId/submit", async (req: Request, res: Response) => {
 
 //日程編集。Guestのみ
 router.put("/:projectId/submit", async (req: Request, res: Response) => {
-  const { eventId: projectId } = req.params;
+  const {projectId } = req.params;
   const browserId = req.cookies?.browserId;
 
   const parsed = submitReqSchema.safeParse(req.body); // TODO:
