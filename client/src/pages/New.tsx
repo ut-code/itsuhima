@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { projectReqSchema } from "../../../common/schema";
 import { z } from "zod";
 import Header from "../components/Header";
+import { API_ENDPOINT } from "../utils";
 
 // スキーマに基づく型定義
 type ProjectFormValues = z.infer<typeof projectReqSchema>;
@@ -58,7 +59,7 @@ export default function NewPage() {
 
     console.log("送信データ:", eventData);
 
-    const res = await fetch("http://localhost:3000/projects", {
+    const res = await fetch(`${API_ENDPOINT}/projects`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(eventData),

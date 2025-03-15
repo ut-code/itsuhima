@@ -5,6 +5,7 @@ import { useData } from "../../../hooks";
 import { useCallback, useState } from "react";
 import dayjs from "dayjs";
 import Header from "../../../components/Header";
+import { API_ENDPOINT } from "../../../utils";
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
@@ -12,13 +13,13 @@ export default function SubmissionPage() {
     data: project,
     loading: projectLoading,
     error: projectError,
-  } = useData<Project>(`http://localhost:3000/projects/${projectId}`, projectResSchema);
+  } = useData<Project>(`${API_ENDPOINT}/projects/${projectId}`, projectResSchema);
 
   const {
     data: me,
     loading: meLoading,
     error: meError,
-  } = useData<Me>("http://localhost:3000/users/me", meResSchema);
+  } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
 
   const loading = projectLoading || meLoading;
   const error = (projectError ?? "") + (meError ?? "");
@@ -42,14 +43,14 @@ export default function SubmissionPage() {
         return;
       }
       if (!myGuestId) {
-        await fetch(`http://localhost:3000/projects/${projectId}/availabilities`, {
+        await fetch(`${API_ENDPOINT}/projects/${projectId}/availabilities`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
           credentials: "include",
         });
       } else {
-        await fetch(`http://localhost:3000/projects/${projectId}/availabilities`, {
+        await fetch(`${API_ENDPOINT}/projects/${projectId}/availabilities`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

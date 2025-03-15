@@ -2,13 +2,14 @@ import { NavLink } from "react-router";
 import { InvolvedProjects, involvedProjectsResSchema } from "../../../common/schema";
 import { useData } from "../hooks";
 import Header from "../components/Header";
+import { API_ENDPOINT } from "../utils";
 
 export default function RootPage() {
   const {
     data: involvedProjects,
     loading,
     error,
-  } = useData<InvolvedProjects>("http://localhost:3000/users", involvedProjectsResSchema);
+  } = useData<InvolvedProjects>(`${API_ENDPOINT}/users`, involvedProjectsResSchema);
 
   if (loading) return <p>読み込み中...</p>;
   if (error) return <p>エラーが発生しました: {error}</p>;

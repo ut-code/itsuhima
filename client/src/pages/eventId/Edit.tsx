@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import { Me, meResSchema, Project, projectResSchema } from "../../../../common/schema";
 import { useData } from "../../hooks";
 import Header from "../../components/Header";
+import { API_ENDPOINT } from "../../utils";
 
 export default function EditPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -16,13 +17,13 @@ export default function EditPage() {
     data: project,
     loading: projectLoading,
     error: projectError,
-  } = useData<Project>(`http://localhost:3000/projects/${eventId}`, projectResSchema);
+  } = useData<Project>(`${API_ENDPOINT}/projects/${eventId}`, projectResSchema);
 
   const {
     data: me,
     loading: meLoading,
     error: meError,
-  } = useData<Me>("http://localhost:3000/users/me", meResSchema);
+  } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
 
   const isHost = me?.hosts.some((h) => h.projectId === eventId);
 
@@ -75,7 +76,7 @@ export default function EditPage() {
 
     console.log("送信データ:", eventData); // デバッグ用確認
 
-    const res = await fetch(`http://localhost:3000/projects/${eventId}`, {
+    const res = await fetch(`${API_ENDPOINT}/projects/${eventId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(eventData),
