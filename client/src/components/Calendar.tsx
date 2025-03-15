@@ -26,7 +26,9 @@ export const Calendar = ({ project, onSubmit, myGuestId }: Props) => {
     dayjs(project.endDate).startOf("day").diff(dayjs(project.startDate).startOf("day"), "day") + 1;
   // TODO: +1 は不要かも
   const myMatrixRef = useRef<CalendarMatrix>(new CalendarMatrix(countDays + 1, project.startDate));
-  const othersMatrixRef = useRef<CalendarMatrix>(new CalendarMatrix(countDays + 1, project.startDate));
+  const othersMatrixRef = useRef<CalendarMatrix>(
+    new CalendarMatrix(countDays + 1, project.startDate),
+  );
 
   // TODO: 現在は最初の選択範囲のみ。FullCalendar の制約により、複数の allowedRanges には対応できないため、のちに selectAllow などで独自実装が必要
   const tmpAllowedRange = project.allowedRanges[0] ?? {

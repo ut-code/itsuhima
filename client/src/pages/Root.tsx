@@ -1,6 +1,7 @@
 import { NavLink } from "react-router";
 import { InvolvedProjects, involvedProjectsResSchema } from "../../../common/schema";
 import { useData } from "../hooks";
+import Header from "../components/Header";
 
 export default function RootPage() {
   const {
@@ -13,7 +14,10 @@ export default function RootPage() {
   if (error) return <p>エラーが発生しました: {error}</p>;
 
   return involvedProjects ? (
-    <Preview asHost={involvedProjects.asHost} asGuest={involvedProjects.asGuest} />
+    <>
+      <Header />
+      <Preview asHost={involvedProjects.asHost} asGuest={involvedProjects.asGuest} />
+    </>
   ) : (
     <Landing />
   );

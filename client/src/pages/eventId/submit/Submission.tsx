@@ -4,6 +4,7 @@ import { Me, meResSchema, Project, projectResSchema } from "../../../../../commo
 import { useData } from "../../../hooks";
 import { useCallback, useState } from "react";
 import dayjs from "dayjs";
+import Header from "../../../components/Header";
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
@@ -65,24 +66,26 @@ export default function SubmissionPage() {
   if (!project) return <p>イベントが存在しません。</p>;
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold">イベント詳細</h1>
-      <p>イベント名: {project.name}</p>
-      <p>
-        日程範囲: {dayjs(project.startDate).format("YYYY/MM/DD")} 〜{" "}
-        {dayjs(project.endDate).format("YYYY/MM/DD")}
-      </p>
-      {/*  FIXME: guestName の更新ごとに Calendar が再描画され、コストが大きい*/}
-      <Calendar project={project} onSubmit={postAvailability} myGuestId={myGuestId ?? ""} />
-      {isHost && (
-        <NavLink to={`/${projectId}/edit`} className="block hover:underline">
-          イベントを編集する
-        </NavLink>
-      )}
+    <>
+      <Header />
+      <div className="container p-4 mx-auto">
+        <h1 className="text-xl font-bold">イベント詳細</h1>
+        <p>イベント名: {project.name}</p>
+        <p>
+          日程範囲: {dayjs(project.startDate).format("YYYY/MM/DD")} 〜{" "}
+          {dayjs(project.endDate).format("YYYY/MM/DD")}
+        </p>
+        {/*  FIXME: guestName の更新ごとに Calendar が再描画され、コストが大きい*/}
+        <Calendar project={project} onSubmit={postAvailability} myGuestId={myGuestId ?? ""} />
+        {isHost && (
+          <NavLink to={`/${projectId}/edit`} className="block hover:underline">
+            イベントを編集する
+          </NavLink>
+        )}
 
-      {/* ----------- 大枠 (Range) ----------- */}
-      {/* TODO: カレンダーにグレー枠で表示など */}
-      {/* <h2 className="text-lg font-semibold mt-4">時間帯の大枠 (Range)</h2>
+        {/* ----------- 大枠 (Range) ----------- */}
+        {/* TODO: カレンダーにグレー枠で表示など */}
+        {/* <h2 className="text-lg font-semibold mt-4">時間帯の大枠 (Range)</h2>
       <ul>
         {project.range.map((r) => (
           <li key={r.id} className="border p-2 my-2">
@@ -91,9 +94,9 @@ export default function SubmissionPage() {
         ))}
       </ul> */}
 
-      {/* ----------- ゲスト (Guest) ----------- */}
-      {/* TODO: カレンダーに人数を表示など */}
-      {/* <h2 className="text-lg font-semibold mt-4">ゲスト</h2>
+        {/* ----------- ゲスト (Guest) ----------- */}
+        {/* TODO: カレンダーに人数を表示など */}
+        {/* <h2 className="text-lg font-semibold mt-4">ゲスト</h2>
       {project.guests?.length ? (
         <ul>
           {project.guests.map((guest) => (
@@ -116,15 +119,16 @@ export default function SubmissionPage() {
         <p>ゲストはいません</p>
       )} */}
 
-      {/* ----------- ゲスト名入力 ----------- */}
-      <h2 className="text-lg font-semibold mt-6">参加者情報</h2>
-      <input
-        type="text"
-        placeholder="あなたの名前"
-        value={guestName}
-        onChange={(e) => setGuestName(e.target.value)}
-        className="input input-bordered w-full max-w-xs my-2"
-      />
-    </div>
+        {/* ----------- ゲスト名入力 ----------- */}
+        <h2 className="text-lg font-semibold mt-6">参加者情報</h2>
+        <input
+          type="text"
+          placeholder="あなたの名前"
+          value={guestName}
+          onChange={(e) => setGuestName(e.target.value)}
+          className="input input-bordered w-full max-w-xs my-2"
+        />
+      </div>
+    </>
   );
 }

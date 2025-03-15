@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Me, meResSchema, Project, projectResSchema } from "../../../../common/schema";
 import { useData } from "../../hooks";
+import Header from "../../components/Header";
 
 export default function EditPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -103,90 +104,95 @@ export default function EditPage() {
 
   return (
     <>
-      {projectLoading && (
-        <div className="fixed inset-0 bg-opacity-50 flex justify-center items-center z-50">
-          <span className="loading loading-spinner loading-lg text-blue"></span>
-        </div>
-      )}
-      <h1>イベント編集</h1>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label>イベント名</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="input input-bordered w-full"
-            required
-            placeholder="イベント名"
-          />
-        </div>
-
-        {!project.guests ? (
-          <>
-            {" "}
-            <div>
-              <label>開始日</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="input input-bordered w-full"
-                required
-              />
-            </div>
-            <div>
-              <label>終了日</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="input input-bordered w-full"
-                required
-              />
-            </div>
-            <div>
-              <label>範囲 (range)</label>
-              {ranges.map((range, index) => (
-                <div key={index} className="space-y-2 p-2 border rounded mb-2">
-                  <div>
-                    <label>開始時刻</label>
-                    <input
-                      type="time"
-                      value={range.startTime}
-                      onChange={(e) =>
-                        handleRangeChange(index, "startTime", `${e.target.value}:00`)
-                      }
-                      className="input input-bordered w-full"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label>終了時刻</label>
-                    <input
-                      type="time"
-                      value={range.endTime}
-                      onChange={(e) => handleRangeChange(index, "endTime", `${e.target.value}:00`)}
-                      className="input input-bordered w-full"
-                      required
-                    />
-                  </div>
-                </div>
-              ))}
-              <button type="button" onClick={handleAddRange} className="btn btn-secondary">
-                範囲を追加
-              </button>
-            </div>
-          </>
-        ) : (
-          <p>すでにデータを登録したユーザーがいるため、日時の編集はできません。</p>
+      <Header />
+      <div className="container p-4 mx-auto">
+        {projectLoading && (
+          <div className="fixed inset-0 bg-opacity-50 flex justify-center items-center z-50">
+            <span className="loading loading-spinner loading-lg text-blue"></span>
+          </div>
         )}
+        <h1>イベント編集</h1>
 
-        <button type="submit" className="btn btn-primary w-full">
-          送信
-        </button>
-      </form>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label>イベント名</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="input input-bordered w-full"
+              required
+              placeholder="イベント名"
+            />
+          </div>
+
+          {!project.guests ? (
+            <>
+              {" "}
+              <div>
+                <label>開始日</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="input input-bordered w-full"
+                  required
+                />
+              </div>
+              <div>
+                <label>終了日</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="input input-bordered w-full"
+                  required
+                />
+              </div>
+              <div>
+                <label>範囲 (range)</label>
+                {ranges.map((range, index) => (
+                  <div key={index} className="space-y-2 p-2 border rounded mb-2">
+                    <div>
+                      <label>開始時刻</label>
+                      <input
+                        type="time"
+                        value={range.startTime}
+                        onChange={(e) =>
+                          handleRangeChange(index, "startTime", `${e.target.value}:00`)
+                        }
+                        className="input input-bordered w-full"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label>終了時刻</label>
+                      <input
+                        type="time"
+                        value={range.endTime}
+                        onChange={(e) =>
+                          handleRangeChange(index, "endTime", `${e.target.value}:00`)
+                        }
+                        className="input input-bordered w-full"
+                        required
+                      />
+                    </div>
+                  </div>
+                ))}
+                <button type="button" onClick={handleAddRange} className="btn btn-secondary">
+                  範囲を追加
+                </button>
+              </div>
+            </>
+          ) : (
+            <p>すでにデータを登録したユーザーがいるため、日時の編集はできません。</p>
+          )}
+
+          <button type="submit" className="btn btn-primary w-full">
+            送信
+          </button>
+        </form>
+      </div>
     </>
   );
 }
