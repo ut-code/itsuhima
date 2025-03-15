@@ -22,7 +22,7 @@ export default function SubmissionPage() {
   } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
 
   const loading = projectLoading || meLoading;
-  const error = (projectError ?? "") + (meError ?? "");
+  const error = projectError;
 
   const [guestName, setGuestName] = useState("");
 
