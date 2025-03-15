@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { projectReqSchema } from "../../../common/schema";
+import { z } from "zod";
 
-export default function Create() {
+export default function NewPage() {
   const [name, setName] = useState<string>("");
   const [startDate, setStartDate] = useState<string>(""); // ISO 文字列
   const [endDate, setEndDate] = useState<string>(""); // ISO 文字列
@@ -57,36 +59,12 @@ export default function Create() {
       name,
       startDate: startDateTime,
       endDate: endDateTime,
-      range: rangeWithDateTime,
-    };
+      restrictions: rangeWithDateTime,
+    } satisfies z.infer<typeof projectReqSchema>;
 
     console.log("送信データ:", eventData); // デバッグ用確認
 
-    // // startDate, endDate は "2025-03-13T00:00:00.000Z" 形式に変換
-    // const startDateTime = new Date(startDate + "T00:00:00.000Z").toISOString();
-    // const endDateTime = new Date(endDate + "T00:00:00.000Z").toISOString(); // 終日のため最後の瞬間
-
-    // // range も "startDate" を基準にして日時結合
-    // const rangeWithDateTime = ranges.map((range) => {
-    //   const start = new Date(`${startDate}T${range.startTime}`).toISOString();
-    //   const end = new Date(`${startDate}T${range.endTime}`).toISOString(); // 同日の時間帯として送信
-    //   return {
-    //     startTime: start,
-    //     endTime: end,
-    //   };
-    // });
-
-    // // 最終送信データ
-    // const eventData = {
-    //   name,
-    //   startDate: startDateTime,
-    //   endDate: endDateTime,
-    //   range: rangeWithDateTime,
-    // };
-
-    // console.log("送信データ:", eventData); // デバッグ用確認
-
-    const res = await fetch("http://localhost:3000/event", {
+    const res = await fetch("http://localhost:3000/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(eventData),

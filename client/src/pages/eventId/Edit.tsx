@@ -1,73 +1,32 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { EventSchema } from "../../../common/schema";
-import { z } from "zod";
+import { Me, meResSchema, Project, projectResSchema } from "../../../../common/schema";
+import { useData } from "../../hooks";
 
-type Event = z.infer<typeof EventSchema>;
-
-export default function EventEdit() {
+export default function EditPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const [name, setName] = useState<string>("");
-  const [event, setEvent] = useState<Event | null>(null);
   const [startDate, setStartDate] = useState<string>(""); // ISO 文字列
   const [endDate, setEndDate] = useState<string>(""); // ISO 文字列
   const [ranges, setRanges] = useState<{ startTime: string; endTime: string }[]>([]); // range 配列
   const navigate = useNavigate(); // ページ遷移
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [alreadyGuest, setAlreadyGuest] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        const res = await fetch(`http://localhost:3000/event/${eventId}`, {
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("イベントが見つかりません");
-        const data = await res.json();
+  const {
+    data: project,
+    loading: projectLoading,
+    error: projectError,
+  } = useData<Project>(`http://localhost:3000/projects/${eventId}`, projectResSchema);
 
-        // event データのパース
-        const parseEvent = EventSchema.parse(data.event);
-        console.log("受信イベントデータ", parseEvent);
-        console.log("受信ゲストデータ", data.guest);
-        if (data.guest) setAlreadyGuest(true);
-        console.log("受信ホストデータ", data.host);
+  const {
+    data: me,
+    loading: meLoading,
+    error: meError,
+  } = useData<Me>("http://localhost:3000/users/me", meResSchema);
 
-        if (!data.host) return navigate(`/${eventId}/submit`); // hostじゃないので、リダイレクト
+  const isHost = me?.hosts.some((h) => h.projectId === eventId);
 
-        // 日付をローカル（現地）時間に変換
-        setName(parseEvent.name);
-        setStartDate(
-          new Date(parseEvent.startDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
-        );
-        setEndDate(
-          new Date(parseEvent.endDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
-        );
-
-        // 範囲 (時間) もローカル時間に変換
-        const formattedRanges = parseEvent.range.map((range) => ({
-          startTime: new Date(range.startTime).toLocaleTimeString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }), // "HH:MM"
-          endTime: new Date(range.endTime).toLocaleTimeString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }), // "HH:MM"
-        }));
-        setRanges(formattedRanges);
-
-        setEvent(parseEvent);
-      } catch (err: any) {
-        console.error(err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (eventId) fetchEvent();
-  }, [eventId]);
+  const loading = projectLoading || meLoading;
+  const error = (projectError ?? "") + (meError ?? "");
 
   // range 追加処理
   const handleAddRange = () => {
@@ -84,12 +43,10 @@ export default function EventEdit() {
   // 送信処理
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
 
     // 日付部分が空の場合は送信させない
     if (!startDate || !endDate || !ranges) {
       alert("開始日と終了日を入力してください");
-      setLoading(false);
       return;
     }
 
@@ -117,7 +74,7 @@ export default function EventEdit() {
 
     console.log("送信データ:", eventData); // デバッグ用確認
 
-    const res = await fetch(`http://localhost:3000/event/${eventId}`, {
+    const res = await fetch(`http://localhost:3000/projects/${eventId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(eventData),
@@ -128,24 +85,25 @@ export default function EventEdit() {
 
     if (res.ok) {
       navigate(`/${eventId}`);
-      setLoading(false);
     } else {
       if (res.status === 403) {
         alert("認証に失敗しました。");
       } else {
         alert("送信に失敗しました");
       }
-      setLoading(false);
     }
   };
-  // -------------------- UI --------------------
+
+  if (!isHost) navigate(`/${eventId}/submit`);
+
   if (loading) return <p>読み込み中...</p>;
   if (error) return <p>エラー: {error}</p>;
-  if (!event) return <p>イベントが存在しません。</p>;
+  if (!project) return <p>イベントが存在しません。</p>;
+  if (!me) return <p>ユーザー情報が取得できませんでした。</p>;
 
   return (
     <>
-      {loading && (
+      {projectLoading && (
         <div className="fixed inset-0 bg-opacity-50 flex justify-center items-center z-50">
           <span className="loading loading-spinner loading-lg text-blue"></span>
         </div>
@@ -165,7 +123,7 @@ export default function EventEdit() {
           />
         </div>
 
-        {!alreadyGuest ? (
+        {!project.guests ? (
           <>
             {" "}
             <div>

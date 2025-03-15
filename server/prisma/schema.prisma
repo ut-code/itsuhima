@@ -13,47 +13,51 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Event {
-  id        String   @id @default(uuid())
-  name      String
-  startDate DateTime
-  endDate   DateTime
-  range     Range[]
-  slots     Slot[]
-  hosts     Host[]
-  guests    Guest[]
+model Project {
+  id           String        @id @default(uuid())
+  name         String
+  startDate    DateTime
+  endDate      DateTime
+  restrictions Restriction[]
+  slots        Slot[]
+  hosts        Host[]
+  guests       Guest[]
 }
 
-model Range {
+model Restriction {
   id        String   @id @default(uuid())
   startTime DateTime
   endTime   DateTime
-  event     Event    @relation(fields: [eventId], references: [id])
-  eventId   String
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
 }
 
 model Slot {
-  id      String   @id @default(uuid())
-  start   DateTime
-  end     DateTime
-  eventId String
-  event   Event    @relation(fields: [eventId], references: [id])
-  guestId String
-  guest   Guest    @relation(fields: [guestId], references: [id])
+  id        String   @id @default(uuid())
+  from      DateTime
+  to        DateTime
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  guestId   String
+  guest     Guest    @relation(fields: [guestId], references: [id])
 }
 
 model Host {
-  id        String @id @default(uuid())
-  browserId String @default(uuid())
-  eventId   String
-  event     Event  @relation(fields: [eventId], references: [id])
+  id        String  @id @default(uuid())
+  browserId String  @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+
+  @@unique([browserId, projectId])
 }
 
 model Guest {
-  id        String @id @default(uuid())
+  id        String  @id @default(uuid())
   name      String
-  browserId String @default(uuid())
-  eventId   String
-  event     Event  @relation(fields: [eventId], references: [id])
+  browserId String  @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
   slots     Slot[]
+
+  @@unique([browserId, projectId])
 }
