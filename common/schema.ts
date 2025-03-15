@@ -52,38 +52,50 @@ export const submitReqSchema = z.object({
 
 export type SubmitReq = z.infer<typeof submitReqSchema>;
 
-export const projectReqSchema = z
-  .object({
-    name: z.string().min(1, "イベント名を入力してください"),
-    startDate: z.string().min(1, "開始日を入力してください"),
-    endDate: z.string().min(1, "終了日を入力してください"),
-    allowedRanges: z
-      .array(
-        z.object({
-          startTime: z.string(),
-          endTime: z.string(),
-        })
-      )
-      .refine(
-        (ranges) =>
-          ranges.every(({ startTime, endTime }) => startTime < endTime),
-        {
-          message: "開始時刻は終了時刻より前でなければなりません",
-        }
-      ),
-  })
-  .refine(
-    (data) => {
-      if (data.startDate && data.endDate) {
-        return data.startDate < data.endDate;
+const baseProjectReqSchema = z.object({
+  name: z.string().min(1, "イベント名を入力してください"),
+  startDate: z.string().min(1, "開始日を入力してください"),
+  endDate: z.string().min(1, "終了日を入力してください"),
+  allowedRanges: z
+    .array(
+      z.object({
+        startTime: z.string(),
+        endTime: z.string(),
+      })
+    )
+    .refine(
+      (ranges) => ranges.every(({ startTime, endTime }) => startTime < endTime),
+      {
+        message: "開始時刻は終了時刻より前でなければなりません",
       }
-      return true;
-    },
-    {
-      message: "開始日は終了日より前に設定してください",
-      path: ["endDate"],
+    ),
+});
+
+export const projectReqSchema = baseProjectReqSchema.refine(
+  (data) => {
+    if (data.startDate && data.endDate) {
+      return data.startDate < data.endDate;
     }
-  );
+    return true;
+  },
+  {
+    message: "開始日は終了日より前に設定してください",
+    path: ["endDate"],
+  }
+);
+
+export const editReqSchema = baseProjectReqSchema.partial().refine(
+  (data) => {
+    if (data.startDate && data.endDate) {
+      return data.startDate < data.endDate;
+    }
+    return true;
+  },
+  {
+    message: "開始日は終了日より前に設定してください",
+    path: ["endDate"],
+  }
+);
 
 export const projectResSchema = project.extend({
   allowedRanges: z.array(allowedRange),
