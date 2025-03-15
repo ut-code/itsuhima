@@ -179,17 +179,11 @@ export const Calendar = ({ project, onSubmit, myGuestId }: Props) => {
           // 実際の編集
           (info) => {
             const { from, to } = getVertexes(info.start, info.end);
-            editMySlots(
-              from,
-              to,
-              !!deletionStartRef.current,
-              calendarRef,
-              mySlotsRef,
-              myMatrixRef,
-            );
+            editMySlots(from, to, !!deletionStartRef.current, calendarRef, mySlotsRef, myMatrixRef);
             deletionStartRef.current = null;
             hoveringEventRef.current = null;
-          }}
+          }
+        }
       />
       <div>
         <button

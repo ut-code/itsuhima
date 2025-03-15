@@ -1,46 +1,32 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { Project, projectResSchema } from "../../../../common/schema";
+import { Me, meResSchema, Project, projectResSchema } from "../../../../common/schema";
 import { useData } from "../../hooks";
 
 export default function EditPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const [name, setName] = useState<string>("");
-  // const [project, setProject] = useState<Project | null>(null);
   const [startDate, setStartDate] = useState<string>(""); // ISO 文字列
   const [endDate, setEndDate] = useState<string>(""); // ISO 文字列
   const [ranges, setRanges] = useState<{ startTime: string; endTime: string }[]>([]); // range 配列
   const navigate = useNavigate(); // ページ遷移
-  // const [loading, setLoading] = useState<boolean>(false);
-  // const [error, setError] = useState<string | null>(null);
-  // const [alreadyGuest, setAlreadyGuest] = useState<boolean>(false);
 
   const {
     data: project,
-    loading,
-    error,
+    loading: projectLoading,
+    error: projectError,
   } = useData<Project>(`http://localhost:3000/event/${eventId}`, projectResSchema);
-  //       // 日付をローカル（現地）時間に変換
-  //       setName(project.name);
-  //       setStartDate(
-  //         new Date(project.startDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
-  //       );
-  //       setEndDate(
-  //         new Date(project.endDate).toLocaleDateString("sv-SE"), // "YYYY-MM-DD"
-  //       );
 
-  //       // 範囲 (時間) もローカル時間に変換
-  //       const formattedRanges = project.ranges.map((range) => ({
-  //         startTime: new Date(range.startTime).toLocaleTimeString("en-GB", {
-  //           hour: "2-digit",
-  //           minute: "2-digit",
-  //         }), // "HH:MM"
-  //         endTime: new Date(range.endTime).toLocaleTimeString("en-GB", {
-  //           hour: "2-digit",
-  //           minute: "2-digit",
-  //         }), // "HH:MM"
-  //       }));
-  //       setRanges(formattedRanges);
+  const {
+    data: me,
+    loading: meLoading,
+    error: meError,
+  } = useData<Me>("http://localhost:3000/user/me", meResSchema);
+
+  const isHost = me?.hosts.some((h) => h.eventId === eventId);
+
+  const loading = projectLoading || meLoading;
+  const error = (projectError ?? "") + (meError ?? "");
 
   // range 追加処理
   const handleAddRange = () => {
@@ -57,12 +43,10 @@ export default function EditPage() {
   // 送信処理
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
 
     // 日付部分が空の場合は送信させない
     if (!startDate || !endDate || !ranges) {
       alert("開始日と終了日を入力してください");
-      setLoading(false);
       return;
     }
 
@@ -101,27 +85,25 @@ export default function EditPage() {
 
     if (res.ok) {
       navigate(`/${eventId}`);
-      setLoading(false);
     } else {
       if (res.status === 403) {
         alert("認証に失敗しました。");
       } else {
         alert("送信に失敗しました");
       }
-      setLoading(false);
     }
   };
 
-  // if (!parsedProject.host) return navigate(`/${eventId}/submit`); // hostじゃないので、リダイレクト TODO:
+  if (!isHost) navigate(`/${eventId}/submit`);
 
-  // -------------------- UI --------------------
   if (loading) return <p>読み込み中...</p>;
   if (error) return <p>エラー: {error}</p>;
   if (!project) return <p>イベントが存在しません。</p>;
+  if (!me) return <p>ユーザー情報が取得できませんでした。</p>;
 
   return (
     <>
-      {loading && (
+      {projectLoading && (
         <div className="fixed inset-0 bg-opacity-50 flex justify-center items-center z-50">
           <span className="loading loading-spinner loading-lg text-blue"></span>
         </div>
