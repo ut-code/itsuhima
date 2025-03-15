@@ -27,9 +27,11 @@ function Preview({ asHost: hostingProjects, asGuest: guestingProjects }: Involve
   return (
     <div className="space-y-6 p-4">
       <h1 className="text-4xl mb-4">トップページ</h1>
-      <NavLink to="./new" end className="btn btn-primary">
-        イベントを作成する。
-      </NavLink>
+      <div className="flex justify-center">
+        <NavLink to="./new" end className="btn btn-lg btn-primary">
+          イベントを作成
+        </NavLink>
+      </div>
       <h2 className="text-2xl font-bold">あなたがホストのイベント一覧</h2>
       {hostingProjects.length > 0 ? (
         <ul className="list-disc pl-5 space-y-2">

@@ -4,7 +4,7 @@ export default function Header() {
       <div className="flex-1">
         <a className="btn btn-ghost text-2xl text-white">
           <img src="/logo.png" alt="logo" width="50px" />
-          <span>イツヒマ</span>
+          <span className="ml-2">イツヒマ</span>
         </a>
       </div>
     </div>
