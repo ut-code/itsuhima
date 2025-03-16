@@ -1,4 +1,4 @@
-import { NavLink, useParams } from "react-router";
+import { NavLink, useNavigate, useParams } from "react-router";
 import { Calendar } from "../../../components/Calendar";
 import { Me, meResSchema, Project, projectResSchema } from "../../../../../common/schema";
 import { useData } from "../../../hooks";
@@ -28,6 +28,8 @@ export default function SubmissionPage() {
   const myGuestId = me?.guests.find((g) => g.projectId === projectId)?.id;
   const isHost = me?.hosts.some((h) => h.projectId === projectId);
 
+  const navigate = useNavigate();
+
   const postAvailability = useCallback(
     async (slots: { start: Date; end: Date }[], myGuestId: string) => {
       const payload = {
@@ -48,6 +50,7 @@ export default function SubmissionPage() {
           body: JSON.stringify(payload),
           credentials: "include",
         });
+        navigate(`/${projectId}/submit/done`);
       } else {
         await fetch(`${API_ENDPOINT}/projects/${projectId}/availabilities`, {
           method: "PUT",
@@ -55,9 +58,10 @@ export default function SubmissionPage() {
           body: JSON.stringify(payload),
           credentials: "include",
         });
+        navigate(`/${projectId}/submit/done`);
       }
     },
-    [guestName, projectId],
+    [guestName, projectId, navigate],
   );
 
   // -------------------- UI --------------------
@@ -119,7 +123,7 @@ export default function SubmissionPage() {
         <p>ゲストはいません</p>
       )} */}
 
-        {/* ----------- ゲスト名入力 ----------- */}
+        {/* TODO:  should be required */}
         <h2 className="text-lg font-semibold mt-6">参加者情報</h2>
         <input
           type="text"

@@ -5,7 +5,6 @@ import Header from "../components/Header";
 import { API_ENDPOINT } from "../utils";
 
 export default function RootPage() {
-  console.log("🤩",API_ENDPOINT)
   const {
     data: involvedProjects,
     loading,
@@ -22,7 +21,7 @@ export default function RootPage() {
         <div className="flex flex-col items-center">
           <img src="/logo.png" alt="logo" width="200px" />
           {/* TODO: 文面 */}
-          <p>イツヒマは、日程調整アプリです。</p>
+          <p>「いつ暇？」で日程調整しよう</p>
         </div>
         <div className="flex justify-center">
           <NavLink to="./new" end className="btn btn-lg btn-primary">
@@ -84,6 +83,7 @@ function Preview({ asHost: hostingProjects, asGuest: guestingProjects }: Involve
 function Landing() {
   return (
     <div className="p-4">
+      {/* TODO: 使い方のイントロダクションなど */}
       <div className="mt-4">ランディングページ</div>
     </div>
   );

@@ -31,7 +31,7 @@ export default function NewPage() {
     },
   });
 
-  const { fields, append } = useFieldArray({
+  const { fields } = useFieldArray({
     control,
     name: "allowedRanges",
   });
@@ -139,13 +139,14 @@ export default function NewPage() {
                 </div>
               </div>
             ))}
-            <button
+            {/* TODO: 現在は単一の範囲にしか対応しない */}
+            {/* <button
               type="button"
               onClick={() => append({ startTime: "", endTime: "" })}
               className="btn btn-secondary"
             >
               範囲を追加
-            </button>
+            </button> */}
             {errors.allowedRanges && <p className="text-red-500">{errors.allowedRanges.message}</p>}
           </div>
 

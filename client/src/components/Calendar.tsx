@@ -166,6 +166,7 @@ export const Calendar = ({ project, onSubmit, myGuestId }: Props) => {
             const calendarApi = calendarRef.current.getApi();
 
             // ドラッグ開始地点が既存のイベントなら削除、そうでなければ追加 TODO: 単一セルだとダメかもしれない・・・ (select が赤にならない)
+            // TODO: 他人のイベントでも削除モードになってしまう (上から直接 create することもあるので)
             const selectionColor = deletionStartRef.current ? DELETE_COLOR : CREATE_COLOR;
 
             // 既存の選択範囲をクリア
