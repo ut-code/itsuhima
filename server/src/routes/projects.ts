@@ -8,6 +8,8 @@ import {
 import { z } from "zod";
 import { prisma } from "../main.js";
 
+const isProduction = process.env.NODE_ENV === "prod";
+
 const router = Router();
 // type Slot = z.infer<typeof SlotSchema>;
 
@@ -47,6 +49,8 @@ router.post(
 
       res.cookie("browserId", host.browserId, {
         httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
         maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
       });
 
@@ -223,6 +227,8 @@ router.post(
 
       res.cookie("browserId", guest.browserId, {
         httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
         maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
       });
 
