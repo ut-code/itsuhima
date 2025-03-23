@@ -52,6 +52,11 @@ export const submitReqSchema = z.object({
 
 export type SubmitReq = z.infer<typeof submitReqSchema>;
 
+const isQuarterHour = (time: string): boolean => {
+  const [, minute] = time.split(":").map(Number);
+  return [0, 15, 30, 45].includes(minute);
+};
+
 const baseProjectReqSchema = z.object({
   name: z.string().min(1, "イベント名を入力してください"),
   startDate: z.string().min(1, "開始日を入力してください"),
@@ -67,6 +72,16 @@ const baseProjectReqSchema = z.object({
       (ranges) => ranges.every(({ startTime, endTime }) => startTime < endTime),
       {
         message: "開始時刻は終了時刻より前でなければなりません",
+      }
+    )
+    .refine(
+      (ranges) =>
+        ranges.every(
+          ({ startTime, endTime }) =>
+            isQuarterHour(startTime) && isQuarterHour(endTime)
+        ),
+      {
+        message: "開始時刻と終了時刻は15分単位で入力してください",
       }
     ),
 });
@@ -96,7 +111,6 @@ export const editReqSchema = baseProjectReqSchema.partial().refine(
     path: ["endDate"],
   }
 );
-
 export const projectResSchema = project.extend({
   allowedRanges: z.array(allowedRange),
   hosts: z.array(host),
