@@ -190,11 +190,13 @@ router.post(
     const { projectId } = req.params;
     const browserId = req.cookies?.browserId;
 
-    const existingGuest = await prisma.guest.findFirst({
-      where: { projectId, browserId },
-    });
-    if (existingGuest) {
-      return res.status(403).json({ message: "すでに登録済みです" });
+    if (browserId) {
+      const existingGuest = await prisma.guest.findFirst({
+        where: { projectId, browserId },
+      });
+      if (existingGuest) {
+        return res.status(403).json({ message: "すでに登録済みです" });
+      }
     }
 
     const parsed = submitReqSchema.safeParse(req.body);
