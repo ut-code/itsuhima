@@ -21,7 +21,6 @@ const OTHERS_EVENT_ID = "othersBox";
 const SELECT_EVENT_ID = "selectBox";
 
 export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
-  console.log("📅");
   const countDays =
     dayjs(project.endDate).startOf("day").diff(dayjs(project.startDate).startOf("day"), "day") + 1;
   // TODO: +1 は不要かも
@@ -45,27 +44,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
 
   const calendarRef = useRef<FullCalendar | null>(null);
 
-  const hoveringEventRef = useRef<{ from: Date; to: Date } | null>(null);
-  const deletionStartRef = useRef<{ from: Date; to: Date } | null>(null);
-
-  const handleDragStart = () => {
-    if (hoveringEventRef.current) {
-      // console.log("✨", "deletionStartRef continued!", hoveringEventRef.current);
-      deletionStartRef.current = { ...hoveringEventRef.current };
-    }
-  };
-
-  // const handleDragEnd = () => {
-  //   if (deletionStartRef.current && hoveringEventRef.current) {
-  //     // console.log("🧨", "delete", deletionStartRef.current, hoveringEventRef.current);
-  //   }
-  // };
-  document.onmousedown = handleDragStart;
-  // document.onmouseup = handleDragEnd;
-
-  // TODO: スマホで動かない・・・？
-  // document.onpointerdown = handleDragStart;
-  // document.onpointerup = handleDragEnd;
+  const isSelectionDeleting = useRef<boolean | null>(null);
 
   // init
   const calendarApi = calendarRef.current?.getApi();
@@ -81,7 +60,6 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
     slots.forEach((slot) => {
       const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
       if (slot.guestId === myGuestId) {
-        console.log("🔵", from, to);
         myMatrix.setRange(from, to, true);
       } else {
         othersMatrix.setRange(from, to, true);
@@ -116,10 +94,11 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
   }
 
   return (
-    <>
+    <div className="h-full">
       <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, interactionPlugin]}
+        height={"100%"}
         longPressDelay={200}
         slotDuration={"00:15:00"}
         allDaySlot={false}
@@ -143,25 +122,22 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
           },
         }}
         initialView="timeGrid"
-        eventMouseEnter={(info) => {
-          if (info.event.start && info.event.end) {
-            hoveringEventRef.current = { from: info.event.start, to: info.event.end };
-          }
-        }}
-        eventMouseLeave={() => {
-          hoveringEventRef.current = null;
-        }}
         selectable={true}
         selectAllow={
-          // 選択中の表示
+          // 選択範囲の表示
+          // 通常の selection では矩形選択ができないため、イベントを作成することで選択範囲を表現している。
           // https://github.com/fullcalendar/fullcalendar/issues/4119
           (info) => {
+            if (isSelectionDeleting.current === null) {
+              // ドラッグ開始地点が既存の自分のイベントなら削除モード、そうでなければ追加モードとする。
+              // isSelectionDeleting は select の発火時 (つまり、ドラッグが終了した際) に null にリセットされる。
+              isSelectionDeleting.current = myMatrix.getIsSlotExist(info.start);
+            }
+
+            const selectionColor = isSelectionDeleting.current ? DELETE_COLOR : CREATE_COLOR;
+
             if (!calendarRef.current) return false;
             const calendarApi = calendarRef.current.getApi();
-
-            // ドラッグ開始地点が既存のイベントなら削除、そうでなければ追加 TODO: 単一セルだとダメかもしれない・・・ (select が赤にならない)
-            // TODO: 他人のイベントでも削除モードになってしまう (上から直接 create することもあるので)
-            const selectionColor = deletionStartRef.current ? DELETE_COLOR : CREATE_COLOR;
 
             // 既存の選択範囲をクリア
             const existingSelection = calendarApi.getEventById("selectBox");
@@ -203,13 +179,13 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
           // 実際の編集
           (info) => {
             const { from, to } = getVertexes(info.start, info.end);
-            editMySlots(from, to, !!deletionStartRef.current, calendarRef, mySlotsRef, myMatrixRef);
-            deletionStartRef.current = null;
-            hoveringEventRef.current = null;
+            if (isSelectionDeleting.current === null) return;
+            editMySlots(from, to, isSelectionDeleting.current, calendarRef, mySlotsRef, myMatrixRef);
+            isSelectionDeleting.current = null;
           }
         }
       />
-    </>
+    </div>
   );
 };
 
@@ -232,6 +208,11 @@ class CalendarMatrix {
     const totalMinutes = date.getHours() * 60 + date.getMinutes();
     const dayDiff = dayjs(date).startOf("day").diff(this.initialDate, "day");
     return [dayDiff, Math.floor(totalMinutes / 15)];
+  }
+
+  getIsSlotExist(date: Date): boolean {
+    const [row, col] = this.getIndex(date);
+    return this.matrix[row][col];
   }
 
   getSlots() {

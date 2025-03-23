@@ -83,7 +83,7 @@ export default function SubmissionPage() {
   return (
     <>
       <Header />
-      <div className="container p-4 mx-auto">
+      <div className="container p-4 mx-auto flex flex-col h-full">
         <h1 className="text-xl font-bold">イベント詳細</h1>
         <p>イベント名: {project.name}</p>
         <p>
@@ -91,7 +91,9 @@ export default function SubmissionPage() {
           {dayjs(project.endDate).format("YYYY/MM/DD")}
         </p>
         {/*  FIXME: guestName の更新ごとに Calendar が再描画され、コストが大きい*/}
-        <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef}/>
+        <div className="flex-1">
+          <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef} />
+        </div>
 
         {/* ----------- 大枠 (Range) ----------- */}
         {/* TODO: カレンダーにグレー枠で表示など */}
