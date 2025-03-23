@@ -2,7 +2,7 @@ import { NavLink, useNavigate, useParams } from "react-router";
 import { Calendar } from "../../../components/Calendar";
 import { Me, meResSchema, Project, projectResSchema } from "../../../../../common/schema";
 import { useData } from "../../../hooks";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import dayjs from "dayjs";
 import Header from "../../../components/Header";
 import { API_ENDPOINT } from "../../../utils";
@@ -29,6 +29,9 @@ export default function SubmissionPage() {
   const isHost = me?.hosts.some((h) => h.projectId === projectId);
 
   const navigate = useNavigate();
+
+  // calendar state (ref)
+  const mySlotsRef = useRef<{ from: Date; to: Date }[]>([]);
 
   const postAvailability = useCallback(
     async (slots: { start: Date; end: Date }[], myGuestId: string) => {
@@ -80,7 +83,7 @@ export default function SubmissionPage() {
           {dayjs(project.endDate).format("YYYY/MM/DD")}
         </p>
         {/*  FIXME: guestName の更新ごとに Calendar が再描画され、コストが大きい*/}
-        <Calendar project={project} onSubmit={postAvailability} myGuestId={myGuestId ?? ""} />
+        <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef}/>
         {isHost && (
           <NavLink to={`/${projectId}/edit`} className="block hover:underline">
             イベントを編集する
@@ -132,6 +135,21 @@ export default function SubmissionPage() {
           onChange={(e) => setGuestName(e.target.value)}
           className="input input-bordered w-full max-w-xs my-2"
         />
+        <div>
+          <button
+            onClick={() => {
+              postAvailability(
+                mySlotsRef.current.map((slot) => {
+                  return { start: slot.from, end: slot.to };
+                }),
+                myGuestId ?? "",
+              );
+            }}
+            className="btn btn-primary"
+          >
+            イベントを提出
+          </button>
+        </div>
       </div>
     </>
   );
