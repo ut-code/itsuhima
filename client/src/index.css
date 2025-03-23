@@ -10,3 +10,9 @@
 .fc-highlight {
   display: none;
 }
+
+/* 今日の日付のハイライトを削除する */
+/* https://github.com/fullcalendar/fullcalendar/issues/7150 */
+:root {
+  --fc-today-bg-color: inherit;
+}
