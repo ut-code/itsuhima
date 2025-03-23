@@ -88,6 +88,21 @@ export default function EditPage() {
       navigate(`/${eventId}/submit`);
     }
   }, [loading, me, project, isHost, eventId, navigate]);
+
+  useEffect(() => {
+    if (project) {
+      setName(project.name || "");
+      if (project.startDate) setStartDate(new Date(project.startDate).toISOString().slice(0, 10));
+      if (project.endDate) setEndDate(new Date(project.endDate).toISOString().slice(0, 10));
+      if (project.allowedRanges && project.allowedRanges.length > 0) {
+        const ranges = project.allowedRanges.map((range) => ({
+          startTime: new Date(range.startTime).toTimeString().slice(0, 5),
+          endTime: new Date(range.endTime).toTimeString().slice(0, 5),
+        }));
+        setRanges(ranges);
+      }
+    }
+  }, [project]);
   if (loading) return <p>読み込み中...</p>;
   if (error) return <p>エラー: {error}</p>;
   if (!project) return <p>イベントが存在しません。</p>;
@@ -143,7 +158,7 @@ export default function EditPage() {
 
               <div>
                 <label>範囲 (TimeRange)</label>
-                <TimeRange onAddRange={handleReplaceRange} />
+                <TimeRange onAddRange={handleReplaceRange} initialRanges={ranges} />
 
                 {ranges.map((range, index) => (
                   <div key={index} className="flex items-center gap-2 border rounded p-2 my-2">

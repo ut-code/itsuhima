@@ -1,10 +1,11 @@
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 type Props = {
   onAddRange: (range: { startTime: string; endTime: string }) => void;
+  initialRanges?: { startTime: string; endTime: string }[]; // ← 追加
 };
 
 const SELECTED_RANGE_EVENT_ID = "selected-range";
@@ -12,10 +13,32 @@ const PREVIEW_RANGE_EVENT_ID = "preview-range";
 const SELECTED_COLOR = "lightblue";
 const PREVIEW_COLOR = "green";
 
-export function TimeRange({ onAddRange }: Props) {
+export function TimeRange({ onAddRange, initialRanges = [] }: Props) {
   const calendarRef = useRef<FullCalendar | null>(null);
 
-  // 実際に選択確定したとき
+  // 追加：初期レンダリング時に initialRanges を背景に表示
+  useEffect(() => {
+    const calendarApi = calendarRef.current?.getApi();
+    if (!calendarApi) return;
+
+    // クリア
+    calendarApi.getEvents().forEach((event) => {
+      if (event.id?.startsWith("initial-")) event.remove();
+    });
+
+    // 追加
+    initialRanges.forEach((range, i) => {
+      const today = new Date().toISOString().slice(0, 10); // ダミー日付 (表示用)
+      calendarApi.addEvent({
+        id: `initial-${i}`,
+        start: `${today}T${range.startTime}:00`,
+        end: `${today}T${range.endTime}:00`,
+        display: "background",
+        color: "lightblue",
+      });
+    });
+  }, [initialRanges]);
+
   const handleSelect = (info: { start: Date; end: Date }) => {
     const calendarApi = calendarRef.current?.getApi();
     if (!calendarApi) return;
@@ -36,7 +59,6 @@ export function TimeRange({ onAddRange }: Props) {
       color: SELECTED_COLOR,
     });
 
-    // 選択範囲を親に伝える
     const toHHMM = (date: Date) => date.toTimeString().slice(0, 5);
     onAddRange({
       startTime: toHHMM(info.start),
