@@ -29,7 +29,7 @@ model AllowedRange {
   startTime DateTime
   endTime   DateTime
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model Slot {
@@ -37,7 +37,7 @@ model Slot {
   from      DateTime
   to        DateTime
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   guestId   String
   guest     Guest    @relation(fields: [guestId], references: [id])
 }
@@ -46,7 +46,7 @@ model Host {
   id        String  @id @default(uuid())
   browserId String  @default(uuid())
   projectId String
-  project   Project @relation(fields: [projectId], references: [id])
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([browserId, projectId])
 }
@@ -56,7 +56,7 @@ model Guest {
   name      String
   browserId String  @default(uuid())
   projectId String
-  project   Project @relation(fields: [projectId], references: [id])
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   slots     Slot[]
 
   @@unique([browserId, projectId])

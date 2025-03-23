@@ -3,6 +3,7 @@ import { InvolvedProjects, involvedProjectsResSchema } from "../../../common/sch
 import { useData } from "../hooks";
 import Header from "../components/Header";
 import { API_ENDPOINT } from "../utils";
+import { IoMdTrash } from "react-icons/io";
 
 export default function RootPage() {
   const {
@@ -28,53 +29,60 @@ export default function RootPage() {
             イベントを作成
           </NavLink>
         </div>
-        {involvedProjects ? <Preview asHost={involvedProjects.asHost} asGuest={involvedProjects.asGuest} /> : <Landing />}
+        {involvedProjects ? <Preview asHost={involvedProjects.asHost} /> : <Landing />}
       </div>
     </>
-  )
+  );
 }
 
-function Preview({ asHost: hostingProjects, asGuest: guestingProjects }: InvolvedProjects) {
+function Preview({ asHost: hostingProjects }: InvolvedProjects) {
+  function deleteEvent(id: string): import("react").MouseEventHandler<HTMLButtonElement> {
+    return async (event) => {
+      event.preventDefault();
+      if (confirm("本当にこのイベントを削除しますか？")) {
+        try {
+          const response = await fetch(`${API_ENDPOINT}/projects/${id}`, {
+            method: "DELETE",
+          });
+          if (!response.ok) {
+            throw new Error("削除に失敗しました。");
+          }
+          alert("イベントを削除しました。");
+          // Optionally, trigger a re-fetch or update the state to reflect the deletion
+        } catch (error) {
+          console.error(error);
+          alert("エラーが発生しました。もう一度お試しください。");
+        }
+      }
+    };
+  }
+
   return (
     <div className="mt-4">
-      <h2 className="text-2xl font-bold">あなたがホストのイベント一覧</h2>
+      <h2 className="text-2xl font-bold">あなたが作成したイベント一覧</h2>
       {hostingProjects.length > 0 ? (
-        <ul className="list-disc pl-5 space-y-2">
+        <ul className="space-y-2">
           {hostingProjects.map((p) => (
-            <li key={p.id} className="border p-2 rounded">
-              <NavLink to={`/${p.id}/submit`} className="block hover:underline">
+            <li key={p.id} className="border p-2 rounded flex justify-between items-center">
+              <NavLink to={`/${p.id}/submit`} className="hover:underline">
                 <div>イベント名: {p.name}</div>
                 <div>
                   日付: {formatDate(p.startDate.toLocaleDateString())} ～{" "}
                   {formatDate(p.endDate.toLocaleDateString())}
                 </div>
-                <div>イベントID: {p.id}</div>
               </NavLink>
+              <button onClick={deleteEvent(p.id)}>
+                <IoMdTrash
+                  id={`idIoMdTrash-${p.id}`}
+                  className="text-red-500 hover:text-red-700 cursor-pointer ml-4"
+                  size={24}
+                />
+              </button>
             </li>
           ))}
         </ul>
       ) : (
-        <p>ホストしているイベントはありません。</p>
-      )}
-
-      <h2 className="text-2xl font-bold">あなたがゲストのイベント一覧</h2>
-      {guestingProjects.length > 0 ? (
-        <ul className="list-disc pl-5 space-y-2">
-          {guestingProjects.map((p) => (
-            <li key={p.id} className="border p-2 rounded">
-              <NavLink to={`/${p.id}/submit`} className="block hover:underline">
-                <div>イベント名: {p.name}</div>
-                <div>
-                  日付: {formatDate(p.startDate.toLocaleDateString())} ～{" "}
-                  {formatDate(p.endDate.toLocaleDateString())}
-                </div>
-                <div>イベントID: {p.id}</div>
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>参加しているイベントはありません。</p>
+        <p>あなたが作成したイベントはありません。</p>
       )}
     </div>
   );
