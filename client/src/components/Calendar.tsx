@@ -2,8 +2,11 @@ import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import dayjs, { Dayjs } from "dayjs";
+import "dayjs/locale/ja";
 import React, { useEffect, useRef } from "react";
 import { Project } from "../../../common/schema";
+
+dayjs.locale('ja');
 
 type Props = {
   project: Project;
@@ -123,7 +126,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
       <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, interactionPlugin]}
-        height={"100%"}
+        height={"auto"}
         longPressDelay={200}
         slotDuration={"00:15:00"}
         allDaySlot={false}
@@ -140,6 +143,13 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
             //   start: project.startDate,
             //   end: project.endDate,
             // },
+            dayHeaderContent: (args) => {
+              return dayjs(args.date).format("M/D (ddd)");
+            },
+            slotLabelContent: (args) => {
+              return dayjs(args.date).format("HH:mm");
+            },
+            slotLabelInterval: "00:30:00",
             validRange: {
               start: project.startDate,
               end: project.endDate,
