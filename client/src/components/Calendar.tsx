@@ -253,7 +253,7 @@ class CalendarMatrix {
   getSlots() {
     const slots: { from: Date; to: Date }[] = [];
     for (let day = 0; day < this.matrix.length; day++) {
-      let isEvent = this.matrix[day][0];
+      let isEvent = null;
       let start: Date | null = null;
       for (let q = 0; q < this.matrix[day].length; q++) {
         const currentCell = this.matrix[day][q];
