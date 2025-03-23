@@ -301,5 +301,32 @@ router.put(
     }
   }
 );
+// イベント削除（Hostのみ）
+router.delete("/:projectId", async (req: Request, res: Response) => {
+  const { projectId } = req.params;
+  const browserId = req.cookies?.browserId;
+
+  try {
+    // Host 認証
+    const host = await prisma.host.findFirst({
+      where: { projectId, browserId },
+    });
+
+    if (!host) {
+      return res.status(403).json({ message: "認証エラー: 削除権限がありません。" });
+    }
+
+    // 関連データを削除（Cascade を使っていない場合）
+    await prisma.project.delete({
+      where: { id: projectId },
+    });
+
+    return res.status(200).json({ message: "イベントを削除しました。" });
+  } catch (error) {
+    console.error("イベント削除エラー:", error);
+    return res.status(500).json({ message: "イベント削除中にエラーが発生しました。" });
+  }
+});
+
 
 export default router;

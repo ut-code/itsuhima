@@ -28,13 +28,38 @@ export default function RootPage() {
             イベントを作成
           </NavLink>
         </div>
-        {involvedProjects ? <Preview asHost={involvedProjects.asHost} asGuest={involvedProjects.asGuest} /> : <Landing />}
+        {involvedProjects ? (
+          <Preview asHost={involvedProjects.asHost} asGuest={involvedProjects.asGuest} />
+        ) : (
+          <Landing />
+        )}
       </div>
     </>
-  )
+  );
 }
 
 function Preview({ asHost: hostingProjects, asGuest: guestingProjects }: InvolvedProjects) {
+  function deleteEvent(id: string): import("react").MouseEventHandler<HTMLButtonElement> {
+    return async (event) => {
+      event.preventDefault();
+      if (confirm("本当にこのイベントを削除しますか？")) {
+        try {
+          const response = await fetch(`${API_ENDPOINT}/projects/${id}`, {
+            method: "DELETE",
+          });
+          if (!response.ok) {
+            throw new Error("削除に失敗しました。");
+          }
+          alert("イベントを削除しました。");
+          // Optionally, trigger a re-fetch or update the state to reflect the deletion
+        } catch (error) {
+          console.error(error);
+          alert("エラーが発生しました。もう一度お試しください。");
+        }
+      }
+    };
+  }
+
   return (
     <div className="mt-4">
       <h2 className="text-2xl font-bold">あなたがホストのイベント一覧</h2>
@@ -48,8 +73,10 @@ function Preview({ asHost: hostingProjects, asGuest: guestingProjects }: Involve
                   日付: {formatDate(p.startDate.toLocaleDateString())} ～{" "}
                   {formatDate(p.endDate.toLocaleDateString())}
                 </div>
-                <div>イベントID: {p.id}</div>
               </NavLink>
+              <button className="btn btn-error" onClick={deleteEvent(p.id)}>
+                削除
+              </button>
             </li>
           ))}
         </ul>
@@ -65,10 +92,9 @@ function Preview({ asHost: hostingProjects, asGuest: guestingProjects }: Involve
               <NavLink to={`/${p.id}/submit`} className="block hover:underline">
                 <div>イベント名: {p.name}</div>
                 <div>
-                  日付: {formatDate(p.startDate.toLocaleDateString())} ～{" "}
+                  日付: {formatDate(p.startDate.toLocaleDateString())} ～
                   {formatDate(p.endDate.toLocaleDateString())}
                 </div>
-                <div>イベントID: {p.id}</div>
               </NavLink>
             </li>
           ))}
