@@ -69,7 +69,6 @@ router.get(
       // return res.status(401).json({ message: "認証情報がありません。" }); TODO: a
       return res.status(200).json({
         asHost: [],
-        asGuest: [],
       });
     }
 
@@ -84,19 +83,8 @@ router.get(
         },
       });
 
-      const guestingProjects = await prisma.project.findMany({
-        where: { guests: { some: { browserId } } },
-        select: {
-          id: true,
-          name: true,
-          startDate: true,
-          endDate: true,
-        },
-      });
-
       return res.status(200).json({
         asHost: hostingProjects,
-        asGuest: guestingProjects,
       });
     } catch (error) {
       console.error("ユーザー検索エラー:", error);
