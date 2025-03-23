@@ -6,6 +6,7 @@ import { projectReqSchema } from "../../../common/schema";
 import { z } from "zod";
 import Header from "../components/Header";
 import { API_ENDPOINT } from "../utils";
+import { TimeRange } from "../components/TimeRange";
 
 // スキーマに基づく型定義
 type ProjectFormValues = z.infer<typeof projectReqSchema>;
@@ -13,7 +14,6 @@ type ProjectFormValues = z.infer<typeof projectReqSchema>;
 export default function NewPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(false);
-
   // フォーム管理
   const {
     register,
@@ -31,7 +31,7 @@ export default function NewPage() {
     },
   });
 
-  const { fields } = useFieldArray({
+  const { fields, replace } = useFieldArray({
     control,
     name: "allowedRanges",
   });
@@ -113,41 +113,25 @@ export default function NewPage() {
 
           <div>
             <label>範囲 (range)</label>
-            {fields.map((field, index) => (
-              <div key={field.id} className="space-y-2 p-2 border rounded mb-2">
-                <div>
-                  <label>開始時刻</label>
-                  <input
-                    type="time"
-                    {...register(`allowedRanges.${index}.startTime`)}
-                    className="input input-bordered w-full"
-                  />
-                  {errors.allowedRanges?.[index]?.startTime && (
-                    <p className="text-red-500">{errors.allowedRanges[index].startTime?.message}</p>
-                  )}
-                </div>
-                <div>
-                  <label>終了時刻</label>
-                  <input
-                    type="time"
-                    {...register(`allowedRanges.${index}.endTime`)}
-                    className="input input-bordered w-full"
-                  />
-                  {errors.allowedRanges?.[index]?.endTime && (
-                    <p className="text-red-500">{errors.allowedRanges[index].endTime?.message}</p> //TODO: なぜかエラーが表示されないが
-                  )}
+
+            <TimeRange
+              onAddRange={({ startTime, endTime }) => {
+                replace([{ startTime, endTime }]);
+              }}
+            />
+
+            {fields.map((field) => (
+              <div key={field.id} className="flex items-center gap-2 border rounded p-2 my-2">
+                <div className="flex-1">
+                  <span className="font-semibold">開始:</span> {field.startTime}
+                  <span className="ml-4 font-semibold">終了:</span> {field.endTime}
                 </div>
               </div>
             ))}
-            {/* TODO: 現在は単一の範囲にしか対応しない */}
-            {/* <button
-              type="button"
-              onClick={() => append({ startTime: "", endTime: "" })}
-              className="btn btn-secondary"
-            >
-              範囲を追加
-            </button> */}
-            {errors.allowedRanges && <p className="text-red-500">{errors.allowedRanges.message}</p>}
+
+            {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
+              <p className="text-red-500">{errors.allowedRanges.message}</p>
+            )}
           </div>
 
           <button type="submit" className="btn btn-primary w-full" disabled={!isValid}>
