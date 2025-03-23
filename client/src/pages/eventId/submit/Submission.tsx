@@ -84,11 +84,6 @@ export default function SubmissionPage() {
         </p>
         {/*  FIXME: guestName の更新ごとに Calendar が再描画され、コストが大きい*/}
         <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef}/>
-        {isHost && (
-          <NavLink to={`/${projectId}/edit`} className="block hover:underline">
-            イベントを編集する
-          </NavLink>
-        )}
 
         {/* ----------- 大枠 (Range) ----------- */}
         {/* TODO: カレンダーにグレー枠で表示など */}
@@ -147,8 +142,13 @@ export default function SubmissionPage() {
             }}
             className="btn btn-primary"
           >
-            イベントを提出
+            日程を提出
           </button>
+          {isHost && (
+            <NavLink to={`/${projectId}/edit`} className="block hover:underline">
+              イベントを編集する
+            </NavLink>
+          )}
         </div>
       </div>
     </>
