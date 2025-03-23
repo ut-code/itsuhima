@@ -3,6 +3,7 @@
 @plugin "daisyui/theme" {
   name: "light";
   default: true;
+  prefersdark: true; /* TODO: ダークモード対応 */
   --color-primary: #001e59;
   --color-secondary: #ff48a0;
 }
@@ -11,8 +12,7 @@
   display: none;
 }
 
-/* 今日の日付のハイライトを削除する */
-/* https://github.com/fullcalendar/fullcalendar/issues/7150 */
 :root {
-  --fc-today-bg-color: inherit;
+  --fc-today-bg-color: inherit; /* 今日の日付のハイライトを削除する https://github.com/fullcalendar/fullcalendar/issues/7150 */
+  overscroll-behavior: none; /* 引っ張って更新を無効化 */
 }
