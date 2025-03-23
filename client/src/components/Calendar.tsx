@@ -116,10 +116,11 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
   }
 
   return (
-    <>
+    <div className="h-full">
       <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, interactionPlugin]}
+        height={"100%"}
         longPressDelay={200}
         slotDuration={"00:15:00"}
         allDaySlot={false}
@@ -209,7 +210,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
           }
         }
       />
-    </>
+    </div>
   );
 };
 
