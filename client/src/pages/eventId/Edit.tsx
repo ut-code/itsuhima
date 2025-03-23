@@ -1,17 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Me, meResSchema, Project, projectResSchema } from "../../../../common/schema";
 import { useData } from "../../hooks";
 import Header from "../../components/Header";
 import { API_ENDPOINT } from "../../utils";
+import { TimeRange } from "../../components/TimeRange";
 
 export default function EditPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const [name, setName] = useState<string>("");
-  const [startDate, setStartDate] = useState<string>(""); // ISO 文字列
-  const [endDate, setEndDate] = useState<string>(""); // ISO 文字列
-  const [ranges, setRanges] = useState<{ startTime: string; endTime: string }[]>([]); // range 配列
-  const navigate = useNavigate(); // ページ遷移
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [ranges, setRanges] = useState<{ startTime: string; endTime: string }[]>([]);
+  const navigate = useNavigate();
 
   const {
     data: project,
@@ -30,29 +31,17 @@ export default function EditPage() {
   const loading = projectLoading || meLoading;
   const error = (projectError ?? "") + (meError ?? "");
 
-  // range 追加処理
-  const handleAddRange = () => {
-    setRanges([...ranges, { startTime: "", endTime: "" }]);
+  const handleReplaceRange = (range: { startTime: string; endTime: string }) => {
+    setRanges([range]);
   };
 
-  // range 更新処理
-  const handleRangeChange = (index: number, field: "startTime" | "endTime", value: string) => {
-    const newRanges = [...ranges];
-    newRanges[index][field] = value;
-    setRanges(newRanges);
-  };
-
-  // 送信処理
-  // 送信処理
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     let eventData;
     if (project && project.guests) {
-      // すでにデータを登録したユーザーがいる場合、名前のみ編集可能
       eventData = { name };
     } else {
-      // 通常の編集
       if (!startDate || !endDate || !ranges.length) {
         alert("開始日と終了日を入力してください");
         return;
@@ -70,11 +59,9 @@ export default function EditPage() {
         name,
         startDate: startDateTime,
         endDate: endDateTime,
-        range: rangeWithDateTime,
+        allowedRanges: rangeWithDateTime,
       };
     }
-
-    console.log("送信データ:", eventData);
 
     const res = await fetch(`${API_ENDPOINT}/projects/${eventId}`, {
       method: "PUT",
@@ -84,7 +71,7 @@ export default function EditPage() {
     });
 
     const data = await res.json();
-    console.log("受信データ", data.event);
+    console.log(data.event);
 
     if (res.ok) {
       if (project) {
@@ -96,8 +83,11 @@ export default function EditPage() {
     }
   };
 
-  if (!isHost) navigate(`/${eventId}/submit`);
-
+  useEffect(() => {
+    if (!loading && me && project && !isHost) {
+      navigate(`/${eventId}/submit`);
+    }
+  }, [loading, me, project, isHost, eventId, navigate]);
   if (loading) return <p>読み込み中...</p>;
   if (error) return <p>エラー: {error}</p>;
   if (!project) return <p>イベントが存在しません。</p>;
@@ -127,9 +117,8 @@ export default function EditPage() {
             />
           </div>
 
-          {!project.guests ? (
+          {!project.guests || project.guests.length === 0 ? (
             <>
-              {" "}
               <div>
                 <label>開始日</label>
                 <input
@@ -140,6 +129,7 @@ export default function EditPage() {
                   required
                 />
               </div>
+
               <div>
                 <label>終了日</label>
                 <input
@@ -150,39 +140,19 @@ export default function EditPage() {
                   required
                 />
               </div>
+
               <div>
-                <label>範囲 (range)</label>
+                <label>範囲 (TimeRange)</label>
+                <TimeRange onAddRange={handleReplaceRange} />
+
                 {ranges.map((range, index) => (
-                  <div key={index} className="space-y-2 p-2 border rounded mb-2">
-                    <div>
-                      <label>開始時刻</label>
-                      <input
-                        type="time"
-                        value={range.startTime}
-                        onChange={(e) =>
-                          handleRangeChange(index, "startTime", `${e.target.value}:00`)
-                        }
-                        className="input input-bordered w-full"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label>終了時刻</label>
-                      <input
-                        type="time"
-                        value={range.endTime}
-                        onChange={(e) =>
-                          handleRangeChange(index, "endTime", `${e.target.value}:00`)
-                        }
-                        className="input input-bordered w-full"
-                        required
-                      />
+                  <div key={index} className="flex items-center gap-2 border rounded p-2 my-2">
+                    <div className="flex-1">
+                      <span className="font-semibold">開始:</span> {range.startTime}
+                      <span className="ml-4 font-semibold">終了:</span> {range.endTime}
                     </div>
                   </div>
                 ))}
-                <button type="button" onClick={handleAddRange} className="btn btn-secondary">
-                  範囲を追加
-                </button>
               </div>
             </>
           ) : (
