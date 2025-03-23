@@ -7,8 +7,8 @@ import { Project } from "../../../common/schema";
 
 type Props = {
   project: Project;
-  onSubmit: (slots: { start: Date; end: Date }[], myGuestId: string) => void;
   myGuestId: string;
+  mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>;
 };
 
 const OTHERS_COLOR = "orange";
@@ -20,7 +20,7 @@ const MY_EVENT_ID = "myBox";
 const OTHERS_EVENT_ID = "othersBox";
 const SELECT_EVENT_ID = "selectBox";
 
-export const Calendar = ({ project, onSubmit, myGuestId }: Props) => {
+export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
   console.log("📅");
   const countDays =
     dayjs(project.endDate).startOf("day").diff(dayjs(project.startDate).startOf("day"), "day") + 1;
@@ -36,12 +36,6 @@ export const Calendar = ({ project, onSubmit, myGuestId }: Props) => {
     endTime: dayjs(new Date()).set("hour", 23).set("minute", 59),
   };
 
-  const mySlotsRef = useRef<
-    {
-      from: Date;
-      to: Date;
-    }[]
-  >([]);
   const othersSlotsRef = useRef<
     {
       from: Date;
@@ -215,21 +209,6 @@ export const Calendar = ({ project, onSubmit, myGuestId }: Props) => {
           }
         }
       />
-      <div>
-        <button
-          onClick={() => {
-            onSubmit(
-              mySlotsRef.current.map((slot) => {
-                return { start: slot.from, end: slot.to };
-              }),
-              myGuestId,
-            );
-          }}
-          className="btn btn-primary"
-        >
-          イベントを提出
-        </button>
-      </div>
     </>
   );
 };

@@ -259,7 +259,7 @@ router.put(
       });
     }
 
-    const { slots } = parsed.data;
+    const { slots, name } = parsed.data;
 
     try {
       const existingGuest = await prisma.guest.findFirst({
@@ -278,11 +278,12 @@ router.put(
       if (existingGuest) {
         await prisma.slot.deleteMany({ where: { guestId: existingGuest.id } });
 
-        // ゲスト情報更新 // FIXME: project is missing??
+        // ゲスト情報更新
         guest = await prisma.guest.update({
           where: { id: existingGuest.id },
           data: {
             slots: { create: slotData },
+            name,
           },
           include: { slots: true },
         });

@@ -2,7 +2,7 @@ import { NavLink, useNavigate, useParams } from "react-router";
 import { Calendar } from "../../../components/Calendar";
 import { Me, meResSchema, Project, projectResSchema } from "../../../../../common/schema";
 import { useData } from "../../../hooks";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dayjs from "dayjs";
 import Header from "../../../components/Header";
 import { API_ENDPOINT } from "../../../utils";
@@ -23,12 +23,16 @@ export default function SubmissionPage() {
   const loading = projectLoading || meLoading;
   const error = projectError;
 
-  const [guestName, setGuestName] = useState("");
-
-  const myGuestId = me?.guests.find((g) => g.projectId === projectId)?.id;
+  const guestAsMe = me?.guests.find((g) => g.projectId === projectId);
+  const myGuestId = guestAsMe?.id;
   const isHost = me?.hosts.some((h) => h.projectId === projectId);
 
+  const [guestName, setGuestName] = useState(guestAsMe?.name ?? "");
+
   const navigate = useNavigate();
+
+  // calendar state (ref)
+  const mySlotsRef = useRef<{ from: Date; to: Date }[]>([]);
 
   const postAvailability = useCallback(
     async (slots: { start: Date; end: Date }[], myGuestId: string) => {
@@ -64,6 +68,13 @@ export default function SubmissionPage() {
     [guestName, projectId, navigate],
   );
 
+  useEffect(() => {
+    console.log("guestAsMe", guestAsMe);
+    if (guestAsMe) {
+      setGuestName(guestAsMe.name);
+    }
+  }, [guestAsMe])
+
   // -------------------- UI --------------------
   if (loading) return <p>読み込み中...</p>;
   if (error) return <p>エラー: {error}</p>;
@@ -80,12 +91,7 @@ export default function SubmissionPage() {
           {dayjs(project.endDate).format("YYYY/MM/DD")}
         </p>
         {/*  FIXME: guestName の更新ごとに Calendar が再描画され、コストが大きい*/}
-        <Calendar project={project} onSubmit={postAvailability} myGuestId={myGuestId ?? ""} />
-        {isHost && (
-          <NavLink to={`/${projectId}/edit`} className="block hover:underline">
-            イベントを編集する
-          </NavLink>
-        )}
+        <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef}/>
 
         {/* ----------- 大枠 (Range) ----------- */}
         {/* TODO: カレンダーにグレー枠で表示など */}
@@ -132,6 +138,26 @@ export default function SubmissionPage() {
           onChange={(e) => setGuestName(e.target.value)}
           className="input input-bordered w-full max-w-xs my-2"
         />
+        <div>
+          <button
+            onClick={() => {
+              postAvailability(
+                mySlotsRef.current.map((slot) => {
+                  return { start: slot.from, end: slot.to };
+                }),
+                myGuestId ?? "",
+              );
+            }}
+            className="btn btn-primary"
+          >
+            日程を提出
+          </button>
+          {isHost && (
+            <NavLink to={`/${projectId}/edit`} className="block hover:underline">
+              イベントを編集する
+            </NavLink>
+          )}
+        </div>
       </div>
     </>
   );
