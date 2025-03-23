@@ -63,19 +63,18 @@ function Preview({ asHost: hostingProjects }: InvolvedProjects) {
       {hostingProjects.length > 0 ? (
         <ul className="space-y-2">
           {hostingProjects.map((p) => (
-            <li key={p.id} className="border p-2 rounded flex ">
-              <NavLink to={`/${p.id}/submit`} className="block hover:underline">
+            <li key={p.id} className="border p-2 rounded flex justify-between items-center">
+              <NavLink to={`/${p.id}/submit`} className="hover:underline">
                 <div>イベント名: {p.name}</div>
                 <div>
                   日付: {formatDate(p.startDate.toLocaleDateString())} ～{" "}
                   {formatDate(p.endDate.toLocaleDateString())}
                 </div>
               </NavLink>
-
               <button onClick={deleteEvent(p.id)}>
                 <IoMdTrash
                   id={`idIoMdTrash-${p.id}`}
-                  className="text-red-500 hover:text-red-700 cursor-pointer inline-block ml-2"
+                  className="text-red-500 hover:text-red-700 cursor-pointer ml-4"
                   size={24}
                 />
               </button>
