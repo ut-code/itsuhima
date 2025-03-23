@@ -2,7 +2,7 @@ import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import dayjs, { Dayjs } from "dayjs";
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { Project } from "../../../common/schema";
 
 type Props = {
@@ -93,8 +93,33 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
     });
   }
 
+  useEffect(() => {
+    // カレンダー外までドラッグした際に選択を解除
+    const handleMouseUp = (e: MouseEvent | TouchEvent) => {
+      const calendarEl = document.getElementById("ih-cal-wrapper");
+
+      const target = (e instanceof MouseEvent) ? e.target : document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+
+      const isExternal = calendarEl && !calendarEl.contains(target as Node);
+
+      if (isSelectionDeleting.current !== null && calendarEl && isExternal) {
+        isSelectionDeleting.current = null;
+        const existingSelection = calendarRef.current?.getApi()?.getEventById(SELECT_EVENT_ID);
+        if (existingSelection) {
+          existingSelection.remove();
+        }
+      }
+    }
+    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("touchend", handleMouseUp);
+    return () => {
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("touchend", handleMouseUp);
+    };
+  }, [])
+
   return (
-    <div className="h-full">
+    <div className="h-full" id="ih-cal-wrapper">
       <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, interactionPlugin]}
