@@ -63,9 +63,9 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
     slots.forEach((slot) => {
       const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
       if (slot.guestId === myGuestId) {
-        myMatrix.setRange(from, to, true);
+        myMatrix.setRange(from, to, 1);
       } else {
-        othersMatrix.setRange(from, to, true);
+        othersMatrix.setRange(from, to, 1);
       }
     });
     myMatrix.getSlots().forEach((slot) => {
@@ -225,7 +225,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
 };
 
 class CalendarMatrix {
-  private matrix: boolean[][];
+  private matrix: number[][];
   /**
    * 15 分を 1 セルとしたセルの数 (96 = 24 * 4)
    */
@@ -234,7 +234,7 @@ class CalendarMatrix {
 
   constructor(dayCount: number, initialDate: Date) {
     this.matrix = Array.from({ length: dayCount }, () =>
-      Array.from({ length: this.quarterCount }, () => false),
+      Array.from({ length: this.quarterCount }, () => 0),
     );
     this.initialDate = dayjs(initialDate).startOf("day");
   }
@@ -247,7 +247,7 @@ class CalendarMatrix {
 
   getIsSlotExist(date: Date): boolean {
     const [row, col] = this.getIndex(date);
-    return this.matrix[row][col];
+    return this.matrix[row][col] !== 0;
   }
 
   getSlots() {
@@ -280,7 +280,7 @@ class CalendarMatrix {
     return slots;
   }
 
-  setSlot(from: Date, to: Date, newValue: boolean): void {
+  setSlot(from: Date, to: Date, newValue: number): void {
     const [startRow, startCol] = this.getIndex(from);
     const [endRow, endCol] = this.getIndex(dayjs(to).subtract(1, "minute").toDate());
     for (let r = startRow; r <= endRow; r++) {
@@ -290,12 +290,22 @@ class CalendarMatrix {
     }
   }
 
-  setRange(from: Date, to: Date, newValue: boolean): void {
+  setRange(from: Date, to: Date, newValue: number): void {
     const [startRow, startCol] = this.getIndex(from);
     const [endRow, endCol] = this.getIndex(dayjs(to).subtract(1, "minute").toDate());
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
         this.matrix[r][c] = newValue;
+      }
+    }
+  }
+
+  incrementRange(from: Date, to: Date): void {
+    const [startRow, startCol] = this.getIndex(from);
+    const [endRow, endCol] = this.getIndex(dayjs(to).subtract(1, "minute").toDate());
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        this.matrix[r][c] += 1;
       }
     }
   }
@@ -318,7 +328,7 @@ function editMySlots(
   });
   mySlotsRef.current = [];
 
-  myMatrix.current.setRange(from, to, !isDeletion);
+  myMatrix.current.setRange(from, to, isDeletion ? 0 : 1);
   myMatrix.current.getSlots().forEach((slot) => {
     calendarApi.addEvent({
       start: slot.from,
