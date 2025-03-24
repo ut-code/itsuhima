@@ -65,7 +65,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
       if (slot.guestId === myGuestId) {
         myMatrix.setRange(from, to, 1);
       } else {
-        othersMatrix.setRange(from, to, 1);
+        othersMatrix.incrementRange(from, to);
       }
     });
     myMatrix.getSlots().forEach((slot) => {
@@ -253,27 +253,27 @@ class CalendarMatrix {
   getSlots() {
     const slots: { from: Date; to: Date }[] = [];
     for (let day = 0; day < this.matrix.length; day++) {
-      let isEvent = null;
+      let eventCount = null;
       let start: Date | null = null;
       for (let q = 0; q < this.matrix[day].length; q++) {
         const currentCell = this.matrix[day][q];
-        if (isEvent !== currentCell) {
-          if (currentCell) {
+        if (eventCount !== currentCell) {
+          if (start) {
+            const from = start;
+            const to = this.initialDate
+              .add(day, "day")
+              .add(q * 15, "minute")
+              .toDate();
+            slots.push({ from, to });
+            start = null;
+          }
+          if (currentCell !== 0) {
             start = this.initialDate
               .add(day, "day")
               .add(q * 15, "minute")
               .toDate();
-          } else {
-            if (start) {
-              const from = start;
-              const to = this.initialDate
-                .add(day, "day")
-                .add(q * 15, "minute")
-                .toDate();
-              slots.push({ from, to });
-            }
           }
-          isEvent = currentCell;
+          eventCount = currentCell;
         }
       }
     }
