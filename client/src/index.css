@@ -12,6 +12,12 @@
   display: none;
 }
 
+.fc-bg-event {
+  border: 1px solid rgb(0, 255, 255);
+}
+
+/* TODO: 選択のbgEventも枠付きになってしまう */
+
 :root {
   --fc-today-bg-color: inherit; /* 今日の日付のハイライトを削除する https://github.com/fullcalendar/fullcalendar/issues/7150 */
   overscroll-behavior: none; /* 引っ張って更新を無効化 */

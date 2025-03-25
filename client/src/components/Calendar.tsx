@@ -16,7 +16,7 @@ type Props = {
 };
 
 // const OTHERS_COLOR = "orange";
-const MY_COLOR = "lightblue";
+// const MY_COLOR = "lightblue";
 const CREATE_COLOR = "green";
 const DELETE_COLOR = "red";
 
@@ -49,7 +49,6 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
 
   // init
   useEffect(() => {
-    console.log("init🚀")
     if (calendarApi) {
       calendarApi.getEvents().forEach((event) => {
         event.remove();
@@ -59,7 +58,6 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
       othersMatrix.clear()
 
       const slots = project.guests.flatMap((guest) => guest.slots);
-      console.log(slots)
       slots.forEach((slot) => {
         const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
         if (slot.guestId === myGuestId) {
@@ -73,9 +71,10 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         calendarApi.addEvent({
           start: slot.from,
           end: slot.to,
-          display: "background",
           id: MY_EVENT_ID,
-          color: MY_COLOR,
+          color: "rgba(255, 255, 255, 0)",
+          borderColor: "blue",
+          textColor: "black",
         });
         mySlotsRef.current.push({
           from: slot.from,
@@ -86,9 +85,10 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         calendarApi.addEvent({
           start: slot.from,
           end: slot.to,
+          title: slot.weight.toString(),
           display: "background",
           id: OTHERS_EVENT_ID,
-          color: `rgba(255, 0, 0, ${slot.weight / 12})`,
+          color: `rgba(0, 255, 255, ${slot.weight / project.guests.length})`,
         });
       });
     }
@@ -168,6 +168,14 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
           // 選択が完了した際に編集する
           (info) => {
             handleEdit(info, isSelectionDeleting, calendarRef, myMatrixRef, mySlotsRef);
+          }
+        }
+        eventDidMount={
+          // background event を選択できるようにするため。
+          (info) => {
+            if (info.el) {
+              info.el.style.pointerEvents = 'none';
+            }
           }
         }
       />
@@ -353,9 +361,10 @@ function handleEdit(
     calendarApi.addEvent({
       start: slot.from,
       end: slot.to,
-      display: "background",
-      color: MY_COLOR,
       id: MY_EVENT_ID,
+      color: "rgba(255, 255, 255, 0)",
+      borderColor: "blue",
+      textColor: "black",
     });
     mySlotsRef.current.push({
       from: slot.from,
