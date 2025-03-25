@@ -5,6 +5,7 @@ import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/ja";
 import React, { useEffect, useRef } from "react";
 import { Project } from "../../../common/schema";
+import { DateSelectArg, DateSpanApi } from "@fullcalendar/core/index.js";
 
 dayjs.locale('ja');
 
@@ -158,64 +159,15 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         initialView="timeGrid"
         selectable={true}
         selectAllow={
-          // 選択範囲の表示
-          // 通常の selection では矩形選択ができないため、イベントを作成することで選択範囲を表現している。
-          // https://github.com/fullcalendar/fullcalendar/issues/4119
+          // 選択中に選択範囲を表示する
           (info) => {
-            if (isSelectionDeleting.current === null) {
-              // ドラッグ開始地点が既存の自分のイベントなら削除モード、そうでなければ追加モードとする。
-              // isSelectionDeleting は select の発火時 (つまり、ドラッグが終了した際) に null にリセットされる。
-              isSelectionDeleting.current = myMatrix.getIsSlotExist(info.start);
-            }
-
-            const selectionColor = isSelectionDeleting.current ? DELETE_COLOR : CREATE_COLOR;
-
-            if (!calendarRef.current) return false;
-            const calendarApi = calendarRef.current.getApi();
-
-            // 既存の選択範囲をクリア
-            const existingSelection = calendarApi.getEventById("selectBox");
-            if (existingSelection) {
-              existingSelection.remove();
-            }
-
-            // start と end が逆転している場合は入れ替える (TODO: refactor)
-            let startTime = info.start.toLocaleTimeString("ja-JP", {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-            let endTime = info.end.toLocaleTimeString("ja-JP", {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-
-            if (
-              info.start.getHours() > info.end.getHours() ||
-              (info.start.getHours() === info.end.getHours() &&
-                info.start.getMinutes() > info.end.getMinutes())
-            ) {
-              [startTime, endTime] = [endTime, startTime];
-            }
-
-            calendarApi.addEvent({
-              id: SELECT_EVENT_ID,
-              startTime: startTime,
-              endTime: endTime,
-              startRecur: info.start,
-              endRecur: info.end,
-              display: "background",
-              color: selectionColor,
-            });
-            return true;
+            return handleSelect(info, isSelectionDeleting, calendarRef, myMatrixRef);
           }
         }
         select={
-          // 実際の編集
+          // 選択が完了した際に編集する
           (info) => {
-            const { from, to } = getVertexes(info.start, info.end);
-            if (isSelectionDeleting.current === null) return;
-            editMySlots(from, to, isSelectionDeleting.current, calendarRef, mySlotsRef, myMatrixRef);
-            isSelectionDeleting.current = null;
+            handleEdit(info, isSelectionDeleting, calendarRef, myMatrixRef, mySlotsRef);
           }
         }
       />
@@ -317,14 +269,76 @@ class CalendarMatrix {
   }
 }
 
-function editMySlots(
-  from: Date,
-  to: Date,
-  isDeletion: boolean,
+function handleSelect(
+  info: DateSpanApi,
+  isSelectionDeleting: React.RefObject<boolean | null>,
   calendarRef: React.RefObject<FullCalendar | null>,
-  mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>,
-  myMatrix: React.RefObject<CalendarMatrix>,
+  myMatrixRef: React.RefObject<CalendarMatrix>,
 ) {
+  // 選択範囲の表示
+  // 通常の selection では矩形選択ができないため、イベントを作成することで選択範囲を表現している。
+  // https://github.com/fullcalendar/fullcalendar/issues/4119
+
+  if (isSelectionDeleting.current === null) {
+    // ドラッグ開始地点が既存の自分のイベントなら削除モード、そうでなければ追加モードとする。
+    // isSelectionDeleting は select の発火時 (つまり、ドラッグが終了した際) に null にリセットされる。
+    isSelectionDeleting.current = myMatrixRef.current.getIsSlotExist(info.start);
+  }
+
+  const selectionColor = isSelectionDeleting.current ? DELETE_COLOR : CREATE_COLOR;
+
+  if (!calendarRef.current) return false;
+  const calendarApi = calendarRef.current.getApi();
+
+  // 既存の選択範囲をクリア
+  const existingSelection = calendarApi.getEventById("selectBox");
+  if (existingSelection) {
+    existingSelection.remove();
+  }
+
+  // start と end が逆転している場合は入れ替える (TODO: refactor)
+  let startTime = info.start.toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  let endTime = info.end.toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (
+    info.start.getHours() > info.end.getHours() ||
+    (info.start.getHours() === info.end.getHours() &&
+      info.start.getMinutes() > info.end.getMinutes())
+  ) {
+    [startTime, endTime] = [endTime, startTime];
+  }
+
+  calendarApi.addEvent({
+    id: SELECT_EVENT_ID,
+    startTime: startTime,
+    endTime: endTime,
+    startRecur: info.start,
+    endRecur: info.end,
+    display: "background",
+    color: selectionColor,
+  });
+  return true;
+}
+
+function handleEdit(
+  info: DateSelectArg,
+  isSelectionDeleting: React.RefObject<boolean | null>,
+  calendarRef: React.RefObject<FullCalendar | null>,
+  myMatrixRef: React.RefObject<CalendarMatrix>,
+  mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>,
+) {
+  const { from, to } = getVertexes(info.start, info.end);
+
+  if (isSelectionDeleting.current === null) return;
+  if (!calendarRef.current) return;
+  const isDeletion = isSelectionDeleting.current;
+
   if (!calendarRef.current) return;
   const calendarApi = calendarRef.current.getApi();
 
@@ -334,8 +348,8 @@ function editMySlots(
   });
   mySlotsRef.current = [];
 
-  myMatrix.current.setRange(from, to, isDeletion ? 0 : 1);
-  myMatrix.current.getSlots().forEach((slot) => {
+  myMatrixRef.current.setRange(from, to, isDeletion ? 0 : 1);
+  myMatrixRef.current.getSlots().forEach((slot) => {
     calendarApi.addEvent({
       start: slot.from,
       end: slot.to,
@@ -354,6 +368,7 @@ function editMySlots(
   if (existingSelection) {
     existingSelection.remove();
   }
+  isSelectionDeleting.current = null;
 }
 
 /**
