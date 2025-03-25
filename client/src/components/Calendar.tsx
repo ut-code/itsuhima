@@ -5,6 +5,7 @@ import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/ja";
 import React, { useEffect, useRef } from "react";
 import { Project } from "../../../common/schema";
+import { DateSelectArg, DateSpanApi } from "@fullcalendar/core/index.js";
 
 dayjs.locale('ja');
 
@@ -14,7 +15,7 @@ type Props = {
   mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>;
 };
 
-const OTHERS_COLOR = "orange";
+// const OTHERS_COLOR = "orange";
 const MY_COLOR = "lightblue";
 const CREATE_COLOR = "green";
 const DELETE_COLOR = "red";
@@ -32,69 +33,68 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
     new CalendarMatrix(countDays + 1, project.startDate),
   );
 
+  const myMatrix = myMatrixRef.current;
+  const othersMatrix = othersMatrixRef.current;
+
   // TODO: 現在は最初の選択範囲のみ。FullCalendar の制約により、複数の allowedRanges には対応できないため、のちに selectAllow などで独自実装が必要
   const tmpAllowedRange = project.allowedRanges[0] ?? {
     startTime: dayjs(new Date()).set("hour", 0).set("minute", 0),
     endTime: dayjs(new Date()).set("hour", 23).set("minute", 59),
   };
 
-  const othersSlotsRef = useRef<
-    {
-      from: Date;
-      to: Date;
-    }[]
-  >([]);
-
   const calendarRef = useRef<FullCalendar | null>(null);
-
   const isSelectionDeleting = useRef<boolean | null>(null);
 
-  // init
   const calendarApi = calendarRef.current?.getApi();
-  const myMatrix = myMatrixRef.current;
-  const othersMatrix = othersMatrixRef.current;
 
-  if (calendarApi) {
-    calendarApi.getEvents().forEach((event) => {
-      event.remove();
-    });
+  // init
+  useEffect(() => {
+    console.log("init🚀")
+    if (calendarApi) {
+      calendarApi.getEvents().forEach((event) => {
+        event.remove();
+      });
+      mySlotsRef.current = [];
+      myMatrix.clear()
+      othersMatrix.clear()
 
-    const slots = project.guests.flatMap((guest) => guest.slots);
-    slots.forEach((slot) => {
-      const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
-      if (slot.guestId === myGuestId) {
-        myMatrix.setRange(from, to, true);
-      } else {
-        othersMatrix.setRange(from, to, true);
-      }
-    });
-    myMatrix.getSlots().forEach((slot) => {
-      calendarApi.addEvent({
-        start: slot.from,
-        end: slot.to,
-        display: "background",
-        id: MY_EVENT_ID,
-        color: MY_COLOR,
+      const slots = project.guests.flatMap((guest) => guest.slots);
+      console.log(slots)
+      slots.forEach((slot) => {
+        const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
+        if (slot.guestId === myGuestId) {
+          myMatrix.setRange(from, to, 1);
+        } else {
+          // console.log("increment", from, to);
+          othersMatrix.incrementRange(from, to);
+        }
       });
-      mySlotsRef.current.push({
-        from: slot.from,
-        to: slot.to,
+      myMatrix.getSlots().forEach((slot) => {
+        calendarApi.addEvent({
+          start: slot.from,
+          end: slot.to,
+          display: "background",
+          id: MY_EVENT_ID,
+          color: MY_COLOR,
+        });
+        mySlotsRef.current.push({
+          from: slot.from,
+          to: slot.to,
+        });
       });
-    });
-    othersMatrix.getSlots().forEach((slot) => {
-      calendarApi.addEvent({
-        start: slot.from,
-        end: slot.to,
-        display: "background",
-        id: OTHERS_EVENT_ID,
-        color: OTHERS_COLOR,
+      othersMatrix.getSlots().forEach((slot) => {
+        calendarApi.addEvent({
+          start: slot.from,
+          end: slot.to,
+          display: "background",
+          id: OTHERS_EVENT_ID,
+          color: `rgba(255, 0, 0, ${slot.weight / 12})`,
+        });
       });
-      othersSlotsRef.current.push({
-        from: slot.from,
-        to: slot.to,
-      });
-    });
-  }
+    }
+
+  }, [calendarApi, myGuestId, myMatrix, mySlotsRef, othersMatrix, project.guests]);
+
 
   useEffect(() => {
     // カレンダー外までドラッグした際に選択を解除
@@ -159,64 +159,15 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         initialView="timeGrid"
         selectable={true}
         selectAllow={
-          // 選択範囲の表示
-          // 通常の selection では矩形選択ができないため、イベントを作成することで選択範囲を表現している。
-          // https://github.com/fullcalendar/fullcalendar/issues/4119
+          // 選択中に選択範囲を表示する
           (info) => {
-            if (isSelectionDeleting.current === null) {
-              // ドラッグ開始地点が既存の自分のイベントなら削除モード、そうでなければ追加モードとする。
-              // isSelectionDeleting は select の発火時 (つまり、ドラッグが終了した際) に null にリセットされる。
-              isSelectionDeleting.current = myMatrix.getIsSlotExist(info.start);
-            }
-
-            const selectionColor = isSelectionDeleting.current ? DELETE_COLOR : CREATE_COLOR;
-
-            if (!calendarRef.current) return false;
-            const calendarApi = calendarRef.current.getApi();
-
-            // 既存の選択範囲をクリア
-            const existingSelection = calendarApi.getEventById("selectBox");
-            if (existingSelection) {
-              existingSelection.remove();
-            }
-
-            // start と end が逆転している場合は入れ替える (TODO: refactor)
-            let startTime = info.start.toLocaleTimeString("ja-JP", {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-            let endTime = info.end.toLocaleTimeString("ja-JP", {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-
-            if (
-              info.start.getHours() > info.end.getHours() ||
-              (info.start.getHours() === info.end.getHours() &&
-                info.start.getMinutes() > info.end.getMinutes())
-            ) {
-              [startTime, endTime] = [endTime, startTime];
-            }
-
-            calendarApi.addEvent({
-              id: SELECT_EVENT_ID,
-              startTime: startTime,
-              endTime: endTime,
-              startRecur: info.start,
-              endRecur: info.end,
-              display: "background",
-              color: selectionColor,
-            });
-            return true;
+            return handleSelect(info, isSelectionDeleting, calendarRef, myMatrixRef);
           }
         }
         select={
-          // 実際の編集
+          // 選択が完了した際に編集する
           (info) => {
-            const { from, to } = getVertexes(info.start, info.end);
-            if (isSelectionDeleting.current === null) return;
-            editMySlots(from, to, isSelectionDeleting.current, calendarRef, mySlotsRef, myMatrixRef);
-            isSelectionDeleting.current = null;
+            handleEdit(info, isSelectionDeleting, calendarRef, myMatrixRef, mySlotsRef);
           }
         }
       />
@@ -225,7 +176,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
 };
 
 class CalendarMatrix {
-  private matrix: boolean[][];
+  private matrix: number[][];
   /**
    * 15 分を 1 セルとしたセルの数 (96 = 24 * 4)
    */
@@ -234,7 +185,7 @@ class CalendarMatrix {
 
   constructor(dayCount: number, initialDate: Date) {
     this.matrix = Array.from({ length: dayCount }, () =>
-      Array.from({ length: this.quarterCount }, () => false),
+      Array.from({ length: this.quarterCount }, () => 0),
     );
     this.initialDate = dayjs(initialDate).startOf("day");
   }
@@ -247,40 +198,41 @@ class CalendarMatrix {
 
   getIsSlotExist(date: Date): boolean {
     const [row, col] = this.getIndex(date);
-    return this.matrix[row][col];
+    return this.matrix[row][col] !== 0;
   }
 
   getSlots() {
-    const slots: { from: Date; to: Date }[] = [];
+    const slots: { from: Date; to: Date, weight: number }[] = [];
     for (let day = 0; day < this.matrix.length; day++) {
-      let isEvent = this.matrix[day][0];
+      let eventCount = null;
       let start: Date | null = null;
       for (let q = 0; q < this.matrix[day].length; q++) {
         const currentCell = this.matrix[day][q];
-        if (isEvent !== currentCell) {
-          if (currentCell) {
+        if (eventCount !== currentCell) {
+          if (start) {
+            const from = start;
+            const to = this.initialDate
+              .add(day, "day")
+              .add(q * 15, "minute")
+              .toDate();
+            const weight = eventCount ?? 0;
+            slots.push({ from, to, weight });
+            start = null;
+          }
+          if (currentCell !== 0) {
             start = this.initialDate
               .add(day, "day")
               .add(q * 15, "minute")
               .toDate();
-          } else {
-            if (start) {
-              const from = start;
-              const to = this.initialDate
-                .add(day, "day")
-                .add(q * 15, "minute")
-                .toDate();
-              slots.push({ from, to });
-            }
           }
-          isEvent = currentCell;
+          eventCount = currentCell;
         }
       }
     }
     return slots;
   }
 
-  setSlot(from: Date, to: Date, newValue: boolean): void {
+  setSlot(from: Date, to: Date, newValue: number): void {
     const [startRow, startCol] = this.getIndex(from);
     const [endRow, endCol] = this.getIndex(dayjs(to).subtract(1, "minute").toDate());
     for (let r = startRow; r <= endRow; r++) {
@@ -290,7 +242,7 @@ class CalendarMatrix {
     }
   }
 
-  setRange(from: Date, to: Date, newValue: boolean): void {
+  setRange(from: Date, to: Date, newValue: number): void {
     const [startRow, startCol] = this.getIndex(from);
     const [endRow, endCol] = this.getIndex(dayjs(to).subtract(1, "minute").toDate());
     for (let r = startRow; r <= endRow; r++) {
@@ -298,17 +250,95 @@ class CalendarMatrix {
         this.matrix[r][c] = newValue;
       }
     }
+  }
+
+  incrementRange(from: Date, to: Date): void {
+    const [startRow, startCol] = this.getIndex(from);
+    const [endRow, endCol] = this.getIndex(dayjs(to).subtract(1, "minute").toDate());
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        this.matrix[r][c] += 1;
+      }
+    }
+  }
+
+  clear() {
+    this.matrix = Array.from({ length: this.matrix.length }, () =>
+      Array.from({ length: this.quarterCount }, () => 0),
+    );
   }
 }
 
-function editMySlots(
-  from: Date,
-  to: Date,
-  isDeletion: boolean,
+function handleSelect(
+  info: DateSpanApi,
+  isSelectionDeleting: React.RefObject<boolean | null>,
   calendarRef: React.RefObject<FullCalendar | null>,
-  mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>,
-  myMatrix: React.RefObject<CalendarMatrix>,
+  myMatrixRef: React.RefObject<CalendarMatrix>,
 ) {
+  // 選択範囲の表示
+  // 通常の selection では矩形選択ができないため、イベントを作成することで選択範囲を表現している。
+  // https://github.com/fullcalendar/fullcalendar/issues/4119
+
+  if (isSelectionDeleting.current === null) {
+    // ドラッグ開始地点が既存の自分のイベントなら削除モード、そうでなければ追加モードとする。
+    // isSelectionDeleting は select の発火時 (つまり、ドラッグが終了した際) に null にリセットされる。
+    isSelectionDeleting.current = myMatrixRef.current.getIsSlotExist(info.start);
+  }
+
+  const selectionColor = isSelectionDeleting.current ? DELETE_COLOR : CREATE_COLOR;
+
+  if (!calendarRef.current) return false;
+  const calendarApi = calendarRef.current.getApi();
+
+  // 既存の選択範囲をクリア
+  const existingSelection = calendarApi.getEventById("selectBox");
+  if (existingSelection) {
+    existingSelection.remove();
+  }
+
+  // start と end が逆転している場合は入れ替える (TODO: refactor)
+  let startTime = info.start.toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  let endTime = info.end.toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (
+    info.start.getHours() > info.end.getHours() ||
+    (info.start.getHours() === info.end.getHours() &&
+      info.start.getMinutes() > info.end.getMinutes())
+  ) {
+    [startTime, endTime] = [endTime, startTime];
+  }
+
+  calendarApi.addEvent({
+    id: SELECT_EVENT_ID,
+    startTime: startTime,
+    endTime: endTime,
+    startRecur: info.start,
+    endRecur: info.end,
+    display: "background",
+    color: selectionColor,
+  });
+  return true;
+}
+
+function handleEdit(
+  info: DateSelectArg,
+  isSelectionDeleting: React.RefObject<boolean | null>,
+  calendarRef: React.RefObject<FullCalendar | null>,
+  myMatrixRef: React.RefObject<CalendarMatrix>,
+  mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>,
+) {
+  const { from, to } = getVertexes(info.start, info.end);
+
+  if (isSelectionDeleting.current === null) return;
+  if (!calendarRef.current) return;
+  const isDeletion = isSelectionDeleting.current;
+
   if (!calendarRef.current) return;
   const calendarApi = calendarRef.current.getApi();
 
@@ -318,8 +348,8 @@ function editMySlots(
   });
   mySlotsRef.current = [];
 
-  myMatrix.current.setRange(from, to, !isDeletion);
-  myMatrix.current.getSlots().forEach((slot) => {
+  myMatrixRef.current.setRange(from, to, isDeletion ? 0 : 1);
+  myMatrixRef.current.getSlots().forEach((slot) => {
     calendarApi.addEvent({
       start: slot.from,
       end: slot.to,
@@ -338,6 +368,7 @@ function editMySlots(
   if (existingSelection) {
     existingSelection.remove();
   }
+  isSelectionDeleting.current = null;
 }
 
 /**
