@@ -14,7 +14,7 @@ type Props = {
   mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>;
 };
 
-const OTHERS_COLOR = "orange";
+// const OTHERS_COLOR = "orange";
 const MY_COLOR = "lightblue";
 const CREATE_COLOR = "green";
 const DELETE_COLOR = "red";
@@ -32,69 +32,68 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
     new CalendarMatrix(countDays + 1, project.startDate),
   );
 
+  const myMatrix = myMatrixRef.current;
+  const othersMatrix = othersMatrixRef.current;
+
   // TODO: 現在は最初の選択範囲のみ。FullCalendar の制約により、複数の allowedRanges には対応できないため、のちに selectAllow などで独自実装が必要
   const tmpAllowedRange = project.allowedRanges[0] ?? {
     startTime: dayjs(new Date()).set("hour", 0).set("minute", 0),
     endTime: dayjs(new Date()).set("hour", 23).set("minute", 59),
   };
 
-  const othersSlotsRef = useRef<
-    {
-      from: Date;
-      to: Date;
-    }[]
-  >([]);
-
   const calendarRef = useRef<FullCalendar | null>(null);
-
   const isSelectionDeleting = useRef<boolean | null>(null);
 
-  // init
   const calendarApi = calendarRef.current?.getApi();
-  const myMatrix = myMatrixRef.current;
-  const othersMatrix = othersMatrixRef.current;
 
-  if (calendarApi) {
-    calendarApi.getEvents().forEach((event) => {
-      event.remove();
-    });
+  // init
+  useEffect(() => {
+    console.log("init🚀")
+    if (calendarApi) {
+      calendarApi.getEvents().forEach((event) => {
+        event.remove();
+      });
+      mySlotsRef.current = [];
+      myMatrix.clear()
+      othersMatrix.clear()
 
-    const slots = project.guests.flatMap((guest) => guest.slots);
-    slots.forEach((slot) => {
-      const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
-      if (slot.guestId === myGuestId) {
-        myMatrix.setRange(from, to, 1);
-      } else {
-        othersMatrix.incrementRange(from, to);
-      }
-    });
-    myMatrix.getSlots().forEach((slot) => {
-      calendarApi.addEvent({
-        start: slot.from,
-        end: slot.to,
-        display: "background",
-        id: MY_EVENT_ID,
-        color: MY_COLOR,
+      const slots = project.guests.flatMap((guest) => guest.slots);
+      console.log(slots)
+      slots.forEach((slot) => {
+        const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
+        if (slot.guestId === myGuestId) {
+          myMatrix.setRange(from, to, 1);
+        } else {
+          // console.log("increment", from, to);
+          othersMatrix.incrementRange(from, to);
+        }
       });
-      mySlotsRef.current.push({
-        from: slot.from,
-        to: slot.to,
+      myMatrix.getSlots().forEach((slot) => {
+        calendarApi.addEvent({
+          start: slot.from,
+          end: slot.to,
+          display: "background",
+          id: MY_EVENT_ID,
+          color: MY_COLOR,
+        });
+        mySlotsRef.current.push({
+          from: slot.from,
+          to: slot.to,
+        });
       });
-    });
-    othersMatrix.getSlots().forEach((slot) => {
-      calendarApi.addEvent({
-        start: slot.from,
-        end: slot.to,
-        display: "background",
-        id: OTHERS_EVENT_ID,
-        color: OTHERS_COLOR,
+      othersMatrix.getSlots().forEach((slot) => {
+        calendarApi.addEvent({
+          start: slot.from,
+          end: slot.to,
+          display: "background",
+          id: OTHERS_EVENT_ID,
+          color: `rgba(255, 0, 0, ${slot.weight / 12})`,
+        });
       });
-      othersSlotsRef.current.push({
-        from: slot.from,
-        to: slot.to,
-      });
-    });
-  }
+    }
+
+  }, [calendarApi, myGuestId, myMatrix, mySlotsRef, othersMatrix, project.guests]);
+
 
   useEffect(() => {
     // カレンダー外までドラッグした際に選択を解除
@@ -251,7 +250,7 @@ class CalendarMatrix {
   }
 
   getSlots() {
-    const slots: { from: Date; to: Date }[] = [];
+    const slots: { from: Date; to: Date, weight: number }[] = [];
     for (let day = 0; day < this.matrix.length; day++) {
       let eventCount = null;
       let start: Date | null = null;
@@ -264,7 +263,8 @@ class CalendarMatrix {
               .add(day, "day")
               .add(q * 15, "minute")
               .toDate();
-            slots.push({ from, to });
+            const weight = eventCount ?? 0;
+            slots.push({ from, to, weight });
             start = null;
           }
           if (currentCell !== 0) {
@@ -308,6 +308,12 @@ class CalendarMatrix {
         this.matrix[r][c] += 1;
       }
     }
+  }
+
+  clear() {
+    this.matrix = Array.from({ length: this.matrix.length }, () =>
+      Array.from({ length: this.quarterCount }, () => 0),
+    );
   }
 }
 
