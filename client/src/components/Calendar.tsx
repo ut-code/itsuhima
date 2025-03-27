@@ -31,7 +31,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
   // TODO: +1 は不要かも
   const myMatrixRef = useRef<CalendarMatrix>(new CalendarMatrix(countDays + 1, project.startDate));
   const othersMatrixRef = useRef<CalendarMatrix>(
-    new CalendarMatrix(countDays + 1, project.startDate),
+    new CalendarMatrix(countDays + 1, project.startDate, true),
   );
 
   const myMatrix = myMatrixRef.current;
@@ -58,14 +58,16 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
       myMatrix.clear()
       othersMatrix.clear()
 
-      const slots = project.guests.flatMap((guest) => guest.slots);
+      const slots = project.guests.flatMap((guest) => guest.slots.map((slot) => ({
+        ...slot,
+        guestName: guest.name
+      })));
       slots.forEach((slot) => {
         const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
         if (slot.guestId === myGuestId) {
           myMatrix.setRange(from, to, 1);
         } else {
-          // console.log("increment", from, to);
-          othersMatrix.incrementRange(from, to);
+          othersMatrix.incrementRange(from, to, slot.guestName);
         }
       });
       myMatrix.getSlots().forEach((slot) => {
@@ -86,12 +88,12 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         calendarApi.addEvent({
           start: slot.from,
           end: slot.to,
-          title: slot.weight.toString(),
           display: "background",
           id: OTHERS_EVENT_ID,
           color: `rgba(0, 255, 255, ${slot.weight / project.guests.length})`,
           extendedProps: {
-            members: slot.weight
+            members: slot.guestNames,
+            countMembers: slot.weight
           }
         });
       });
@@ -188,9 +190,9 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
               <div className="w-full h-full">
                 <div className="badge badge-sm"
                   data-tooltip-id="member-info"
-                  data-tooltip-content={info.event.extendedProps.members}
+                  data-tooltip-content={info.event.extendedProps.members?.join(", ")}
                   data-tooltip-place="top"
-                >{info.event.extendedProps.members}</div>
+                >{info.event.extendedProps.countMembers}</div>
               </div>
             )
           } else if (info.event.id === MY_EVENT_ID) {
@@ -209,16 +211,18 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
 
 class CalendarMatrix {
   private matrix: number[][];
+  private guestNames: string[][][] | null;
   /**
    * 15 分を 1 セルとしたセルの数 (96 = 24 * 4)
    */
   private readonly quarterCount = 96;
   private initialDate: Dayjs;
 
-  constructor(dayCount: number, initialDate: Date) {
+  constructor(dayCount: number, initialDate: Date, hasGuestNames?: boolean) {
     this.matrix = Array.from({ length: dayCount }, () =>
       Array.from({ length: this.quarterCount }, () => 0),
     );
+    this.guestNames = hasGuestNames ? Array.from({ length: dayCount }, () => Array.from({ length: this.quarterCount }, () => [])) : null
     this.initialDate = dayjs(initialDate).startOf("day");
   }
 
@@ -234,10 +238,11 @@ class CalendarMatrix {
   }
 
   getSlots() {
-    const slots: { from: Date; to: Date, weight: number }[] = [];
+    const slots: { from: Date; to: Date, weight: number, guestNames?: string[] }[] = [];
     for (let day = 0; day < this.matrix.length; day++) {
       let eventCount = null;
       let start: Date | null = null;
+      let startGuestNames: string[] | null = null
       for (let q = 0; q < this.matrix[day].length; q++) {
         const currentCell = this.matrix[day][q];
         if (eventCount !== currentCell) {
@@ -248,7 +253,7 @@ class CalendarMatrix {
               .add(q * 15, "minute")
               .toDate();
             const weight = eventCount ?? 0;
-            slots.push({ from, to, weight });
+            slots.push({ from, to, weight, guestNames: startGuestNames ?? undefined });
             start = null;
           }
           if (currentCell !== 0) {
@@ -256,6 +261,7 @@ class CalendarMatrix {
               .add(day, "day")
               .add(q * 15, "minute")
               .toDate();
+            startGuestNames = this.guestNames?.[day][q] ?? null
           }
           eventCount = currentCell;
         }
@@ -284,12 +290,15 @@ class CalendarMatrix {
     }
   }
 
-  incrementRange(from: Date, to: Date): void {
+  incrementRange(from: Date, to: Date, guestName: string): void {
     const [startRow, startCol] = this.getIndex(from);
     const [endRow, endCol] = this.getIndex(dayjs(to).subtract(1, "minute").toDate());
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
         this.matrix[r][c] += 1;
+        if (this.guestNames) {
+          this.guestNames[r][c].push(guestName)
+        }
       }
     }
   }
@@ -389,9 +398,6 @@ function handleEdit(
       color: "rgba(255, 255, 255, 0)",
       borderColor: "blue",
       textColor: "black",
-      extendedProps: {
-        description: "it's mine!"
-      }
     });
     mySlotsRef.current.push({
       from: slot.from,
