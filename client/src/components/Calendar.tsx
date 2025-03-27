@@ -6,6 +6,7 @@ import "dayjs/locale/ja";
 import React, { useEffect, useRef } from "react";
 import { Project } from "../../../common/schema";
 import { DateSelectArg, DateSpanApi } from "@fullcalendar/core/index.js";
+import { Tooltip } from 'react-tooltip'
 
 dayjs.locale('ja');
 
@@ -89,6 +90,9 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
           display: "background",
           id: OTHERS_EVENT_ID,
           color: `rgba(0, 255, 255, ${slot.weight / project.guests.length})`,
+          extendedProps: {
+            members: slot.weight
+          }
         });
       });
     }
@@ -171,14 +175,34 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
           }
         }
         eventDidMount={
-          // background event を選択できるようにするため。
           (info) => {
-            if (info.el) {
+            if (info.event.id === MY_EVENT_ID) {
+              // 既存の event 上で選択できるようにするため。
               info.el.style.pointerEvents = 'none';
             }
           }
         }
+        eventContent={(info) => {
+          if (info.event.id === OTHERS_EVENT_ID) {
+            return (
+              <div className="w-full h-full">
+                <div className="badge badge-sm"
+                  data-tooltip-id="member-info"
+                  data-tooltip-content={info.event.extendedProps.members}
+                  data-tooltip-place="top"
+                >{info.event.extendedProps.members}</div>
+              </div>
+            )
+          } else if (info.event.id === MY_EVENT_ID) {
+            return (
+              <div>
+                {info.timeText}
+              </div>
+            )
+          }
+        }}
       />
+      <Tooltip id="member-info" />
     </div>
   );
 };
@@ -365,6 +389,9 @@ function handleEdit(
       color: "rgba(255, 255, 255, 0)",
       borderColor: "blue",
       textColor: "black",
+      extendedProps: {
+        description: "it's mine!"
+      }
     });
     mySlotsRef.current.push({
       from: slot.from,
