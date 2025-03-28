@@ -157,7 +157,12 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
             //   end: project.endDate,
             // },
             dayHeaderContent: (args) => {
-              return dayjs(args.date).format("M/D (ddd)");
+              return (
+                <div className="font-normal">
+                  <div>{dayjs(args.date).format("M/D")}</div>
+                  <div>{dayjs(args.date).format("(ddd)")}</div>
+                </div>
+              )
             },
             slotLabelContent: (args) => {
               return dayjs(args.date).format("HH:mm");
