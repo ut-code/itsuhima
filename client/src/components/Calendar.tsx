@@ -194,8 +194,8 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         eventContent={(info) => {
           if (info.event.id === OTHERS_EVENT) {
             return (
-              <div className="w-full h-full">
-                <div className="badge badge-sm"
+              <div className="flex w-full h-full justify-center items-center">
+                <div className="badge badge-sm bg-gray-200 border-0 text-primary font-bold"
                   data-tooltip-id="member-info"
                   data-tooltip-content={info.event.extendedProps.members?.join(", ")}
                   data-tooltip-place="top"
@@ -204,7 +204,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
             )
           } else if (info.event.id === MY_EVENT) {
             return (
-              <div>
+              <div className="h-full w-full text-gray-600 overflow-hidden">
                 {info.timeText}
               </div>
             )
