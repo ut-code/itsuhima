@@ -8,6 +8,10 @@
   --color-secondary: #ff48a0;
 }
 
+.fc-event {
+  box-shadow: none !important;
+}
+
 .fc-highlight {
   /* 日を跨ぐ選択が矩形選択にならないため、デフォルトの選択範囲を隠す */
   display: none;
