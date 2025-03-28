@@ -16,14 +16,14 @@ type Props = {
   mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>;
 };
 
-// const OTHERS_COLOR = "orange";
-// const MY_COLOR = "lightblue";
-const CREATE_COLOR = "green";
-const DELETE_COLOR = "red";
+const OPACITY = 0.2
+const PRIMARY_RGB = [15, 130, 177]
 
-const MY_EVENT_ID = "myBox";
-const OTHERS_EVENT_ID = "othersBox";
-const SELECT_EVENT_ID = "selectBox";
+const MY_EVENT = "ih-my-event";
+const OTHERS_EVENT = "ih-others-event";
+const SELECT_EVENT = "ih-select-event"
+const CREATE_SELECT_EVENT = "ih-create-select-event";
+const DELETE_SELECT_EVENT = "ih-delete-select-event"
 
 export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
   const countDays =
@@ -72,11 +72,10 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
       });
       myMatrix.getSlots().forEach((slot) => {
         calendarApi.addEvent({
+          id: MY_EVENT,
+          className: MY_EVENT,
           start: slot.from,
           end: slot.to,
-          id: MY_EVENT_ID,
-          color: "rgba(255, 255, 255, 0)",
-          borderColor: "blue",
           textColor: "black",
         });
         mySlotsRef.current.push({
@@ -86,11 +85,12 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
       });
       othersMatrix.getSlots().forEach((slot) => {
         calendarApi.addEvent({
+          id: OTHERS_EVENT,
+          className: OTHERS_EVENT,
           start: slot.from,
           end: slot.to,
+          color: `rgba(${PRIMARY_RGB.join(",")}, ${(1 - Math.pow(1 - OPACITY, slot.weight)).toFixed(3)})`,
           display: "background",
-          id: OTHERS_EVENT_ID,
-          color: `rgba(0, 255, 255, ${slot.weight / project.guests.length})`,
           extendedProps: {
             members: slot.guestNames,
             countMembers: slot.weight
@@ -113,7 +113,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
 
       if (isSelectionDeleting.current !== null && calendarEl && isExternal) {
         isSelectionDeleting.current = null;
-        const existingSelection = calendarRef.current?.getApi()?.getEventById(SELECT_EVENT_ID);
+        const existingSelection = calendarRef.current?.getApi()?.getEventById(SELECT_EVENT);
         if (existingSelection) {
           existingSelection.remove();
         }
@@ -129,6 +129,14 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
 
   return (
     <div className="h-full" id="ih-cal-wrapper">
+      {/* <div>
+      <button className="btn" onClick={() => {
+          calendarApi?.prev()
+        }}>{"<"}</button>
+        <button className="btn" onClick={() => {
+          calendarApi?.next()
+        }}>{">"}</button>
+      </div> */}
       <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, interactionPlugin]}
@@ -139,11 +147,10 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         initialDate={project.startDate}
         slotMinTime={dayjs(tmpAllowedRange.startTime).format("HH:mm:ss")}
         slotMaxTime={dayjs(tmpAllowedRange.endTime).format("HH:mm:ss")}
-        headerToolbar={false}
         views={{
           timeGrid: {
             type: "timeGrid",
-            duration: { days: countDays },
+            duration: { days: Math.min(countDays, 7) },
             // TODO: not working..?
             // visibleRange: {
             //   start: project.startDate,
@@ -178,14 +185,14 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         }
         eventDidMount={
           (info) => {
-            if (info.event.id === MY_EVENT_ID) {
+            if (info.event.id === MY_EVENT) {
               // 既存の event 上で選択できるようにするため。
               info.el.style.pointerEvents = 'none';
             }
           }
         }
         eventContent={(info) => {
-          if (info.event.id === OTHERS_EVENT_ID) {
+          if (info.event.id === OTHERS_EVENT) {
             return (
               <div className="w-full h-full">
                 <div className="badge badge-sm"
@@ -195,7 +202,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
                 >{info.event.extendedProps.countMembers}</div>
               </div>
             )
-          } else if (info.event.id === MY_EVENT_ID) {
+          } else if (info.event.id === MY_EVENT) {
             return (
               <div>
                 {info.timeText}
@@ -326,13 +333,11 @@ function handleSelect(
     isSelectionDeleting.current = myMatrixRef.current.getIsSlotExist(info.start);
   }
 
-  const selectionColor = isSelectionDeleting.current ? DELETE_COLOR : CREATE_COLOR;
-
   if (!calendarRef.current) return false;
   const calendarApi = calendarRef.current.getApi();
 
   // 既存の選択範囲をクリア
-  const existingSelection = calendarApi.getEventById("selectBox");
+  const existingSelection = calendarApi.getEventById(SELECT_EVENT);
   if (existingSelection) {
     existingSelection.remove();
   }
@@ -356,13 +361,13 @@ function handleSelect(
   }
 
   calendarApi.addEvent({
-    id: SELECT_EVENT_ID,
+    id: SELECT_EVENT,
+    className: isSelectionDeleting.current ? DELETE_SELECT_EVENT : CREATE_SELECT_EVENT,
     startTime: startTime,
     endTime: endTime,
     startRecur: info.start,
     endRecur: info.end,
     display: "background",
-    color: selectionColor,
   });
   return true;
 }
@@ -384,7 +389,7 @@ function handleEdit(
   const calendarApi = calendarRef.current.getApi();
 
   calendarApi.getEvents().forEach((event) => {
-    if (event.id !== MY_EVENT_ID) return;
+    if (event.id !== MY_EVENT) return;
     event.remove();
   });
   mySlotsRef.current = [];
@@ -394,9 +399,8 @@ function handleEdit(
     calendarApi.addEvent({
       start: slot.from,
       end: slot.to,
-      id: MY_EVENT_ID,
-      color: "rgba(255, 255, 255, 0)",
-      borderColor: "blue",
+      id: MY_EVENT,
+      className: MY_EVENT,
       textColor: "black",
     });
     mySlotsRef.current.push({
@@ -406,7 +410,7 @@ function handleEdit(
   });
 
   // 選択範囲をクリア
-  const existingSelection = calendarApi.getEventById(SELECT_EVENT_ID);
+  const existingSelection = calendarApi.getEventById(SELECT_EVENT);
   if (existingSelection) {
     existingSelection.remove();
   }

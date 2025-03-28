@@ -4,23 +4,48 @@
   name: "light";
   default: true;
   prefersdark: true; /* TODO: ダークモード対応 */
-  --color-primary: #001e59;
+  --color-primary: #0F82B1;
   --color-secondary: #ff48a0;
 }
 
 .fc-highlight {
+  /* 日を跨ぐ選択が矩形選択にならないため、デフォルトの選択範囲を隠す */
   display: none;
 }
 
 .fc-bg-event {
-  border: 1px solid rgb(0, 255, 255);
+  opacity: 1 !important; /* デフォルトで透明度を付与されるのを防止 */
+}
+
+/* 作成の選択範囲 */
+.ih-create-select-event {
+  z-index: 100 !important;
+  background-color: rgb(15, 130, 177, 0.2) !important;
+  border: 3px dashed rgb(15, 130, 177) !important;
+}
+
+/* 削除の選択範囲 */
+.ih-delete-select-event {
+  z-index: 100 !important;
+  background-color: rgb(255, 0, 0, 0.5) !important;
+  border: 3px dashed red !important;
+}
+
+/* 他者の日程 */
+.ih-others-event {
+   border: 3px solid lightgray !important;
+   /* background-color は重ね合わせ個数分 JS で計算*/
+}
+
+/* 自分の日程 */
+.ih-my-event {
+  border: 3px solid rgb(15, 130, 177) !important;
+  background-color: rgb(15, 130, 177, 0.2) !important;
 }
 
 #member-info {
-  z-index: 100
+  z-index: 50
 }
-
-/* TODO: 選択のbgEventも枠付きになってしまう */
 
 :root {
   --fc-today-bg-color: inherit; /* 今日の日付のハイライトを削除する https://github.com/fullcalendar/fullcalendar/issues/7150 */
