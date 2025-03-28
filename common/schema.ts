@@ -46,7 +46,7 @@ export const submitReqSchema = z.object({
     z.object({
       start: isoStrToDate,
       end: isoStrToDate,
-    })
+    }),
   ), // TODO: should rename
 });
 
@@ -66,23 +66,23 @@ const baseProjectReqSchema = z.object({
       z.object({
         startTime: z.string(),
         endTime: z.string(),
-      })
+      }),
     )
     .refine(
       (ranges) => ranges.every(({ startTime, endTime }) => startTime < endTime),
       {
         message: "開始時刻は終了時刻より前でなければなりません",
-      }
+      },
     )
     .refine(
       (ranges) =>
         ranges.every(
           ({ startTime, endTime }) =>
-            isQuarterHour(startTime) && isQuarterHour(endTime)
+            isQuarterHour(startTime) && isQuarterHour(endTime),
         ),
       {
         message: "開始時刻と終了時刻は15分単位で入力してください",
-      }
+      },
     ),
 });
 
@@ -96,7 +96,7 @@ export const projectReqSchema = baseProjectReqSchema.refine(
   {
     message: "開始日は終了日より前に設定してください",
     path: ["endDate"],
-  }
+  },
 );
 
 export const editReqSchema = baseProjectReqSchema.partial().refine(
@@ -109,7 +109,7 @@ export const editReqSchema = baseProjectReqSchema.partial().refine(
   {
     message: "開始日は終了日より前に設定してください",
     path: ["endDate"],
-  }
+  },
 );
 export const projectResSchema = project.extend({
   allowedRanges: z.array(allowedRange),
@@ -117,7 +117,7 @@ export const projectResSchema = project.extend({
   guests: z.array(
     guest.extend({
       slots: z.array(slot),
-    })
+    }),
   ),
 });
 

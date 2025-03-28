@@ -62,7 +62,10 @@ router.get("/me", async (req, res) => {
 // /user GET
 router.get(
   "/",
-  async (req: Request<never, InvolvedProjects, never, never>, res: Response<InvolvedProjects>) => {
+  async (
+    req: Request<never, InvolvedProjects, never, never>,
+    res: Response<InvolvedProjects>,
+  ) => {
     const browserId = req.cookies?.browserId;
 
     if (!browserId) {
@@ -91,7 +94,7 @@ router.get(
       return res.status(500).json(); // TODO:
       // .json({ message: "ユーザー検索中にエラーが発生しました。" });
     }
-  }
+  },
 );
 
 export default router;

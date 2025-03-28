@@ -4,7 +4,7 @@
   name: "light";
   default: true;
   prefersdark: true; /* TODO: ダークモード対応 */
-  --color-primary: #0F82B1;
+  --color-primary: #0f82b1;
   --color-secondary: #ff48a0;
 }
 
@@ -37,8 +37,8 @@
 
 /* 他者の日程 */
 .ih-others-event {
-   border: 3px solid lightgray !important;
-   /* background-color は重ね合わせ個数分 JS で計算*/
+  border: 3px solid lightgray !important;
+  /* background-color は重ね合わせ個数分 JS で計算*/
 }
 
 /* 自分の日程 */
@@ -48,7 +48,7 @@
 }
 
 #member-info {
-  z-index: 50
+  z-index: 50;
 }
 
 :root {

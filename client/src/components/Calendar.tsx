@@ -6,9 +6,9 @@ import "dayjs/locale/ja";
 import React, { useEffect, useRef } from "react";
 import { Project } from "../../../common/schema";
 import { DateSelectArg, DateSpanApi } from "@fullcalendar/core/index.js";
-import { Tooltip } from 'react-tooltip'
+import { Tooltip } from "react-tooltip";
 
-dayjs.locale('ja');
+dayjs.locale("ja");
 
 type Props = {
   project: Project;
@@ -16,14 +16,14 @@ type Props = {
   mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>;
 };
 
-const OPACITY = 0.2
-const PRIMARY_RGB = [15, 130, 177]
+const OPACITY = 0.2;
+const PRIMARY_RGB = [15, 130, 177];
 
 const MY_EVENT = "ih-my-event";
 const OTHERS_EVENT = "ih-others-event";
-const SELECT_EVENT = "ih-select-event"
+const SELECT_EVENT = "ih-select-event";
 const CREATE_SELECT_EVENT = "ih-create-select-event";
-const DELETE_SELECT_EVENT = "ih-delete-select-event"
+const DELETE_SELECT_EVENT = "ih-delete-select-event";
 
 export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
   const countDays =
@@ -55,13 +55,15 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         event.remove();
       });
       mySlotsRef.current = [];
-      myMatrix.clear()
-      othersMatrix.clear()
+      myMatrix.clear();
+      othersMatrix.clear();
 
-      const slots = project.guests.flatMap((guest) => guest.slots.map((slot) => ({
-        ...slot,
-        guestName: guest.name
-      })));
+      const slots = project.guests.flatMap((guest) =>
+        guest.slots.map((slot) => ({
+          ...slot,
+          guestName: guest.name,
+        })),
+      );
       slots.forEach((slot) => {
         const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
         if (slot.guestId === myGuestId) {
@@ -93,21 +95,22 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
           display: "background",
           extendedProps: {
             members: slot.guestNames,
-            countMembers: slot.weight
-          }
+            countMembers: slot.weight,
+          },
         });
       });
     }
-
   }, [calendarApi, myGuestId, myMatrix, mySlotsRef, othersMatrix, project.guests]);
-
 
   useEffect(() => {
     // カレンダー外までドラッグした際に選択を解除
     const handleMouseUp = (e: MouseEvent | TouchEvent) => {
       const calendarEl = document.getElementById("ih-cal-wrapper");
 
-      const target = (e instanceof MouseEvent) ? e.target : document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+      const target =
+        e instanceof MouseEvent
+          ? e.target
+          : document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
 
       const isExternal = calendarEl && !calendarEl.contains(target as Node);
 
@@ -118,14 +121,14 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
           existingSelection.remove();
         }
       }
-    }
+    };
     document.addEventListener("mouseup", handleMouseUp);
     document.addEventListener("touchend", handleMouseUp);
     return () => {
       document.removeEventListener("mouseup", handleMouseUp);
       document.removeEventListener("touchend", handleMouseUp);
     };
-  }, [])
+  }, []);
 
   return (
     <div className="h-full" id="ih-cal-wrapper">
@@ -162,7 +165,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
                   <div>{dayjs(args.date).format("M/D")}</div>
                   <div>{dayjs(args.date).format("(ddd)")}</div>
                 </div>
-              )
+              );
             },
             slotLabelContent: (args) => {
               return dayjs(args.date).format("HH:mm");
@@ -188,31 +191,30 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
             handleEdit(info, isSelectionDeleting, calendarRef, myMatrixRef, mySlotsRef);
           }
         }
-        eventDidMount={
-          (info) => {
-            if (info.event.id === MY_EVENT) {
-              // 既存の event 上で選択できるようにするため。
-              info.el.style.pointerEvents = 'none';
-            }
+        eventDidMount={(info) => {
+          if (info.event.id === MY_EVENT) {
+            // 既存の event 上で選択できるようにするため。
+            info.el.style.pointerEvents = "none";
           }
-        }
+        }}
         eventContent={(info) => {
           if (info.event.id === OTHERS_EVENT) {
             return (
               <div className="flex w-full h-full justify-center items-center">
-                <div className="badge badge-sm bg-gray-200 border-0 text-primary font-bold"
+                <div
+                  className="badge badge-sm bg-gray-200 border-0 text-primary font-bold"
                   data-tooltip-id="member-info"
                   data-tooltip-content={info.event.extendedProps.members?.join(", ")}
                   data-tooltip-place="top"
-                >{info.event.extendedProps.countMembers}</div>
+                >
+                  {info.event.extendedProps.countMembers}
+                </div>
               </div>
-            )
+            );
           } else if (info.event.id === MY_EVENT) {
             return (
-              <div className="h-full w-full text-gray-600 overflow-hidden">
-                {info.timeText}
-              </div>
-            )
+              <div className="h-full w-full text-gray-600 overflow-hidden">{info.timeText}</div>
+            );
           }
         }}
       />
@@ -334,7 +336,9 @@ class CalendarMatrix {
     this.matrix = Array.from({ length: dayCount }, () =>
       Array.from({ length: this.quarterCount }, () => 0),
     );
-    this.guestNames = hasGuestNames ? Array.from({ length: dayCount }, () => Array.from({ length: this.quarterCount }, () => [])) : null
+    this.guestNames = hasGuestNames
+      ? Array.from({ length: dayCount }, () => Array.from({ length: this.quarterCount }, () => []))
+      : null;
     this.initialDate = dayjs(initialDate).startOf("day");
   }
 
@@ -350,11 +354,11 @@ class CalendarMatrix {
   }
 
   getSlots() {
-    const slots: { from: Date; to: Date, weight: number, guestNames?: string[] }[] = [];
+    const slots: { from: Date; to: Date; weight: number; guestNames?: string[] }[] = [];
     for (let day = 0; day < this.matrix.length; day++) {
       let eventCount = null;
       let start: Date | null = null;
-      let startGuestNames: string[] | null = null
+      let startGuestNames: string[] | null = null;
       for (let q = 0; q < this.matrix[day].length; q++) {
         const currentCell = this.matrix[day][q];
         if (eventCount !== currentCell) {
@@ -373,7 +377,7 @@ class CalendarMatrix {
               .add(day, "day")
               .add(q * 15, "minute")
               .toDate();
-            startGuestNames = this.guestNames?.[day][q] ?? null
+            startGuestNames = this.guestNames?.[day][q] ?? null;
           }
           eventCount = currentCell;
         }
@@ -409,7 +413,7 @@ class CalendarMatrix {
       for (let c = startCol; c <= endCol; c++) {
         this.matrix[r][c] += 1;
         if (this.guestNames) {
-          this.guestNames[r][c].push(guestName)
+          this.guestNames[r][c].push(guestName);
         }
       }
     }

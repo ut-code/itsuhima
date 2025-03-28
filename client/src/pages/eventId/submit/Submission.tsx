@@ -15,10 +15,7 @@ export default function SubmissionPage() {
     error: projectError,
   } = useData<Project>(`${API_ENDPOINT}/projects/${projectId}`, projectResSchema);
 
-  const {
-    data: me,
-    loading: meLoading,
-  } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
+  const { data: me, loading: meLoading } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
 
   const loading = projectLoading || meLoading;
   const error = projectError;
@@ -73,7 +70,7 @@ export default function SubmissionPage() {
     if (guestAsMe) {
       setGuestName(guestAsMe.name);
     }
-  }, [guestAsMe])
+  }, [guestAsMe]);
 
   // -------------------- UI --------------------
   if (loading) return <p>読み込み中...</p>;
