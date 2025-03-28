@@ -3,7 +3,6 @@ import { Calendar } from "../../../components/Calendar";
 import { Me, meResSchema, Project, projectResSchema } from "../../../../../common/schema";
 import { useData } from "../../../hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
-import dayjs from "dayjs";
 import Header from "../../../components/Header";
 import { API_ENDPOINT } from "../../../utils";
 
@@ -78,66 +77,26 @@ export default function SubmissionPage() {
   if (!project) return <p>イベントが存在しません。</p>;
 
   return (
-    <>
+    <div className="h-[100dvh] flex flex-col">
       <Header />
-      <div className="container p-4 mx-auto flex flex-col h-full">
-        <h1 className="text-xl font-bold">イベント詳細</h1>
-        <p>イベント名: {project.name}</p>
-        <p>
-          日程範囲: {dayjs(project.startDate).format("YYYY/MM/DD")} 〜{" "}
-          {dayjs(project.endDate).format("YYYY/MM/DD")}
-        </p>
-        {/*  FIXME: guestName の更新ごとに Calendar が再描画され、コストが大きい*/}
-        <div className="flex-1">
-          <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef} />
+      <div className="p-4 flex flex-col flex-1 h-full overflow-y-auto">
+        <div className="flex justify-between items-center">
+        <h1 className="text-2xl mb-2">{project.name} の日程調整</h1>
+        {isHost && (
+          <NavLink to={`/${projectId}/edit`} className="block hover:underline">
+            編集する
+          </NavLink>
+        )}
         </div>
-
-        {/* ----------- 大枠 (Range) ----------- */}
-        {/* TODO: カレンダーにグレー枠で表示など */}
-        {/* <h2 className="text-lg font-semibold mt-4">時間帯の大枠 (Range)</h2>
-      <ul>
-        {project.range.map((r) => (
-          <li key={r.id} className="border p-2 my-2">
-            {new Date(r.startTime).toLocaleString()} ～ {new Date(r.endTime).toLocaleString()}
-          </li>
-        ))}
-      </ul> */}
-
-        {/* ----------- ゲスト (Guest) ----------- */}
-        {/* TODO: カレンダーに人数を表示など */}
-        {/* <h2 className="text-lg font-semibold mt-4">ゲスト</h2>
-      {project.guests?.length ? (
-        <ul>
-          {project.guests.map((guest) => (
-            <li key={guest.id} className="border p-2 my-2">
-              {guest.name} (ID: {guest.id})
-              {guest.slots && guest.slots.length > 0 && (
-                <ul className="pl-4 mt-1">
-                  {guest.slots!.map((slot: Slot) => (
-                    <li key={slot.id}>
-                      {new Date(slot.start).toLocaleString()} ～{" "}
-                      {new Date(slot.end).toLocaleString()}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>ゲストはいません</p>
-      )} */}
-
-        {/* TODO:  should be required */}
-        <h2 className="text-lg font-semibold mt-6">参加者情報</h2>
-        <input
-          type="text"
-          placeholder="あなたの名前"
-          value={guestName}
-          onChange={(e) => setGuestName(e.target.value)}
-          className="input input-bordered w-full max-w-xs my-2"
-        />
-        <div>
+        <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef} />
+        <div className="p-2 flex justify-between items-center gap-2">
+          <input
+            type="text"
+            placeholder="あなたの名前"
+            value={guestName}
+            onChange={(e) => setGuestName(e.target.value)}
+            className="input text-base"
+          />
           <button
             onClick={() => {
               postAvailability(
@@ -151,13 +110,8 @@ export default function SubmissionPage() {
           >
             日程を提出
           </button>
-          {isHost && (
-            <NavLink to={`/${projectId}/edit`} className="block hover:underline">
-              イベントを編集する
-            </NavLink>
-          )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
