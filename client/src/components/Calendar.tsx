@@ -3,7 +3,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/ja";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Project } from "../../../common/schema";
 import { DateSelectArg, DateSpanApi } from "@fullcalendar/core/index.js";
 import { Tooltip } from "react-tooltip";
@@ -130,16 +130,38 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
     };
   }, []);
 
+  const pageCount = Math.ceil(countDays / 7);
+  const [currentPage, setCurrentPage] = useState(1);
+
   return (
     <div className="h-full" id="ih-cal-wrapper">
-      {/* <div>
-      <button className="btn" onClick={() => {
-          calendarApi?.prev()
-        }}>{"<"}</button>
-        <button className="btn" onClick={() => {
-          calendarApi?.next()
-        }}>{">"}</button>
-      </div> */}
+      {pageCount >= 2 && (
+        <div className="flex w-full justify-between items-center">
+          <button
+            className="btn"
+            disabled={currentPage === 1}
+            onClick={() => {
+              if (!calendarApi) return;
+              calendarApi.prev();
+              setCurrentPage(currentPage - 1);
+            }}
+          >
+            {"<"}
+          </button>
+          <div>{`${currentPage} / ${pageCount}`}</div>
+          <button
+            className="btn"
+            disabled={currentPage === pageCount}
+            onClick={() => {
+              if (!calendarApi) return;
+              calendarApi.next();
+              setCurrentPage(currentPage + 1);
+            }}
+          >
+            {">"}
+          </button>
+        </div>
+      )}
       <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, interactionPlugin]}
@@ -150,6 +172,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         initialDate={project.startDate}
         slotMinTime={dayjs(tmpAllowedRange.startTime).format("HH:mm:ss")}
         slotMaxTime={dayjs(tmpAllowedRange.endTime).format("HH:mm:ss")}
+        headerToolbar={false}
         views={{
           timeGrid: {
             type: "timeGrid",
