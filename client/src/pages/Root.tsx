@@ -73,7 +73,7 @@ export default function RootPage() {
                       >
                         <IoMdTrash
                           id={`idIoMdTrash-${p.id}`}
-                          className="text-red-500 hover:text-red-700 cursor-pointer ml-4"
+                          className="text-gray-400 hover:text-gray-500 cursor-pointer ml-4"
                           size={24}
                         />
                       </button>
