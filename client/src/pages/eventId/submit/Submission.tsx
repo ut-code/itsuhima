@@ -1,4 +1,4 @@
-import { NavLink, useNavigate, useParams } from "react-router";
+import { NavLink, useParams } from "react-router";
 import { Calendar } from "../../../components/Calendar";
 import { Me, meResSchema, Project, projectResSchema } from "../../../../../common/schema";
 import { useData } from "../../../hooks";
@@ -11,13 +11,11 @@ export default function SubmissionPage() {
   const {
     data: project,
     loading: projectLoading,
-    error: projectError,
   } = useData<Project>(`${API_ENDPOINT}/projects/${projectId}`, projectResSchema);
 
   const { data: me, loading: meLoading } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
 
   const loading = projectLoading || meLoading;
-  const error = projectError;
 
   const guestAsMe = me?.guests.find((g) => g.projectId === projectId);
   const myGuestId = guestAsMe?.id;
@@ -25,9 +23,6 @@ export default function SubmissionPage() {
 
   const [guestName, setGuestName] = useState(guestAsMe?.name ?? "");
 
-  const navigate = useNavigate();
-
-  // calendar state (ref)
   const mySlotsRef = useRef<{ from: Date; to: Date }[]>([]);
 
   const postAvailability = useCallback(
@@ -44,24 +39,32 @@ export default function SubmissionPage() {
         return;
       }
       if (!myGuestId) {
-        await fetch(`${API_ENDPOINT}/projects/${projectId}/availabilities`, {
+        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/availabilities`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
           credentials: "include",
         });
-        navigate(`/${projectId}/submit/done`);
+        if (response.ok) {
+          alert("提出しました。")
+        } else {
+          alert("提出に失敗しました。もう一度お試しください。")
+        }
       } else {
-        await fetch(`${API_ENDPOINT}/projects/${projectId}/availabilities`, {
+        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/availabilities`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
           credentials: "include",
         });
-        navigate(`/${projectId}/submit/done`);
+        if (response.ok) {
+          alert("更新しました。")
+        } else {
+          alert("更新に失敗しました。もう一度お試しください。")
+        }
       }
     },
-    [guestName, projectId, navigate],
+    [guestName, projectId],
   );
 
   useEffect(() => {
@@ -71,47 +74,53 @@ export default function SubmissionPage() {
     }
   }, [guestAsMe]);
 
-  // -------------------- UI --------------------
-  if (loading) return <p>読み込み中...</p>;
-  if (error) return <p>エラー: {error}</p>;
-  if (!project) return <p>イベントが存在しません。</p>;
-
   return (
     <div className="h-[100dvh] flex flex-col">
       <Header />
-      <div className="p-4 flex flex-col flex-1 h-full overflow-y-auto">
-        <div className="flex justify-between items-center">
-        <h1 className="text-2xl mb-2">{project.name} の日程調整</h1>
-        {isHost && (
-          <NavLink to={`/${projectId}/edit`} className="block hover:underline">
-            編集する
-          </NavLink>
-        )}
+      {loading ? (
+        <div className="w-full flex-1 flex justify-center items-center">
+          <span className="loading loading-dots loading-md text-gray-400"></span>
         </div>
-        <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef} />
-        <div className="p-2 flex justify-between items-center gap-2">
-          <input
-            type="text"
-            placeholder="あなたの名前"
-            value={guestName}
-            onChange={(e) => setGuestName(e.target.value)}
-            className="input text-base"
-          />
-          <button
-            onClick={() => {
-              postAvailability(
-                mySlotsRef.current.map((slot) => {
-                  return { start: slot.from, end: slot.to };
-                }),
-                myGuestId ?? "",
-              );
-            }}
-            className="btn btn-primary"
-          >
-            日程を提出
-          </button>
+      ) : !project ? (
+        <div className="w-full flex-1">
+          <p>イベントが存在しません。</p>
+          <a href="/">ホームに戻る</a>
         </div>
-      </div>
+      ) : (
+        <div className="p-4 flex flex-col flex-1 h-full overflow-y-auto">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl mb-2">{project.name} の日程調整</h1>
+            {isHost && (
+              <NavLink to={`/${projectId}/edit`} className="block hover:underline">
+                編集する
+              </NavLink>
+            )}
+          </div>
+          <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef} />
+          <div className="p-2 flex justify-between items-center gap-2">
+            <input
+              type="text"
+              placeholder="あなたの名前"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              className="input text-base"
+            />
+            <button
+              onClick={() => {
+                postAvailability(
+                  mySlotsRef.current.map((slot) => {
+                    return { start: slot.from, end: slot.to };
+                  }),
+                  myGuestId ?? "",
+                );
+              }}
+              className="btn btn-primary"
+            >
+              日程を{guestAsMe ? "更新" : "提出"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
