@@ -6,14 +6,10 @@ import { API_ENDPOINT } from "../utils";
 import { IoMdTrash } from "react-icons/io";
 
 export default function RootPage() {
-  const {
-    data: involvedProjects,
-    loading,
-    error,
-  } = useData<InvolvedProjects>(`${API_ENDPOINT}/users`, involvedProjectsResSchema);
-
-  if (loading) return <p>読み込み中...</p>;
-  if (error) return <p>エラーが発生しました: {error}</p>;
+  const { data: involvedProjects, loading } = useData<InvolvedProjects>(
+    `${API_ENDPOINT}/users`,
+    involvedProjectsResSchema,
+  );
 
   return (
     <>
@@ -21,15 +17,22 @@ export default function RootPage() {
       <div className="container p-4 mx-auto flex flex-col gap-4 justify-center items-center">
         <div className="flex flex-col items-center">
           <img src="/logo.png" alt="logo" width="200px" />
-          {/* TODO: 文面 */}
-          <p>「いつ暇？」で日程調整しよう</p>
+          <p className="text-lg text-gray-600">「いつ暇？」で日程調整しよう</p>
         </div>
         <div className="flex justify-center">
           <NavLink to="./new" end className="btn btn-lg btn-primary">
             イベントを作成
           </NavLink>
         </div>
-        {involvedProjects ? <Preview asHost={involvedProjects.asHost} /> : <Landing />}
+        {loading ? (
+          <div className="py-4">
+            <span className="loading loading-dots loading-md text-gray-400"></span>
+          </div>
+        ) : involvedProjects ? (
+          <Preview asHost={involvedProjects.asHost} />
+        ) : (
+          <Landing />
+        )}
       </div>
     </>
   );
@@ -58,26 +61,31 @@ function Preview({ asHost: hostingProjects }: InvolvedProjects) {
   }
 
   return (
-    <div className="mt-4">
-      <h2 className="text-2xl font-bold">あなたが作成したイベント一覧</h2>
+    <div className="mt-4 w-full px-4">
+      <h2 className="text-2xl text-gray-600 mb-2">作成したイベント</h2>
       {hostingProjects.length > 0 ? (
-        <ul className="space-y-2">
+        <ul className="w-full">
           {hostingProjects.map((p) => (
-            <li key={p.id} className="border p-2 rounded flex justify-between items-center">
-              <NavLink to={`/${p.id}/submit`} className="hover:underline">
-                <div>イベント名: {p.name}</div>
-                <div>
-                  日付: {formatDate(p.startDate.toLocaleDateString())} ～{" "}
-                  {formatDate(p.endDate.toLocaleDateString())}
+            <li key={p.id}>
+              <NavLink
+                to={`/${p.id}/submit`}
+                className="btn btn-ghost w-full h-full flex justify-between p-4"
+              >
+                <div className="flex flex-col items-start gap-1">
+                  <h3 className="font-normal text-xl text-gray-600">{p.name}</h3>
+                  <div className="font-normal text-sm text-gray-400">
+                    {formatDate(p.startDate.toLocaleDateString())} ～{" "}
+                    {formatDate(p.endDate.toLocaleDateString())}
+                  </div>
                 </div>
+                <button onClick={deleteEvent(p.id)}>
+                  <IoMdTrash
+                    id={`idIoMdTrash-${p.id}`}
+                    className="text-red-500 hover:text-red-700 cursor-pointer ml-4"
+                    size={24}
+                  />
+                </button>
               </NavLink>
-              <button onClick={deleteEvent(p.id)}>
-                <IoMdTrash
-                  id={`idIoMdTrash-${p.id}`}
-                  className="text-red-500 hover:text-red-700 cursor-pointer ml-4"
-                  size={24}
-                />
-              </button>
             </li>
           ))}
         </ul>
