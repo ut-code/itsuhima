@@ -64,7 +64,7 @@ router.post(
       }
       res.status(500).json({ message: "イベント作成時にエラーが発生しました" });
     }
-  }
+  },
 );
 
 // イベント情報の取得 Guestのみ
@@ -122,7 +122,7 @@ router.get(
       // TODO:
       res.status(500).json();
     }
-  }
+  },
 );
 
 //イベント編集 Hostのみ すでにguestがいたら時間登録はできない
@@ -132,7 +132,7 @@ router.put("/:projectId", async (req: Request, res: Response) => {
   console.log("イベント", projectId);
   try {
     const { name, startDate, endDate, allowedRanges } = editReqSchema.parse(
-      req.body
+      req.body,
     );
 
     // ホスト認証とゲスト存在確認を一括取得
@@ -140,7 +140,7 @@ router.put("/:projectId", async (req: Request, res: Response) => {
       prisma.host.findFirst({
         where: {
           browserId,
-          projectId: projectId, 
+          projectId: projectId,
         },
       }),
       prisma.guest.findFirst({
@@ -240,7 +240,7 @@ router.post(
       console.error("登録エラー:", error);
       return res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
-  }
+  },
 );
 
 //日程編集。Guestのみ
@@ -299,7 +299,7 @@ router.put(
       console.error("処理中のエラー:", error);
       return res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
-  }
+  },
 );
 // イベント削除（Hostのみ）
 router.delete("/:projectId", async (req: Request, res: Response) => {
@@ -313,7 +313,9 @@ router.delete("/:projectId", async (req: Request, res: Response) => {
     });
 
     if (!host) {
-      return res.status(403).json({ message: "認証エラー: 削除権限がありません。" });
+      return res
+        .status(403)
+        .json({ message: "認証エラー: 削除権限がありません。" });
     }
 
     // 関連データを削除（Cascade を使っていない場合）
@@ -324,9 +326,10 @@ router.delete("/:projectId", async (req: Request, res: Response) => {
     return res.status(200).json({ message: "イベントを削除しました。" });
   } catch (error) {
     console.error("イベント削除エラー:", error);
-    return res.status(500).json({ message: "イベント削除中にエラーが発生しました。" });
+    return res
+      .status(500)
+      .json({ message: "イベント削除中にエラーが発生しました。" });
   }
 });
-
 
 export default router;
