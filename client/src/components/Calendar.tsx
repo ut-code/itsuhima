@@ -216,6 +216,106 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
   );
 };
 
+function handleSelect(
+  info: DateSpanApi,
+  isSelectionDeleting: React.RefObject<boolean | null>,
+  calendarRef: React.RefObject<FullCalendar | null>,
+  myMatrixRef: React.RefObject<CalendarMatrix>,
+) {
+  // 選択範囲の表示
+  // 通常の selection では矩形選択ができないため、イベントを作成することで選択範囲を表現している。
+  // https://github.com/fullcalendar/fullcalendar/issues/4119
+
+  if (isSelectionDeleting.current === null) {
+    // ドラッグ開始地点が既存の自分のイベントなら削除モード、そうでなければ追加モードとする。
+    // isSelectionDeleting は select の発火時 (つまり、ドラッグが終了した際) に null にリセットされる。
+    isSelectionDeleting.current = myMatrixRef.current.getIsSlotExist(info.start);
+  }
+
+  if (!calendarRef.current) return false;
+  const calendarApi = calendarRef.current.getApi();
+
+  // 既存の選択範囲をクリア
+  const existingSelection = calendarApi.getEventById(SELECT_EVENT);
+  if (existingSelection) {
+    existingSelection.remove();
+  }
+
+  // start と end が逆転している場合は入れ替える (TODO: refactor)
+  let startTime = info.start.toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  let endTime = info.end.toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (
+    info.start.getHours() > info.end.getHours() ||
+    (info.start.getHours() === info.end.getHours() &&
+      info.start.getMinutes() > info.end.getMinutes())
+  ) {
+    [startTime, endTime] = [endTime, startTime];
+  }
+
+  calendarApi.addEvent({
+    id: SELECT_EVENT,
+    className: isSelectionDeleting.current ? DELETE_SELECT_EVENT : CREATE_SELECT_EVENT,
+    startTime: startTime,
+    endTime: endTime,
+    startRecur: info.start,
+    endRecur: info.end,
+    display: "background",
+  });
+  return true;
+}
+
+function handleEdit(
+  info: DateSelectArg,
+  isSelectionDeleting: React.RefObject<boolean | null>,
+  calendarRef: React.RefObject<FullCalendar | null>,
+  myMatrixRef: React.RefObject<CalendarMatrix>,
+  mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>,
+) {
+  const { from, to } = getVertexes(info.start, info.end);
+
+  if (isSelectionDeleting.current === null) return;
+  if (!calendarRef.current) return;
+  const isDeletion = isSelectionDeleting.current;
+
+  if (!calendarRef.current) return;
+  const calendarApi = calendarRef.current.getApi();
+
+  calendarApi.getEvents().forEach((event) => {
+    if (event.id !== MY_EVENT) return;
+    event.remove();
+  });
+  mySlotsRef.current = [];
+
+  myMatrixRef.current.setRange(from, to, isDeletion ? 0 : 1);
+  myMatrixRef.current.getSlots().forEach((slot) => {
+    calendarApi.addEvent({
+      start: slot.from,
+      end: slot.to,
+      id: MY_EVENT,
+      className: MY_EVENT,
+      textColor: "black",
+    });
+    mySlotsRef.current.push({
+      from: slot.from,
+      to: slot.to,
+    });
+  });
+
+  // 選択範囲をクリア
+  const existingSelection = calendarApi.getEventById(SELECT_EVENT);
+  if (existingSelection) {
+    existingSelection.remove();
+  }
+  isSelectionDeleting.current = null;
+}
+
 class CalendarMatrix {
   private matrix: number[][];
   private guestNames: string[][][] | null;
@@ -315,106 +415,6 @@ class CalendarMatrix {
       Array.from({ length: this.quarterCount }, () => 0),
     );
   }
-}
-
-function handleSelect(
-  info: DateSpanApi,
-  isSelectionDeleting: React.RefObject<boolean | null>,
-  calendarRef: React.RefObject<FullCalendar | null>,
-  myMatrixRef: React.RefObject<CalendarMatrix>,
-) {
-  // 選択範囲の表示
-  // 通常の selection では矩形選択ができないため、イベントを作成することで選択範囲を表現している。
-  // https://github.com/fullcalendar/fullcalendar/issues/4119
-
-  if (isSelectionDeleting.current === null) {
-    // ドラッグ開始地点が既存の自分のイベントなら削除モード、そうでなければ追加モードとする。
-    // isSelectionDeleting は select の発火時 (つまり、ドラッグが終了した際) に null にリセットされる。
-    isSelectionDeleting.current = myMatrixRef.current.getIsSlotExist(info.start);
-  }
-
-  if (!calendarRef.current) return false;
-  const calendarApi = calendarRef.current.getApi();
-
-  // 既存の選択範囲をクリア
-  const existingSelection = calendarApi.getEventById(SELECT_EVENT);
-  if (existingSelection) {
-    existingSelection.remove();
-  }
-
-  // start と end が逆転している場合は入れ替える (TODO: refactor)
-  let startTime = info.start.toLocaleTimeString("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  let endTime = info.end.toLocaleTimeString("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  if (
-    info.start.getHours() > info.end.getHours() ||
-    (info.start.getHours() === info.end.getHours() &&
-      info.start.getMinutes() > info.end.getMinutes())
-  ) {
-    [startTime, endTime] = [endTime, startTime];
-  }
-
-  calendarApi.addEvent({
-    id: SELECT_EVENT,
-    className: isSelectionDeleting.current ? DELETE_SELECT_EVENT : CREATE_SELECT_EVENT,
-    startTime: startTime,
-    endTime: endTime,
-    startRecur: info.start,
-    endRecur: info.end,
-    display: "background",
-  });
-  return true;
-}
-
-function handleEdit(
-  info: DateSelectArg,
-  isSelectionDeleting: React.RefObject<boolean | null>,
-  calendarRef: React.RefObject<FullCalendar | null>,
-  myMatrixRef: React.RefObject<CalendarMatrix>,
-  mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>,
-) {
-  const { from, to } = getVertexes(info.start, info.end);
-
-  if (isSelectionDeleting.current === null) return;
-  if (!calendarRef.current) return;
-  const isDeletion = isSelectionDeleting.current;
-
-  if (!calendarRef.current) return;
-  const calendarApi = calendarRef.current.getApi();
-
-  calendarApi.getEvents().forEach((event) => {
-    if (event.id !== MY_EVENT) return;
-    event.remove();
-  });
-  mySlotsRef.current = [];
-
-  myMatrixRef.current.setRange(from, to, isDeletion ? 0 : 1);
-  myMatrixRef.current.getSlots().forEach((slot) => {
-    calendarApi.addEvent({
-      start: slot.from,
-      end: slot.to,
-      id: MY_EVENT,
-      className: MY_EVENT,
-      textColor: "black",
-    });
-    mySlotsRef.current.push({
-      from: slot.from,
-      to: slot.to,
-    });
-  });
-
-  // 選択範囲をクリア
-  const existingSelection = calendarApi.getEventById(SELECT_EVENT);
-  if (existingSelection) {
-    existingSelection.remove();
-  }
-  isSelectionDeleting.current = null;
 }
 
 /**
