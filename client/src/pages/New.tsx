@@ -6,7 +6,6 @@ import { projectReqSchema } from "../../../common/schema";
 import { z } from "zod";
 import Header from "../components/Header";
 import { API_ENDPOINT } from "../utils";
-import { TimeRange } from "../components/TimeRange";
 
 // スキーマに基づく型定義
 type ProjectFormValues = z.infer<typeof projectReqSchema>;
@@ -86,57 +85,124 @@ export default function NewPage() {
             <span className="loading loading-spinner loading-lg text-blue"></span>
           </div>
         )}
-        <h1>イベント作成</h1>
-
+        <h1 className="text-2xl mb-2">イベント作成</h1>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label>イベント名</label>
+            <label className="text-sm text-gray-400">イベント名</label>
             <input
               {...register("name")}
-              className="input input-bordered w-full"
+              className="input w-full text-base"
               placeholder="イベント名"
             />
             {errors.name && <p className="text-red-500">{errors.name.message}</p>}
           </div>
-
-          <div>
-            <label>開始日</label>
-            <input type="date" {...register("startDate")} className="input input-bordered w-full" />
-            {errors.startDate && <p className="text-red-500">{errors.startDate.message}</p>}
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="text-sm text-gray-400">開始日</label>
+              <input type="date" {...register("startDate")} className="input w-full text-base" />
+              {errors.startDate && <p className="text-red-500">{errors.startDate.message}</p>}
+            </div>
+            <div className="flex-1">
+              <label className="text-sm text-gray-400">終了日</label>
+              <input type="date" {...register("endDate")} className="input w-full text-base" />
+              {errors.endDate && <p className="text-red-500">{errors.endDate.message}</p>}
+            </div>
           </div>
-
           <div>
-            <label>終了日</label>
-            <input type="date" {...register("endDate")} className="input input-bordered w-full" />
-            {errors.endDate && <p className="text-red-500">{errors.endDate.message}</p>}
-          </div>
-
-          <div>
-            <label>範囲 (range)</label>
-
-            <TimeRange
-              onAddRange={({ startTime, endTime }) => {
-                replace([{ startTime, endTime }]);
-              }}
-            />
-
-            {fields.map((field) => (
-              <div key={field.id} className="flex items-center gap-2 border rounded p-2 my-2">
-                <div className="flex-1">
-                  <span className="font-semibold">開始:</span> {field.startTime}
-                  <span className="ml-4 font-semibold">終了:</span> {field.endTime}
-                </div>
+            <label className="text-sm text-gray-400">時間帯</label>
+            <div className="flex gap-2 items-center">
+              <div className="flex-1 flex gap-1">
+                <select
+                  className="input flex-1 text-base"
+                  value={fields[0].startTime.split(":")[0]}
+                  onChange={(e) => {
+                    replace([
+                      {
+                        startTime: e.target.value + ":" + fields[0].startTime.split(":")[1],
+                        endTime: fields[0].endTime,
+                      },
+                    ]);
+                  }}
+                >
+                  <option value="">時</option>
+                  {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
+                    <option key={h} value={h}>
+                      {h}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="input flex-1 text-base"
+                  value={fields[0].startTime.split(":")[1]}
+                  onChange={(e) => {
+                    replace([
+                      {
+                        startTime: fields[0].startTime.split(":")[0] + ":" + e.target.value,
+                        endTime: fields[0].endTime,
+                      },
+                    ]);
+                  }}
+                >
+                  <option value="">分</option>
+                  {["00", "15", "30", "45"].map((h) => (
+                    <option key={h} value={h}>
+                      {h}
+                    </option>
+                  ))}
+                </select>
               </div>
-            ))}
-
+              <span>〜</span>
+              <div className="flex-1 flex gap-1">
+                <select
+                  className="input flex-1 text-base"
+                  value={fields[0].endTime.split(":")[0]}
+                  onChange={(e) => {
+                    replace([
+                      {
+                        startTime: fields[0].startTime,
+                        endTime: e.target.value + ":" + fields[0].endTime.split(":")[1],
+                      },
+                    ]);
+                  }}
+                >
+                  <option value="">時</option>
+                  {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
+                    <option key={h} value={h}>
+                      {h}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="input flex-1 text-base"
+                  value={fields[0].endTime.split(":")[1]}
+                  onChange={(e) => {
+                    replace([
+                      {
+                        startTime: fields[0].startTime,
+                        endTime: fields[0].endTime.split(":")[0] + ":" + e.target.value,
+                      },
+                    ]);
+                  }}
+                >
+                  <option value="">分</option>
+                  {["00", "15", "30", "45"].map((h) => (
+                    <option key={h} value={h}>
+                      {h}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
             {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
               <p className="text-red-500">{errors.allowedRanges.message}</p>
             )}
           </div>
 
-          <button type="submit" className="btn btn-primary w-full" disabled={!isValid}>
-            送信
-          </button>
+          <div className="p-4 w-full fixed bottom-0 left-0 flex justify-end">
+            <button type="submit" className="btn btn-primary" disabled={!isValid}>
+              イベントを作成する
+            </button>
+          </div>
         </form>
       </div>
     </>
