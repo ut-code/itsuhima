@@ -55,3 +55,11 @@
   --fc-today-bg-color: inherit; /* 今日の日付のハイライトを削除する https://github.com/fullcalendar/fullcalendar/issues/7150 */
   overscroll-behavior: none; /* 引っ張って更新を無効化 */
 }
+
+body {
+  background-color: rgb(15, 130, 177);
+}
+
+#root {
+  background-color: white;
+}
