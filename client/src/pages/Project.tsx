@@ -15,6 +15,7 @@ import Header from "../components/Header";
 import { API_ENDPOINT, FRONTEND_ORIGIN } from "../utils";
 import { useData } from "../hooks";
 import dayjs from "dayjs";
+import { HiOutlineCheckCircle, HiOutlineExclamationCircle } from "react-icons/hi";
 
 export default function ProjectPage() {
   const { eventId } = useParams();
@@ -35,6 +36,11 @@ export default function ProjectPage() {
   const [dialogStatus, setDialogStatus] = useState<{
     projectId: string;
     projectName: string;
+  } | null>(null);
+
+  const [toast, setToast] = useState<{
+    message: string;
+    variant: "success" | "error";
   } | null>(null);
 
   const {
@@ -113,7 +119,11 @@ export default function ProjectPage() {
           projectName: projectName,
         });
       } else {
-        alert("送信に失敗しました");
+        setToast({
+          message: "送信に失敗しました",
+          variant: "error",
+        });
+        setTimeout(() => setToast(null), 3000);
       }
     } else {
       const res = await fetch(`${API_ENDPOINT}/projects/${eventId}`, {
@@ -125,9 +135,17 @@ export default function ProjectPage() {
 
       setSubmitLoading(false);
       if (res.ok) {
-        alert("更新しました。");
+        setToast({
+          message: "更新しました。",
+          variant: "success",
+        });
+        setTimeout(() => setToast(null), 3000);
       } else {
-        alert(res.status === 403 ? "認証に失敗しました。" : "更新に失敗しました。");
+        setToast({
+          message: res.status === 403 ? "認証に失敗しました。" : "更新に失敗しました。",
+          variant: "error",
+        });
+        setTimeout(() => setToast(null), 3000);
       }
     }
   };
@@ -312,6 +330,21 @@ export default function ProjectPage() {
               </a>
             </div>
           </div>
+        </div>
+      )}
+      {toast && (
+        <div className="toast toast-top toast-end z-50 mt-18">
+          {toast.variant === "success" ? (
+            <div className="alert bg-gray-200 border-0">
+              <HiOutlineCheckCircle size={20} className="text-green-500" />
+              <span>{toast.message}</span>
+            </div>
+          ) : (
+            <div className="alert bg-gray-200 border-0">
+              <HiOutlineExclamationCircle size={20} className="text-red-500" />
+              <span>{toast.message}</span>
+            </div>
+          )}
         </div>
       )}
     </>
