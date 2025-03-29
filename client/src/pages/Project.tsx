@@ -15,7 +15,12 @@ import Header from "../components/Header";
 import { API_ENDPOINT, FRONTEND_ORIGIN } from "../utils";
 import { useData } from "../hooks";
 import dayjs from "dayjs";
-import { HiOutlineCheckCircle, HiOutlineExclamationCircle } from "react-icons/hi";
+import {
+  HiClipboardCheck,
+  HiClipboardCopy,
+  HiOutlineCheckCircle,
+  HiOutlineExclamationCircle,
+} from "react-icons/hi";
 
 export default function ProjectPage() {
   const { eventId } = useParams();
@@ -42,6 +47,8 @@ export default function ProjectPage() {
     message: string;
     variant: "success" | "error";
   } | null>(null);
+
+  const [copied, setCopied] = useState(false);
 
   const {
     register,
@@ -312,7 +319,7 @@ export default function ProjectPage() {
                         if (!response.ok) {
                           throw new Error("削除に失敗しました。");
                         }
-                        navigate("/")
+                        navigate("/");
                         setToast({
                           message: "イベントを削除しました。",
                           variant: "success",
@@ -358,10 +365,19 @@ export default function ProjectPage() {
                 value={`${FRONTEND_ORIGIN}/${dialogStatus.projectId}/submit`}
               />
               <button
-                onClick={() => alert("コピーしました！(してない)")}
+                onClick={async () => {
+                  await navigator.clipboard.writeText(
+                    `${FRONTEND_ORIGIN}/${dialogStatus.projectId}/submit`,
+                  );
+                  setCopied(true);
+                  setTimeout(() => {
+                    setCopied(false);
+                  }, 2000);
+                }}
                 className="btn btn-outline btn-primary"
+                disabled={copied}
               >
-                コピー
+                {!copied ? <HiClipboardCopy size={20} /> : <HiClipboardCheck size={20} />} コピー
               </button>
             </div>
             <div className="modal-action">
