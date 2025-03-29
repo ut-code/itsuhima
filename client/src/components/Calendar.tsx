@@ -131,10 +131,9 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
   }, []);
 
   const pageCount = Math.ceil(countDays / 7);
-  // const [currentPage, setCurrentPage] = useState(1);
 
   return (
-    <div className="h-full flex-1" id="ih-cal-wrapper">
+    <div className="flex-1 my-2" id="ih-cal-wrapper">
       <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, interactionPlugin]}
@@ -178,6 +177,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
               start: project.startDate,
               end: project.endDate,
             },
+            expandRows: true, 
           },
         }}
         initialView="timeGrid"
