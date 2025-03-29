@@ -5,7 +5,7 @@ import { useData } from "../../../hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Header from "../../../components/Header";
 import { API_ENDPOINT } from "../../../utils";
-import { HiOutlineCheckCircle, HiOutlineExclamationCircle } from "react-icons/hi";
+import { HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlinePencil } from "react-icons/hi";
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
@@ -126,8 +126,9 @@ export default function SubmissionPage() {
             <div className="flex justify-between items-center">
               <h1 className="text-2xl mb-2">{project.name} の日程調整</h1>
               {isHost && (
-                <NavLink to={`/${projectId}/edit`} className="block hover:underline">
-                  編集する
+                <NavLink to={`/${projectId}/edit`} className="btn btn-sm font-normal text-gray-600">
+                  <HiOutlinePencil />
+                  編集
                 </NavLink>
               )}
             </div>

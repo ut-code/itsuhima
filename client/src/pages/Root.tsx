@@ -65,7 +65,7 @@ export default function RootPage() {
           </div>
         ) : involvedProjects ? (
           <div className="mt-4 w-full px-4">
-            <h2 className="text-2xl text-gray-600 mb-2">作成したイベント</h2>
+            <h2 className="text-sm text-gray-400 mb-2">作成したイベント</h2>
             {involvedProjects.asHost.length > 0 ? (
               <ul className="w-full">
                 {involvedProjects.asHost.map((p) => (

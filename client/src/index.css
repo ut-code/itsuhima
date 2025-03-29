@@ -9,7 +9,12 @@
   default: true;
   prefersdark: true; /* TODO: ダークモード対応 */
   --color-primary: #0f82b1;
+  --color-primary-content: #ffffff;
   --color-secondary: #ff48a0;
+}
+
+.btn {
+  font-weight: normal;
 }
 
 :root {
