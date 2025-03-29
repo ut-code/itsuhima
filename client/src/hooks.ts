@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ZodType } from "zod";
 
 export function useData<T>(
-  url: string,
+  url: string | null,
   schema: ZodType<T, any, any>,
 ): {
   // TODO: any
@@ -16,6 +16,11 @@ export function useData<T>(
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!url) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(url, {
         credentials: "include",
