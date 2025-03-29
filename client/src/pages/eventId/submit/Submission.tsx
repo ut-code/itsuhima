@@ -145,8 +145,9 @@ export default function SubmissionPage() {
               />
               <button
                 className="btn btn-primary"
-                disabled={loading}
+                disabled={loading || !guestName}
                 onClick={() => {
+                  if (!guestName) return;
                   postAvailability(
                     mySlotsRef.current.map((slot) => {
                       return { start: slot.from, end: slot.to };
