@@ -46,10 +46,10 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
   const calendarRef = useRef<FullCalendar | null>(null);
   const isSelectionDeleting = useRef<boolean | null>(null);
 
-  const calendarApi = calendarRef.current?.getApi();
-
   // init
   useEffect(() => {
+    const calendarApi = calendarRef.current?.getApi();
+
     if (calendarApi) {
       calendarApi.getEvents().forEach((event) => {
         event.remove();
@@ -100,7 +100,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         });
       });
     }
-  }, [calendarApi, myGuestId, myMatrix, mySlotsRef, othersMatrix, project.guests]);
+  }, [myGuestId, myMatrix, mySlotsRef, othersMatrix, project.guests, calendarRef]);
 
   useEffect(() => {
     // カレンダー外までドラッグした際に選択を解除

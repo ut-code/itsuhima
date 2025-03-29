@@ -8,14 +8,16 @@ import { API_ENDPOINT } from "../../../utils";
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
-  const { data: project, loading: projectLoading } = useData<Project>(
+  const { data: project, loading: projectLoading, refetch: projectRefetch } = useData<Project>(
     projectId ? `${API_ENDPOINT}/projects/${projectId}` : null,
     projectResSchema,
   );
 
-  const { data: me, loading: meLoading } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
+  const { data: me, loading: meLoading, refetch: meRefetch } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
 
-  const loading = projectLoading || meLoading;
+  const [postLoading, setPostLoading] = useState(false);
+
+  const loading = projectLoading || meLoading || postLoading;
 
   const guestAsMe = me?.guests.find((g) => g.projectId === projectId);
   const myGuestId = guestAsMe?.id;
@@ -27,6 +29,7 @@ export default function SubmissionPage() {
 
   const postAvailability = useCallback(
     async (slots: { start: Date; end: Date }[], myGuestId: string) => {
+      setPostLoading(true);
       const payload = {
         name: guestName,
         projectId,
@@ -63,12 +66,13 @@ export default function SubmissionPage() {
           alert("更新に失敗しました。もう一度お試しください。");
         }
       }
+      await Promise.all([projectRefetch(), meRefetch()])
+      setPostLoading(false);
     },
-    [guestName, projectId],
+    [guestName, projectId, projectRefetch, meRefetch],
   );
 
   useEffect(() => {
-    console.log("guestAsMe", guestAsMe);
     if (guestAsMe) {
       setGuestName(guestAsMe.name);
     }
@@ -106,6 +110,8 @@ export default function SubmissionPage() {
               className="input text-base"
             />
             <button
+              className="btn btn-primary"
+              disabled={loading}
               onClick={() => {
                 postAvailability(
                   mySlotsRef.current.map((slot) => {
@@ -114,7 +120,6 @@ export default function SubmissionPage() {
                   myGuestId ?? "",
                 );
               }}
-              className="btn btn-primary"
             >
               日程を{guestAsMe ? "更新" : "提出"}
             </button>
