@@ -1,4 +1,7 @@
 import { z } from "zod";
+import dayjs from "dayjs";
+import "dayjs/locale/ja";
+dayjs.locale("ja")
 
 // TODO: Is this the best way?
 const isoStrToDate = z
@@ -59,7 +62,16 @@ const isQuarterHour = (time: string): boolean => {
 
 const baseProjectReqSchema = z.object({
   name: z.string().min(1, "イベント名を入力してください"),
-  startDate: z.string().min(1, "開始日を入力してください"),
+  startDate: z.string().min(1, "開始日を入力してください").refine(
+    (startDate) => {
+      const inputDate = dayjs(startDate, 'YYYY-MM-DD');
+      const isPast = inputDate.isBefore(dayjs().startOf('day'));
+      return !isPast;
+    },
+    {
+      message: "過去の日付は指定できません"
+    }
+  ),
   endDate: z.string().min(1, "終了日を入力してください"),
   allowedRanges: z
     .array(
@@ -123,9 +135,9 @@ export const projectResSchema = project.extend({
 
 export type Project = z.infer<typeof projectResSchema>;
 
-export const involvedProjectsResSchema = z.object({
-  asHost: z.array(project),
-});
+export const involvedProjectsResSchema = z.array(project.extend({
+  isHost: z.boolean(),
+}));
 
 export type InvolvedProjects = z.infer<typeof involvedProjectsResSchema>;
 

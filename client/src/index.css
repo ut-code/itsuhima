@@ -1,11 +1,20 @@
+@import url("https://fonts.googleapis.com/css2?family=M+PLUS+1:wght@100..900&display=swap");
 @import "tailwindcss";
+@theme {
+  --font-mplus: "M PLUS 1", sans-serif;
+}
 @plugin "daisyui";
 @plugin "daisyui/theme" {
   name: "light";
   default: true;
   prefersdark: true; /* TODO: ダークモード対応 */
   --color-primary: #0f82b1;
+  --color-primary-content: #ffffff;
   --color-secondary: #ff48a0;
+}
+
+.btn {
+  font-weight: normal;
 }
 
 :root {
