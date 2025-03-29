@@ -3,7 +3,12 @@ import { InvolvedProjects, involvedProjectsResSchema } from "../../../common/sch
 import { useData } from "../hooks";
 import Header from "../components/Header";
 import { API_ENDPOINT } from "../utils";
-import { HiOutlineCheckCircle, HiOutlineExclamationCircle, HiTrash } from "react-icons/hi";
+import {
+  HiOutlineCheckCircle,
+  HiOutlineExclamationCircle,
+  HiPencil,
+  HiTrash,
+} from "react-icons/hi";
 import { useState } from "react";
 
 export default function RootPage() {
@@ -51,8 +56,8 @@ export default function RootPage() {
     <>
       <Header />
       <div className="container p-4 mx-auto flex flex-col gap-4 justify-center items-center">
-        <div className="flex flex-col items-center">
-          <p className="text-lg text-gray-600">「いつ暇？」で日程調整しよう</p>
+        <div className="flex flex-col items-center p-2">
+          <p className="text-2xl text-gray-600">「いつ暇？」で日程調整しよう</p>
         </div>
         <div className="flex justify-center">
           <NavLink to="./new" end className="btn btn-lg btn-primary">
@@ -65,10 +70,10 @@ export default function RootPage() {
           </div>
         ) : involvedProjects ? (
           <div className="mt-4 w-full px-4">
-            <h2 className="text-sm text-gray-400 mb-2">作成したイベント</h2>
-            {involvedProjects.asHost.length > 0 ? (
+            <h2 className="text-sm text-gray-400 mb-2">作成・提出したイベント</h2>
+            {involvedProjects.length > 0 ? (
               <ul className="w-full">
-                {involvedProjects.asHost.map((p) => (
+                {involvedProjects.map((p) => (
                   <li key={p.id}>
                     <NavLink
                       to={`/${p.id}/submit`}
@@ -81,19 +86,23 @@ export default function RootPage() {
                           {formatDate(p.endDate.toLocaleDateString())}
                         </div>
                       </div>
-                      <button
-                        className="btn btn-ghost"
-                        onClick={async (e) => {
-                          e.preventDefault();
-                          await deleteEvent(p.id);
-                          refetch();
-                        }}
-                      >
-                        <HiTrash
-                          className="text-gray-400 cursor-pointer"
-                          size={24}
-                        />
-                      </button>
+                      {p.isHost && (
+                        <div className="flex">
+                          <NavLink className="btn btn-ghost p-1" to={`/${p.id}/edit`}>
+                            <HiPencil className="text-gray-400 cursor-pointer" size={24} />
+                          </NavLink>
+                          <button
+                            className="btn btn-ghost p-1"
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              await deleteEvent(p.id);
+                              refetch();
+                            }}
+                          >
+                            <HiTrash className="text-gray-400 cursor-pointer" size={24} />
+                          </button>
+                        </div>
+                      )}
                     </NavLink>
                   </li>
                 ))}
