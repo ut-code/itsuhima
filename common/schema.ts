@@ -1,7 +1,4 @@
 import { z } from "zod";
-import dayjs from "dayjs";
-import "dayjs/locale/ja";
-dayjs.locale("ja")
 
 // TODO: Is this the best way?
 const isoStrToDate = z
@@ -62,39 +59,39 @@ const isQuarterHour = (time: string): boolean => {
 
 const baseProjectReqSchema = z.object({
   name: z.string().min(1, "イベント名を入力してください"),
-  startDate: z.string().min(1, "開始日を入力してください").refine(
-    (startDate) => {
-      const inputDate = dayjs(startDate, 'YYYY-MM-DD');
-      const isPast = inputDate.isBefore(dayjs().startOf('day'));
-      return !isPast;
-    },
-    {
-      message: "過去の日付は指定できません"
-    }
-  ),
+  startDate: z
+    .string()
+    .min(1, "開始日を入力してください")
+    .refine(
+      (startDate) => {
+        const inputDate = new Date(startDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return inputDate >= today;
+      },
+      {
+        message: "過去の日付は指定できません",
+      }
+    ),
   endDate: z.string().min(1, "終了日を入力してください"),
   allowedRanges: z
     .array(
       z.object({
         startTime: z.string(),
         endTime: z.string(),
-      }),
+      })
     )
-    .refine(
-      (ranges) => ranges.every(({ startTime, endTime }) => startTime < endTime),
-      {
-        message: "開始時刻は終了時刻より前でなければなりません",
-      },
-    )
+    .refine((ranges) => ranges.every(({ startTime, endTime }) => startTime < endTime), {
+      message: "開始時刻は終了時刻より前でなければなりません",
+    })
     .refine(
       (ranges) =>
         ranges.every(
-          ({ startTime, endTime }) =>
-            isQuarterHour(startTime) && isQuarterHour(endTime),
+          ({ startTime, endTime }) => isQuarterHour(startTime) && isQuarterHour(endTime)
         ),
       {
         message: "開始時刻と終了時刻は15分単位で入力してください",
-      },
+      }
     ),
 });
 
