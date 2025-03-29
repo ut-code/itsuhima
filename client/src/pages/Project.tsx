@@ -37,7 +37,7 @@ export default function ProjectPage() {
     handleSubmit,
     control,
     reset,
-    formState: { errors, isValid },
+    formState: { errors, isValid, isDirty },
   } = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
     mode: "onChange",
@@ -273,7 +273,7 @@ export default function ProjectPage() {
           )}
 
           <div className="p-4 w-full fixed bottom-0 left-0 flex justify-end">
-            <button type="submit" className="btn btn-primary" disabled={!isValid}>
+            <button type="submit" className="btn btn-primary" disabled={!isValid || !isDirty}>
               イベントを{project ? "更新" : "作成"}する
             </button>
           </div>
