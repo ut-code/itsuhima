@@ -8,10 +8,10 @@ import { API_ENDPOINT } from "../../../utils";
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
-  const {
-    data: project,
-    loading: projectLoading,
-  } = useData<Project>(`${API_ENDPOINT}/projects/${projectId}`, projectResSchema);
+  const { data: project, loading: projectLoading } = useData<Project>(
+    projectId ? `${API_ENDPOINT}/projects/${projectId}` : null,
+    projectResSchema,
+  );
 
   const { data: me, loading: meLoading } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
 
@@ -46,9 +46,9 @@ export default function SubmissionPage() {
           credentials: "include",
         });
         if (response.ok) {
-          alert("提出しました。")
+          alert("提出しました。");
         } else {
-          alert("提出に失敗しました。もう一度お試しください。")
+          alert("提出に失敗しました。もう一度お試しください。");
         }
       } else {
         const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/availabilities`, {
@@ -58,9 +58,9 @@ export default function SubmissionPage() {
           credentials: "include",
         });
         if (response.ok) {
-          alert("更新しました。")
+          alert("更新しました。");
         } else {
-          alert("更新に失敗しました。もう一度お試しください。")
+          alert("更新に失敗しました。もう一度お試しください。");
         }
       }
     },
