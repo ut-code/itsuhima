@@ -54,7 +54,8 @@ router.post(
         maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
       });
 
-      res.status(201).json(event.id);
+      res.status(201).json(
+        {id: event.id, name: event.name});
     } catch (err) {
       console.error("エラー:", err);
       if (err instanceof z.ZodError) {

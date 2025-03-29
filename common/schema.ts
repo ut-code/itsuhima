@@ -89,7 +89,7 @@ const baseProjectReqSchema = z.object({
 export const projectReqSchema = baseProjectReqSchema.refine(
   (data) => {
     if (data.startDate && data.endDate) {
-      return data.startDate < data.endDate;
+      return data.startDate <= data.endDate;
     }
     return true;
   },
@@ -102,7 +102,7 @@ export const projectReqSchema = baseProjectReqSchema.refine(
 export const editReqSchema = baseProjectReqSchema.partial().refine(
   (data) => {
     if (data.startDate && data.endDate) {
-      return data.startDate < data.endDate;
+      return data.startDate <= data.endDate;
     }
     return true;
   },

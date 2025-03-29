@@ -46,10 +46,10 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
   const calendarRef = useRef<FullCalendar | null>(null);
   const isSelectionDeleting = useRef<boolean | null>(null);
 
-  const calendarApi = calendarRef.current?.getApi();
-
   // init
   useEffect(() => {
+    const calendarApi = calendarRef.current?.getApi();
+
     if (calendarApi) {
       calendarApi.getEvents().forEach((event) => {
         event.remove();
@@ -100,7 +100,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         });
       });
     }
-  }, [calendarApi, myGuestId, myMatrix, mySlotsRef, othersMatrix, project.guests]);
+  }, [myGuestId, myMatrix, mySlotsRef, othersMatrix, project.guests, calendarRef]);
 
   useEffect(() => {
     // カレンダー外までドラッグした際に選択を解除
@@ -131,10 +131,9 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
   }, []);
 
   const pageCount = Math.ceil(countDays / 7);
-  // const [currentPage, setCurrentPage] = useState(1);
 
   return (
-    <div className="h-full flex-1" id="ih-cal-wrapper">
+    <div className="flex-1 my-2" id="ih-cal-wrapper">
       <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, interactionPlugin]}
@@ -145,10 +144,14 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         initialDate={project.startDate}
         slotMinTime={dayjs(tmpAllowedRange.startTime).format("HH:mm:ss")}
         slotMaxTime={dayjs(tmpAllowedRange.endTime).format("HH:mm:ss")}
-        headerToolbar={pageCount >= 2 ? {
-          left: "prev",
-          right: "next"
-        } : false}
+        headerToolbar={
+          pageCount >= 2
+            ? {
+                left: "prev",
+                right: "next",
+              }
+            : false
+        }
         views={{
           timeGrid: {
             type: "timeGrid",
@@ -174,6 +177,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
               start: project.startDate,
               end: project.endDate,
             },
+            expandRows: true,
           },
         }}
         initialView="timeGrid"
