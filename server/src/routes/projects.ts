@@ -48,6 +48,7 @@ router.post(
       const host = event.hosts[0];
 
       res.cookie("browserId", host.browserId, {
+        domain: process.env.DOMAIN,
         httpOnly: true,
         secure: isProduction,
         sameSite: isProduction ? "none" : "lax",
@@ -229,6 +230,7 @@ router.post(
       });
 
       res.cookie("browserId", guest.browserId, {
+        domain: process.env.DOMAIN,
         httpOnly: true,
         secure: isProduction,
         sameSite: isProduction ? "none" : "lax",
