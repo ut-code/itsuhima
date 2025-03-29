@@ -297,7 +297,47 @@ export default function ProjectPage() {
           ) : (
             <p>すでにデータを登録したユーザーがいるため、日時の編集はできません。</p>
           )}
-
+          {project && (
+            <div>
+              <label className="text-sm text-gray-400">イベントの削除</label>
+              <div className="flex justify-end py-2">
+                <button
+                  className="btn bg-red-700 text-white"
+                  onClick={async () => {
+                    if (confirm("本当にこのイベントを削除しますか？")) {
+                      try {
+                        const response = await fetch(`${API_ENDPOINT}/projects/${project.id}`, {
+                          method: "DELETE",
+                        });
+                        if (!response.ok) {
+                          throw new Error("削除に失敗しました。");
+                        }
+                        navigate("/")
+                        setToast({
+                          message: "イベントを削除しました。",
+                          variant: "success",
+                        });
+                        setTimeout(() => {
+                          setToast(null);
+                        }, 3000);
+                      } catch (error) {
+                        console.error(error);
+                        setToast({
+                          message: "エラーが発生しました。もう一度お試しください。",
+                          variant: "error",
+                        });
+                        setTimeout(() => {
+                          setToast(null);
+                        }, 3000);
+                      }
+                    }
+                  }}
+                >
+                  イベントを削除する
+                </button>
+              </div>
+            </div>
+          )}
           <div className="p-4 w-full fixed bottom-0 left-0 flex justify-end">
             <button type="submit" className="btn btn-primary" disabled={!isValid || !isDirty}>
               イベントを{project ? "更新" : "作成"}する
