@@ -8,12 +8,20 @@ import { API_ENDPOINT } from "../../../utils";
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
-  const { data: project, loading: projectLoading, refetch: projectRefetch } = useData<Project>(
+  const {
+    data: project,
+    loading: projectLoading,
+    refetch: projectRefetch,
+  } = useData<Project>(
     projectId ? `${API_ENDPOINT}/projects/${projectId}` : null,
     projectResSchema,
   );
 
-  const { data: me, loading: meLoading, refetch: meRefetch } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
+  const {
+    data: me,
+    loading: meLoading,
+    refetch: meRefetch,
+  } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
 
   const [postLoading, setPostLoading] = useState(false);
 
@@ -66,7 +74,7 @@ export default function SubmissionPage() {
           alert("更新に失敗しました。もう一度お試しください。");
         }
       }
-      await Promise.all([projectRefetch(), meRefetch()])
+      await Promise.all([projectRefetch(), meRefetch()]);
       setPostLoading(false);
     },
     [guestName, projectId, projectRefetch, meRefetch],

@@ -177,7 +177,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
               start: project.startDate,
               end: project.endDate,
             },
-            expandRows: true, 
+            expandRows: true,
           },
         }}
         initialView="timeGrid"
