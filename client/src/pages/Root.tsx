@@ -34,7 +34,6 @@ export default function RootPage() {
       <Header />
       <div className="container p-4 mx-auto flex flex-col gap-4 justify-center items-center">
         <div className="flex flex-col items-center">
-          <img src="/logo.png" alt="logo" width="200px" />
           <p className="text-lg text-gray-600">「いつ暇？」で日程調整しよう</p>
         </div>
         <div className="flex justify-center">
