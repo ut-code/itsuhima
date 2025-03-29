@@ -5,6 +5,7 @@ export default function Header() {
         <a className="flex text-2xl text-white items-center px-2 gap-1 font-mplus" href="/">
           <img src="/logo-white.svg" alt="logo" width={24} />
           <span className="px-2">イツヒマ</span>
+          <span className="text-xs">(アルファ版)</span>
         </a>
       </div>
     </div>
