@@ -1,4 +1,8 @@
+@import url("https://fonts.googleapis.com/css2?family=M+PLUS+1:wght@100..900&display=swap");
 @import "tailwindcss";
+@theme {
+  --font-mplus: "M PLUS 1", sans-serif;
+}
 @plugin "daisyui";
 @plugin "daisyui/theme" {
   name: "light";
