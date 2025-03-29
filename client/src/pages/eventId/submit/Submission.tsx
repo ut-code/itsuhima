@@ -117,9 +117,11 @@ export default function SubmissionPage() {
             <span className="loading loading-dots loading-md text-gray-400"></span>
           </div>
         ) : !project ? (
-          <div className="w-full flex-1">
-            <p>イベントが存在しません。</p>
-            <a href="/">ホームに戻る</a>
+          <div className="flex flex-col justify-center items-center py-4 gap-4">
+            <p className="text-xl text-gray-600">イベントが見つかりませんでした。</p>
+            <NavLink to={"/"} className="link">
+              ホームに戻る
+            </NavLink>
           </div>
         ) : (
           <div className="p-4 flex flex-col flex-1 h-full overflow-y-auto">

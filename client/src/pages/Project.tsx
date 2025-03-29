@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { NavLink, useNavigate, useParams } from "react-router";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -171,186 +171,204 @@ export default function ProjectPage() {
 
   return (
     <>
-      <Header />
-      <div className="container p-4 mx-auto">
-        {loading && (
-          <div className="fixed inset-0 flex bg-white justify-center items-center z-50">
-            <span className="loading loading-dots loading-lg text-gray-400"></span>
+      <div className="h-full w-full flex flex-col">
+        <Header />
+        {loading ? (
+          <div className="flex-1 flex justify-center items-center">
+            <span className="loading loading-dots loading-md text-gray-400"></span>
           </div>
-        )}
-        <h1 className="text-2xl mb-2">{project ? `${project.name} の編集` : "イベントの作成"}</h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="text-sm text-gray-400">イベント名</label>
-            <input
-              {...register("name")}
-              className="input w-full text-base"
-              placeholder="イベント名"
-            />
-            {errors.name && <p className="text-red-500">{errors.name.message}</p>}
+        ) : eventId !== undefined && !project ? (
+          <div className="flex flex-col justify-center items-center py-4 gap-4">
+            <p className="text-xl text-gray-600">イベントが見つかりませんでした。</p>
+            <NavLink to={"/"} className="link">
+              ホームに戻る
+            </NavLink>
           </div>
-          {!project || (project && project.guests.length === 0) ? (
-            <>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="text-sm text-gray-400">開始日</label>
-                  <input
-                    type="date"
-                    {...register("startDate")}
-                    className="input w-full text-base"
-                  />
-                  {errors.startDate && <p className="text-red-500">{errors.startDate.message}</p>}
-                </div>
-                <div className="flex-1">
-                  <label className="text-sm text-gray-400">終了日</label>
-                  <input type="date" {...register("endDate")} className="input w-full text-base" />
-                  {errors.endDate && <p className="text-red-500">{errors.endDate.message}</p>}
-                </div>
-              </div>
+        ) : (
+          <div className="container p-4 mx-auto">
+            <h1 className="text-2xl mb-2">
+              {project ? `${project.name} の編集` : "イベントの作成"}
+            </h1>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <label className="text-sm text-gray-400">時間帯</label>
-                <div className="flex gap-2 items-center">
-                  <div className="flex-1 flex gap-1">
-                    <select
-                      className="input flex-1 text-base"
-                      value={fields[0].startTime.split(":")[0]}
-                      onChange={(e) => {
-                        replace([
-                          {
-                            startTime: e.target.value + ":" + fields[0].startTime.split(":")[1],
-                            endTime: fields[0].endTime,
-                          },
-                        ]);
-                      }}
-                    >
-                      <option value="">時</option>
-                      {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map(
-                        (h) => (
-                          <option key={h} value={h}>
-                            {h}
-                          </option>
-                        ),
+                <label className="text-sm text-gray-400">イベント名</label>
+                <input
+                  {...register("name")}
+                  className="input w-full text-base"
+                  placeholder="イベント名"
+                />
+                {errors.name && <p className="text-red-500">{errors.name.message}</p>}
+              </div>
+              {!project || (project && project.guests.length === 0) ? (
+                <>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-sm text-gray-400">開始日</label>
+                      <input
+                        type="date"
+                        {...register("startDate")}
+                        className="input w-full text-base"
+                      />
+                      {errors.startDate && (
+                        <p className="text-red-500">{errors.startDate.message}</p>
                       )}
-                    </select>
-                    <select
-                      className="input flex-1 text-base"
-                      value={fields[0].startTime.split(":")[1]}
-                      onChange={(e) => {
-                        replace([
-                          {
-                            startTime: fields[0].startTime.split(":")[0] + ":" + e.target.value,
-                            endTime: fields[0].endTime,
-                          },
-                        ]);
-                      }}
-                    >
-                      <option value="">分</option>
-                      {["00", "15", "30", "45"].map((h) => (
-                        <option key={h} value={h}>
-                          {h}
-                        </option>
-                      ))}
-                    </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-sm text-gray-400">終了日</label>
+                      <input
+                        type="date"
+                        {...register("endDate")}
+                        className="input w-full text-base"
+                      />
+                      {errors.endDate && <p className="text-red-500">{errors.endDate.message}</p>}
+                    </div>
                   </div>
-                  <span>〜</span>
-                  <div className="flex-1 flex gap-1">
-                    <select
-                      className="input flex-1 text-base"
-                      value={fields[0].endTime.split(":")[0]}
-                      onChange={(e) => {
-                        replace([
-                          {
-                            startTime: fields[0].startTime,
-                            endTime: e.target.value + ":" + fields[0].endTime.split(":")[1],
-                          },
-                        ]);
+                  <div>
+                    <label className="text-sm text-gray-400">時間帯</label>
+                    <div className="flex gap-2 items-center">
+                      <div className="flex-1 flex gap-1">
+                        <select
+                          className="input flex-1 text-base"
+                          value={fields[0].startTime.split(":")[0]}
+                          onChange={(e) => {
+                            replace([
+                              {
+                                startTime: e.target.value + ":" + fields[0].startTime.split(":")[1],
+                                endTime: fields[0].endTime,
+                              },
+                            ]);
+                          }}
+                        >
+                          <option value="">時</option>
+                          {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map(
+                            (h) => (
+                              <option key={h} value={h}>
+                                {h}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                        <select
+                          className="input flex-1 text-base"
+                          value={fields[0].startTime.split(":")[1]}
+                          onChange={(e) => {
+                            replace([
+                              {
+                                startTime: fields[0].startTime.split(":")[0] + ":" + e.target.value,
+                                endTime: fields[0].endTime,
+                              },
+                            ]);
+                          }}
+                        >
+                          <option value="">分</option>
+                          {["00", "15", "30", "45"].map((h) => (
+                            <option key={h} value={h}>
+                              {h}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <span>〜</span>
+                      <div className="flex-1 flex gap-1">
+                        <select
+                          className="input flex-1 text-base"
+                          value={fields[0].endTime.split(":")[0]}
+                          onChange={(e) => {
+                            replace([
+                              {
+                                startTime: fields[0].startTime,
+                                endTime: e.target.value + ":" + fields[0].endTime.split(":")[1],
+                              },
+                            ]);
+                          }}
+                        >
+                          <option value="">時</option>
+                          {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map(
+                            (h) => (
+                              <option key={h} value={h}>
+                                {h}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                        <select
+                          className="input flex-1 text-base"
+                          value={fields[0].endTime.split(":")[1]}
+                          onChange={(e) => {
+                            replace([
+                              {
+                                startTime: fields[0].startTime,
+                                endTime: fields[0].endTime.split(":")[0] + ":" + e.target.value,
+                              },
+                            ]);
+                          }}
+                        >
+                          <option value="">分</option>
+                          {["00", "15", "30", "45"].map((h) => (
+                            <option key={h} value={h}>
+                              {h}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
+                      <p className="text-red-500">{errors.allowedRanges.message}</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p>すでにデータを登録したユーザーがいるため、日時の編集はできません。</p>
+              )}
+              {project && (
+                <div>
+                  <label className="text-sm text-gray-400">イベントの削除</label>
+                  <div className="flex justify-end py-2">
+                    <button
+                      className="btn bg-red-700 text-white"
+                      onClick={async () => {
+                        if (confirm("本当にこのイベントを削除しますか？")) {
+                          try {
+                            const response = await fetch(`${API_ENDPOINT}/projects/${project.id}`, {
+                              method: "DELETE",
+                            });
+                            if (!response.ok) {
+                              throw new Error("削除に失敗しました。");
+                            }
+                            navigate("/");
+                            setToast({
+                              message: "イベントを削除しました。",
+                              variant: "success",
+                            });
+                            setTimeout(() => {
+                              setToast(null);
+                            }, 3000);
+                          } catch (error) {
+                            console.error(error);
+                            setToast({
+                              message: "エラーが発生しました。もう一度お試しください。",
+                              variant: "error",
+                            });
+                            setTimeout(() => {
+                              setToast(null);
+                            }, 3000);
+                          }
+                        }
                       }}
                     >
-                      <option value="">時</option>
-                      {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map(
-                        (h) => (
-                          <option key={h} value={h}>
-                            {h}
-                          </option>
-                        ),
-                      )}
-                    </select>
-                    <select
-                      className="input flex-1 text-base"
-                      value={fields[0].endTime.split(":")[1]}
-                      onChange={(e) => {
-                        replace([
-                          {
-                            startTime: fields[0].startTime,
-                            endTime: fields[0].endTime.split(":")[0] + ":" + e.target.value,
-                          },
-                        ]);
-                      }}
-                    >
-                      <option value="">分</option>
-                      {["00", "15", "30", "45"].map((h) => (
-                        <option key={h} value={h}>
-                          {h}
-                        </option>
-                      ))}
-                    </select>
+                      イベントを削除する
+                    </button>
                   </div>
                 </div>
-                {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
-                  <p className="text-red-500">{errors.allowedRanges.message}</p>
-                )}
-              </div>
-            </>
-          ) : (
-            <p>すでにデータを登録したユーザーがいるため、日時の編集はできません。</p>
-          )}
-          {project && (
-            <div>
-              <label className="text-sm text-gray-400">イベントの削除</label>
-              <div className="flex justify-end py-2">
-                <button
-                  className="btn bg-red-700 text-white"
-                  onClick={async () => {
-                    if (confirm("本当にこのイベントを削除しますか？")) {
-                      try {
-                        const response = await fetch(`${API_ENDPOINT}/projects/${project.id}`, {
-                          method: "DELETE",
-                        });
-                        if (!response.ok) {
-                          throw new Error("削除に失敗しました。");
-                        }
-                        navigate("/");
-                        setToast({
-                          message: "イベントを削除しました。",
-                          variant: "success",
-                        });
-                        setTimeout(() => {
-                          setToast(null);
-                        }, 3000);
-                      } catch (error) {
-                        console.error(error);
-                        setToast({
-                          message: "エラーが発生しました。もう一度お試しください。",
-                          variant: "error",
-                        });
-                        setTimeout(() => {
-                          setToast(null);
-                        }, 3000);
-                      }
-                    }
-                  }}
-                >
-                  イベントを削除する
+              )}
+              <div className="p-4 w-full fixed bottom-0 left-0 flex justify-end">
+                <button type="submit" className="btn btn-primary" disabled={!isValid || !isDirty}>
+                  イベントを{project ? "更新" : "作成"}する
                 </button>
               </div>
-            </div>
-          )}
-          <div className="p-4 w-full fixed bottom-0 left-0 flex justify-end">
-            <button type="submit" className="btn btn-primary" disabled={!isValid || !isDirty}>
-              イベントを{project ? "更新" : "作成"}する
-            </button>
+            </form>
           </div>
-        </form>
+        )}
       </div>
       {dialogStatus !== null && (
         <div className="modal modal-open">
