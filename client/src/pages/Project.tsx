@@ -12,7 +12,7 @@ import {
 } from "../../../common/schema";
 import { z } from "zod";
 import Header from "../components/Header";
-import { API_ENDPOINT } from "../utils";
+import { API_ENDPOINT, FRONTEND_ORIGIN } from "../utils";
 import { useData } from "../hooks";
 import dayjs from "dayjs";
 
@@ -31,6 +31,11 @@ export default function ProjectPage() {
 
   const [submitLoading, setSubmitLoading] = useState<boolean>(false);
   const loading = projectLoading || meLoading || submitLoading;
+
+  const [dialogStatus, setDialogStatus] = useState<{
+    projectId: string;
+    projectName: string;
+  } | null>(null);
 
   const {
     register,
@@ -99,11 +104,14 @@ export default function ProjectPage() {
         credentials: "include",
       });
 
-      const eventId = await res.json();
+      const { id: projectId, name: projectName } = await res.json(); // TODO:
 
       setSubmitLoading(false);
       if (res.ok) {
-        navigate(`/${eventId}`);
+        setDialogStatus({
+          projectId: projectId,
+          projectName: projectName,
+        });
       } else {
         alert("送信に失敗しました");
       }
@@ -117,7 +125,7 @@ export default function ProjectPage() {
 
       setSubmitLoading(false);
       if (res.ok) {
-        navigate(`/${eventId}`);
+        alert("更新しました。");
       } else {
         alert(res.status === 403 ? "認証に失敗しました。" : "更新に失敗しました。");
       }
@@ -279,6 +287,33 @@ export default function ProjectPage() {
           </div>
         </form>
       </div>
+      {dialogStatus !== null && (
+        <div className="modal modal-open">
+          <div className="modal-box flex flex-col gap-2">
+            <h3 className="text-xl">{dialogStatus.projectName}を作成しました</h3>
+            <p className="py-4">URL をコピーして共有しましょう！</p>
+            <div className="flex gap-1">
+              <input
+                type="text"
+                disabled
+                className="input input-info w-full"
+                value={`${FRONTEND_ORIGIN}/${dialogStatus.projectId}/submit`}
+              />
+              <button
+                onClick={() => alert("コピーしました！(してない)")}
+                className="btn btn-outline btn-primary"
+              >
+                コピー
+              </button>
+            </div>
+            <div className="modal-action">
+              <a className="btn btn-primary" href={`/${dialogStatus.projectId}/submit`}>
+                イベントへ
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
