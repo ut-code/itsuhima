@@ -67,37 +67,43 @@ router.get(
 
     if (!browserId) {
       // return res.status(401).json({ message: "認証情報がありません。" }); TODO: a
-      return res.status(200).json({
-        asHost: [],
-        asGuest: [],
-      });
+      return res.status(200).json([]);
     }
 
     try {
-      const hostingProjects = await prisma.project.findMany({
-        where: { hosts: { some: { browserId } } },
+      const involvedProjects = await prisma.project.findMany({
+        where: {
+          OR: [
+            { hosts: { some: { browserId } } },
+            {
+              guests: {
+                some: { browserId },
+              },
+            },
+          ],
+        },
         select: {
           id: true,
           name: true,
           startDate: true,
           endDate: true,
+          hosts: {
+            select: {
+              browserId: true,
+            }
+          }
         },
       });
 
-      const guestingProjects = await prisma.project.findMany({
-        where: { guests: { some: { browserId } } },
-        select: {
-          id: true,
-          name: true,
-          startDate: true,
-          endDate: true,
-        },
-      });
-
-      return res.status(200).json({
-        asHost: hostingProjects,
-        asGuest: guestingProjects,
-      });
+      return res.status(200).json(involvedProjects.map(
+        (p) => ({
+          id: p.id,
+          name: p.name,
+          startDate: p.startDate,
+          endDate: p.endDate,
+          isHost: p.hosts.some((host) => host.browserId === browserId),
+        })
+      ));
     } catch (error) {
       console.error("ユーザー検索エラー:", error);
       return res.status(500).json(); // TODO:

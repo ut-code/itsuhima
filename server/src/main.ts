@@ -18,8 +18,8 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-  })
-); // TODO: configure
+  }),
+);
 app.use(express.json());
 app.use(cookieParser());
 

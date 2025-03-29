@@ -48,13 +48,15 @@ router.post(
       const host = event.hosts[0];
 
       res.cookie("browserId", host.browserId, {
+        domain: process.env.DOMAIN,
         httpOnly: true,
         secure: isProduction,
         sameSite: isProduction ? "none" : "lax",
         maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
       });
 
-      res.status(201).json(event.id);
+      res.status(201).json(
+        {id: event.id, name: event.name});
     } catch (err) {
       console.error("エラー:", err);
       if (err instanceof z.ZodError) {
@@ -64,7 +66,7 @@ router.post(
       }
       res.status(500).json({ message: "イベント作成時にエラーが発生しました" });
     }
-  }
+  },
 );
 
 // イベント情報の取得 Guestのみ
@@ -122,7 +124,7 @@ router.get(
       // TODO:
       res.status(500).json();
     }
-  }
+  },
 );
 
 //イベント編集 Hostのみ すでにguestがいたら時間登録はできない
@@ -132,7 +134,7 @@ router.put("/:projectId", async (req: Request, res: Response) => {
   console.log("イベント", projectId);
   try {
     const { name, startDate, endDate, allowedRanges } = editReqSchema.parse(
-      req.body
+      req.body,
     );
 
     // ホスト認証とゲスト存在確認を一括取得
@@ -140,7 +142,7 @@ router.put("/:projectId", async (req: Request, res: Response) => {
       prisma.host.findFirst({
         where: {
           browserId,
-          projectId: projectId, 
+          projectId: projectId,
         },
       }),
       prisma.guest.findFirst({
@@ -190,11 +192,13 @@ router.post(
     const { projectId } = req.params;
     const browserId = req.cookies?.browserId;
 
-    const existingGuest = await prisma.guest.findFirst({
-      where: { projectId, browserId },
-    });
-    if (existingGuest) {
-      return res.status(403).json({ message: "すでに登録済みです" });
+    if (browserId) {
+      const existingGuest = await prisma.guest.findFirst({
+        where: { projectId, browserId },
+      });
+      if (existingGuest) {
+        return res.status(403).json({ message: "すでに登録済みです" });
+      }
     }
 
     const parsed = submitReqSchema.safeParse(req.body);
@@ -226,6 +230,7 @@ router.post(
       });
 
       res.cookie("browserId", guest.browserId, {
+        domain: process.env.DOMAIN,
         httpOnly: true,
         secure: isProduction,
         sameSite: isProduction ? "none" : "lax",
@@ -238,7 +243,7 @@ router.post(
       console.error("登録エラー:", error);
       return res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
-  }
+  },
 );
 
 //日程編集。Guestのみ
@@ -257,7 +262,7 @@ router.put(
       });
     }
 
-    const { slots } = parsed.data;
+    const { slots, name } = parsed.data;
 
     try {
       const existingGuest = await prisma.guest.findFirst({
@@ -276,11 +281,12 @@ router.put(
       if (existingGuest) {
         await prisma.slot.deleteMany({ where: { guestId: existingGuest.id } });
 
-        // ゲスト情報更新 // FIXME: project is missing??
+        // ゲスト情報更新
         guest = await prisma.guest.update({
           where: { id: existingGuest.id },
           data: {
             slots: { create: slotData },
+            name,
           },
           include: { slots: true },
         });
@@ -296,7 +302,37 @@ router.put(
       console.error("処理中のエラー:", error);
       return res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
-  }
+  },
 );
+// イベント削除（Hostのみ）
+router.delete("/:projectId", async (req: Request, res: Response) => {
+  const { projectId } = req.params;
+  const browserId = req.cookies?.browserId;
+
+  try {
+    // Host 認証
+    const host = await prisma.host.findFirst({
+      where: { projectId, browserId },
+    });
+
+    if (!host) {
+      return res
+        .status(403)
+        .json({ message: "認証エラー: 削除権限がありません。" });
+    }
+
+    // 関連データを削除（Cascade を使っていない場合）
+    await prisma.project.delete({
+      where: { id: projectId },
+    });
+
+    return res.status(200).json({ message: "イベントを削除しました。" });
+  } catch (error) {
+    console.error("イベント削除エラー:", error);
+    return res
+      .status(500)
+      .json({ message: "イベント削除中にエラーが発生しました。" });
+  }
+});
 
 export default router;

@@ -1,12 +1,95 @@
+@import url("https://fonts.googleapis.com/css2?family=M+PLUS+1:wght@100..900&display=swap");
 @import "tailwindcss";
+@theme {
+  --font-mplus: "M PLUS 1", sans-serif;
+}
 @plugin "daisyui";
 @plugin "daisyui/theme" {
   name: "light";
   default: true;
-  --color-primary: #001e59;
+  prefersdark: true; /* TODO: ダークモード対応 */
+  --color-primary: #0f82b1;
+  --color-primary-content: #ffffff;
   --color-secondary: #ff48a0;
 }
 
+.btn {
+  font-weight: normal;
+}
+
+:root {
+  --fc-today-bg-color: inherit; /* 今日の日付のハイライトを削除する https://github.com/fullcalendar/fullcalendar/issues/7150 */
+  --ih-color-primary-transparent: rgb(15, 130, 177, 0.2);
+
+  overscroll-behavior: none; /* 引っ張って更新を無効化 */
+}
+
+.fc-event {
+  box-shadow: none !important;
+}
+
 .fc-highlight {
+  /* 日を跨ぐ選択が矩形選択にならないため、デフォルトの選択範囲を隠す */
   display: none;
+}
+
+.fc-bg-event {
+  opacity: 1 !important; /* デフォルトで透明度を付与されるのを防止 */
+}
+
+/* 作成の選択範囲 */
+.ih-create-select-event {
+  z-index: 100 !important;
+  background-color: var(--ih-color-primary-transparent) !important;
+  border: 3px dashed var(--color-primary) !important;
+}
+
+/* 削除の選択範囲 */
+.ih-delete-select-event {
+  z-index: 100 !important;
+  background-color: rgb(255, 0, 0, 0.5) !important;
+  border: 3px dashed red !important;
+}
+
+/* 自分の日程 */
+.ih-my-event {
+  border: 3px solid var(--color-primary) !important;
+  background-color: var(--ih-color-primary-transparent) !important;
+}
+
+/* 他者の日程 */
+.ih-others-event {
+  border: 3px solid var(--color-gray-200) !important;
+  /* background-color は重ね合わせ個数分 JS で計算*/
+}
+
+#member-info {
+  z-index: 50;
+}
+
+/* ツールバー */
+.fc-header-toolbar {
+  margin-bottom: 8px !important;
+}
+
+.fc-next-button,
+.fc-prev-button {
+  padding: 1px !important;
+  background-color: transparent !important;
+  color: var(--color-primary) !important;
+  border: 1px solid var(--color-primary) !important;
+}
+
+.fc-next-button:disabled,
+.fc-prev-button:disabled {
+  color: var(--color-gray-200) !important;
+  border: 1px solid var(--color-gray-200) !important;
+}
+
+body {
+  background-color: var(--color-primary);
+}
+
+#root {
+  background-color: white;
 }

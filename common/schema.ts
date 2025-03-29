@@ -1,4 +1,7 @@
 import { z } from "zod";
+import dayjs from "dayjs";
+import "dayjs/locale/ja";
+dayjs.locale("ja")
 
 // TODO: Is this the best way?
 const isoStrToDate = z
@@ -46,73 +49,95 @@ export const submitReqSchema = z.object({
     z.object({
       start: isoStrToDate,
       end: isoStrToDate,
-    })
+    }),
   ), // TODO: should rename
 });
 
 export type SubmitReq = z.infer<typeof submitReqSchema>;
 
+const isQuarterHour = (time: string): boolean => {
+  const [, minute] = time.split(":").map(Number);
+  return [0, 15, 30, 45].includes(minute);
+};
+
 const baseProjectReqSchema = z.object({
   name: z.string().min(1, "イベント名を入力してください"),
-  startDate: z.string().min(1, "開始日を入力してください"),
+  startDate: z.string().min(1, "開始日を入力してください").refine(
+    (startDate) => {
+      const inputDate = dayjs(startDate, 'YYYY-MM-DD');
+      const isPast = inputDate.isBefore(dayjs().startOf('day'));
+      return !isPast;
+    },
+    {
+      message: "過去の日付は指定できません"
+    }
+  ),
   endDate: z.string().min(1, "終了日を入力してください"),
   allowedRanges: z
     .array(
       z.object({
         startTime: z.string(),
         endTime: z.string(),
-      })
+      }),
     )
     .refine(
       (ranges) => ranges.every(({ startTime, endTime }) => startTime < endTime),
       {
         message: "開始時刻は終了時刻より前でなければなりません",
-      }
+      },
+    )
+    .refine(
+      (ranges) =>
+        ranges.every(
+          ({ startTime, endTime }) =>
+            isQuarterHour(startTime) && isQuarterHour(endTime),
+        ),
+      {
+        message: "開始時刻と終了時刻は15分単位で入力してください",
+      },
     ),
 });
 
 export const projectReqSchema = baseProjectReqSchema.refine(
   (data) => {
     if (data.startDate && data.endDate) {
-      return data.startDate < data.endDate;
+      return data.startDate <= data.endDate;
     }
     return true;
   },
   {
     message: "開始日は終了日より前に設定してください",
     path: ["endDate"],
-  }
+  },
 );
 
 export const editReqSchema = baseProjectReqSchema.partial().refine(
   (data) => {
     if (data.startDate && data.endDate) {
-      return data.startDate < data.endDate;
+      return data.startDate <= data.endDate;
     }
     return true;
   },
   {
     message: "開始日は終了日より前に設定してください",
     path: ["endDate"],
-  }
+  },
 );
-
 export const projectResSchema = project.extend({
   allowedRanges: z.array(allowedRange),
   hosts: z.array(host),
   guests: z.array(
     guest.extend({
       slots: z.array(slot),
-    })
+    }),
   ),
 });
 
 export type Project = z.infer<typeof projectResSchema>;
 
-export const involvedProjectsResSchema = z.object({
-  asHost: z.array(project),
-  asGuest: z.array(project),
-});
+export const involvedProjectsResSchema = z.array(project.extend({
+  isHost: z.boolean(),
+}));
 
 export type InvolvedProjects = z.infer<typeof involvedProjectsResSchema>;
 
