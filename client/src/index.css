@@ -56,13 +56,15 @@
   margin-bottom: 8px !important;
 }
 
-.fc-next-button,.fc-prev-button {
+.fc-next-button,
+.fc-prev-button {
   padding: 1px !important;
   background-color: rgb(15, 130, 177) !important;
   border: none !important;
 }
 
-.fc-next-button:disabled,.fc-prev-button:disabled {
+.fc-next-button:disabled,
+.fc-prev-button:disabled {
   background-color: gray !important;
 }
 

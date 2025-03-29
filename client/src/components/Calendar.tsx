@@ -145,10 +145,14 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         initialDate={project.startDate}
         slotMinTime={dayjs(tmpAllowedRange.startTime).format("HH:mm:ss")}
         slotMaxTime={dayjs(tmpAllowedRange.endTime).format("HH:mm:ss")}
-        headerToolbar={pageCount >= 2 ? {
-          left: "prev",
-          right: "next"
-        } : false}
+        headerToolbar={
+          pageCount >= 2
+            ? {
+                left: "prev",
+                right: "next",
+              }
+            : false
+        }
         views={{
           timeGrid: {
             type: "timeGrid",
