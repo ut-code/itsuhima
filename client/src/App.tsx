@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router";
 import RootPage from "./pages/Root.tsx";
-import NewPage from "./pages/New.tsx";
+import ProjectPage from "./pages/Project.tsx";
 import CreateDonePage from "./pages/eventId/CreateDone.tsx";
 import SubmissionPage from "./pages/eventId/submit/Submission.tsx";
 
@@ -9,10 +9,10 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route index element={<RootPage />} />
-        <Route path="new" element={<NewPage />} />
+        <Route path="new" element={<ProjectPage />} />
         <Route path=":eventId">
           <Route index element={<CreateDonePage />} />
-          <Route path="edit" element={<NewPage />} />
+          <Route path="edit" element={<ProjectPage />} />
           <Route path="submit">
             <Route index element={<SubmissionPage />} />
           </Route>

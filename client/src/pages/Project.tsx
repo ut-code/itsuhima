@@ -16,7 +16,7 @@ import { API_ENDPOINT } from "../utils";
 import { useData } from "../hooks";
 import dayjs from "dayjs";
 
-export default function NewPage() {
+export default function ProjectPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
 
