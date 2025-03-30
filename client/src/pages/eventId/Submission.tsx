@@ -152,7 +152,7 @@ export default function SubmissionPage() {
                     onChange={(e) => setGuestName(e.target.value)}
                     className="flex-1 input text-base"
                   />
-                  <div className="flex-1 flex flex-row gap-2">
+                  <div className="flex flex-row gap-2">
                     {!!myGuestId && (
                       <button
                         className="btn text-gray-500"
