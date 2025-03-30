@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
-import express from "express";
+import express, { CookieOptions } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { PrismaClient } from "@prisma/client";
@@ -17,10 +17,10 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-  }),
+  })
 );
 app.use(express.json());
-app.use(cookieParser());
+app.use(cookieParser(process.env.COOKIE_SECRET));
 
 // テスト用
 app.get("/", (req, res) => {
@@ -32,3 +32,14 @@ app.use("/projects", projectsRoutes);
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
+
+const isProduction = process.env.NODE_ENV === "prod";
+
+export const cookieOptions: CookieOptions = {
+  domain: process.env.DOMAIN,
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
+  maxAge: 1000 * 60 * 60 * 24 * 365,
+  signed: true,
+};

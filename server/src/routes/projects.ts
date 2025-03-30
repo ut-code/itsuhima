@@ -7,10 +7,8 @@ import {
   InvolvedProjects,
 } from "../../../common/schema.js";
 import { z } from "zod";
-import { prisma } from "../main.js";
+import { cookieOptions, prisma } from "../main.js";
 import { validateRequest } from "../middleware.js";
-
-const isProduction = process.env.NODE_ENV === "prod";
 
 const router = Router();
 
@@ -20,6 +18,7 @@ const projectIdParamsSchema = z.object({ projectId: z.string().uuid() });
 
 // プロジェクト作成
 router.post("/", validateRequest({ body: projectReqSchema }), async (req, res) => {
+  const browserId = req.signedCookies.browserId;
   try {
     const data = req.body;
     const event = await prisma.project.create({
@@ -32,7 +31,7 @@ router.post("/", validateRequest({ body: projectReqSchema }), async (req, res) =
         },
         hosts: {
           create: {
-            browserId: req.cookies?.browserId || undefined,
+            browserId,
           },
         },
       },
@@ -40,13 +39,7 @@ router.post("/", validateRequest({ body: projectReqSchema }), async (req, res) =
     });
     const host = event.hosts[0];
 
-    res.cookie("browserId", host.browserId, {
-      domain: process.env.DOMAIN,
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "none" : "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
-    });
+    res.cookie("browserId", host.browserId, cookieOptions);
 
     res.status(201).json({ id: event.id, name: event.name });
   } catch (err) {
@@ -55,64 +48,61 @@ router.post("/", validateRequest({ body: projectReqSchema }), async (req, res) =
 });
 
 // 自分が関連するプロジェクト取得
-router.get(
-  "/mine",
-  async (req, res: Response<InvolvedProjects>) => {
-    const browserId = req.cookies?.browserId;
+router.get("/mine", async (req, res: Response<InvolvedProjects>) => {
+  const browserId = req.signedCookies?.browserId;
 
-    if (!browserId) {
-      // return res.status(401).json({ message: "認証情報がありません。" }); TODO: a
-      return res.status(200).json([]);
-    }
-
-    try {
-      const involvedProjects = await prisma.project.findMany({
-        where: {
-          OR: [
-            { hosts: { some: { browserId } } },
-            {
-              guests: {
-                some: { browserId },
-              },
-            },
-          ],
-        },
-        select: {
-          id: true,
-          name: true,
-          startDate: true,
-          endDate: true,
-          hosts: {
-            select: {
-              browserId: true,
-            }
-          }
-        },
-      });
-
-      return res.status(200).json(involvedProjects.map(
-        (p) => ({
-          id: p.id,
-          name: p.name,
-          startDate: p.startDate,
-          endDate: p.endDate,
-          isHost: p.hosts.some((host) => host.browserId === browserId),
-        })
-      ));
-    } catch (error) {
-      console.error("ユーザー検索エラー:", error);
-      return res.status(500).json(); // TODO:
-      // .json({ message: "ユーザー検索中にエラーが発生しました。" });
-    }
+  if (!browserId) {
+    // return res.status(401).json({ message: "認証情報がありません。" }); TODO: a
+    return res.status(200).json([]);
   }
-);
+
+  try {
+    const involvedProjects = await prisma.project.findMany({
+      where: {
+        OR: [
+          { hosts: { some: { browserId } } },
+          {
+            guests: {
+              some: { browserId },
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        startDate: true,
+        endDate: true,
+        hosts: {
+          select: {
+            browserId: true,
+          },
+        },
+      },
+    });
+
+    return res.status(200).json(
+      involvedProjects.map((p) => ({
+        id: p.id,
+        name: p.name,
+        startDate: p.startDate,
+        endDate: p.endDate,
+        isHost: p.hosts.some((host) => host.browserId === browserId),
+      }))
+    );
+  } catch (error) {
+    console.error("ユーザー検索エラー:", error);
+    return res.status(500).json(); // TODO:
+    // .json({ message: "ユーザー検索中にエラーが発生しました。" });
+  }
+});
 
 // プロジェクト取得
 router.get(
   "/:projectId",
   validateRequest({ params: projectIdParamsSchema }),
   async (req, res: Response<ProjectRes>) => {
-    const browserId = req.cookies.browserId;
+    const browserId = req.signedCookies?.browserId;
     try {
       const { projectId } = req.params;
       const project = await prisma.project.findUnique({
@@ -184,7 +174,7 @@ router.put(
   }),
   async (req, res: Response) => {
     const { projectId } = req.params;
-    const browserId = req.cookies?.browserId;
+    const browserId = req.signedCookies?.browserId;
     try {
       const { name, startDate, endDate, allowedRanges } = req.body;
 
@@ -243,7 +233,7 @@ router.delete(
   }),
   async (req, res: Response) => {
     const { projectId } = req.params;
-    const browserId = req.cookies?.browserId;
+    const browserId = req.signedCookies?.browserId;
 
     try {
       // Host 認証
@@ -277,7 +267,7 @@ router.post(
   }),
   async (req, res: Response) => {
     const { projectId } = req.params;
-    const browserId = req.cookies?.browserId;
+    const browserId = req.signedCookies?.browserId;
 
     if (browserId) {
       const existingGuest = await prisma.guest.findFirst({
@@ -307,13 +297,7 @@ router.post(
         include: { slots: true },
       });
 
-      res.cookie("browserId", guest.browserId, {
-        domain: process.env.DOMAIN,
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? "none" : "lax",
-        maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
-      });
+      res.cookie("browserId", guest.browserId, cookieOptions);
 
       console.log("登録されたデータ:", guest);
       return res.status(201).json("日時が登録されました！");
@@ -333,7 +317,7 @@ router.put(
   }),
   async (req, res: Response) => {
     const { projectId } = req.params;
-    const browserId = req.cookies?.browserId;
+    const browserId = req.signedCookies?.browserId;
 
     const { slots, name } = req.body;
 
