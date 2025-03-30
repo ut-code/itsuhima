@@ -1,6 +1,6 @@
 import { NavLink, useParams } from "react-router";
 import { Calendar } from "../../components/Calendar";
-import { Me, meResSchema, Project, projectResSchema } from "../../../../common/schema";
+import { Me, meResSchema, ProjectRes, projectResSchema } from "../../../../common/schema";
 import { useData } from "../../hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Header from "../../components/Header";
@@ -13,7 +13,7 @@ export default function SubmissionPage() {
     data: project,
     loading: projectLoading,
     refetch: projectRefetch,
-  } = useData<Project>(
+  } = useData<ProjectRes>(
     projectId ? `${API_ENDPOINT}/projects/${projectId}` : null,
     projectResSchema,
   );

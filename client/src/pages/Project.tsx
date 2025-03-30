@@ -6,7 +6,7 @@ import {
   editReqSchema,
   Me,
   meResSchema,
-  Project,
+  ProjectRes,
   projectReqSchema,
   projectResSchema,
 } from "../../../common/schema";
@@ -29,7 +29,7 @@ export default function ProjectPage() {
   const formSchema = eventId ? editReqSchema : projectReqSchema;
   type FormSchemaType = z.infer<typeof formSchema>;
 
-  const { data: project, loading: projectLoading } = useData<Project>(
+  const { data: project, loading: projectLoading } = useData<ProjectRes>(
     eventId ? `${API_ENDPOINT}/projects/${eventId}` : null,
     projectResSchema,
   );
