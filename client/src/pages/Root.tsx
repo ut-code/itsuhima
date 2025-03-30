@@ -76,7 +76,7 @@ export default function RootPage() {
                 {involvedProjects.map((p) => (
                   <li key={p.id}>
                     <NavLink
-                      to={`/${p.id}/submit`}
+                      to={`/${p.id}`}
                       className="btn btn-ghost w-full h-full flex justify-between p-4"
                     >
                       <div className="flex flex-col items-start gap-1">

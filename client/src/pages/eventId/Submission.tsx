@@ -1,10 +1,10 @@
 import { NavLink, useParams } from "react-router";
-import { Calendar } from "../../../components/Calendar";
-import { Me, meResSchema, Project, projectResSchema } from "../../../../../common/schema";
-import { useData } from "../../../hooks";
+import { Calendar } from "../../components/Calendar";
+import { Me, meResSchema, Project, projectResSchema } from "../../../../common/schema";
+import { useData } from "../../hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
-import Header from "../../../components/Header";
-import { API_ENDPOINT } from "../../../utils";
+import Header from "../../components/Header";
+import { API_ENDPOINT } from "../../utils";
 import { HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlinePencil } from "react-icons/hi";
 
 export default function SubmissionPage() {

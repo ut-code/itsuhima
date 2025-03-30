@@ -162,7 +162,7 @@ export default function ProjectPage() {
   useEffect(() => {
     if (!loading && me && project && !isHost) {
       if (eventId) {
-        navigate(`/${eventId}/submit`);
+        navigate(`/${eventId}`);
       } else {
         navigate("/");
       }
@@ -380,12 +380,12 @@ export default function ProjectPage() {
                 type="text"
                 disabled
                 className="input input-info w-full"
-                value={`${FRONTEND_ORIGIN}/${dialogStatus.projectId}/submit`}
+                value={`${FRONTEND_ORIGIN}/${dialogStatus.projectId}`}
               />
               <button
                 onClick={async () => {
                   await navigator.clipboard.writeText(
-                    `${FRONTEND_ORIGIN}/${dialogStatus.projectId}/submit`,
+                    `${FRONTEND_ORIGIN}/${dialogStatus.projectId}`,
                   );
                   setCopied(true);
                   setTimeout(() => {
@@ -399,7 +399,7 @@ export default function ProjectPage() {
               </button>
             </div>
             <div className="modal-action">
-              <a className="btn btn-primary" href={`/${dialogStatus.projectId}/submit`}>
+              <a className="btn btn-primary" href={`/${dialogStatus.projectId}`}>
                 イベントへ
               </a>
             </div>
