@@ -41,7 +41,7 @@ export default function SubmissionPage() {
     variant: "success" | "error";
   } | null>(null);
 
-  const postAvailability = useCallback(
+  const postSubmissions = useCallback(
     async (slots: { start: Date; end: Date }[], myGuestId: string) => {
       setPostLoading(true);
       const payload = {
@@ -56,7 +56,7 @@ export default function SubmissionPage() {
         return;
       }
       if (!myGuestId) {
-        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/availabilities`, {
+        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/submissions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -76,7 +76,7 @@ export default function SubmissionPage() {
           setTimeout(() => setToast(null), 3000);
         }
       } else {
-        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/availabilities`, {
+        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/submissions/mine`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -148,7 +148,7 @@ export default function SubmissionPage() {
                 disabled={loading || !guestName}
                 onClick={() => {
                   if (!guestName) return;
-                  postAvailability(
+                  postSubmissions(
                     mySlotsRef.current.map((slot) => {
                       return { start: slot.from, end: slot.to };
                     }),

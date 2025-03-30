@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, Response } from "express";
 import {
   editReqSchema,
   ProjectRes,
@@ -170,9 +170,42 @@ router.put(
   }
 );
 
+// プロジェクト削除
+router.delete(
+  "/:projectId",
+  validateRequest({
+    params: projectIdParamsSchema,
+  }),
+  async (req, res: Response) => {
+    const { projectId } = req.params;
+    const browserId = req.cookies?.browserId;
+
+    try {
+      // Host 認証
+      const host = await prisma.host.findFirst({
+        where: { projectId, browserId },
+      });
+
+      if (!host) {
+        return res.status(403).json({ message: "認証エラー: 削除権限がありません。" });
+      }
+
+      // 関連データを削除（Cascade を使っていない場合）
+      await prisma.project.delete({
+        where: { id: projectId },
+      });
+
+      return res.status(200).json({ message: "イベントを削除しました。" });
+    } catch (error) {
+      console.error("イベント削除エラー:", error);
+      return res.status(500).json({ message: "イベント削除中にエラーが発生しました。" });
+    }
+  }
+);
+
 // 日程の提出。
 router.post(
-  "/:projectId/availabilities",
+  "/:projectId/submissions",
   validateRequest({
     params: projectIdParamsSchema,
     body: submitReqSchema,
@@ -226,9 +259,9 @@ router.post(
   }
 );
 
-// 日程の編集。
+// 日程の更新。
 router.put(
-  "/:projectId/availabilities",
+  "/:projectId/submissions/mine",
   validateRequest({
     params: projectIdParamsSchema,
     body: submitReqSchema,
@@ -276,38 +309,6 @@ router.put(
     } catch (error) {
       console.error("処理中のエラー:", error);
       return res.status(500).json({ message: "サーバーエラーが発生しました" });
-    }
-  }
-);
-// イベント削除（Hostのみ）
-router.delete(
-  "/:projectId",
-  validateRequest({
-    params: projectIdParamsSchema,
-  }),
-  async (req, res: Response) => {
-    const { projectId } = req.params;
-    const browserId = req.cookies?.browserId;
-
-    try {
-      // Host 認証
-      const host = await prisma.host.findFirst({
-        where: { projectId, browserId },
-      });
-
-      if (!host) {
-        return res.status(403).json({ message: "認証エラー: 削除権限がありません。" });
-      }
-
-      // 関連データを削除（Cascade を使っていない場合）
-      await prisma.project.delete({
-        where: { id: projectId },
-      });
-
-      return res.status(200).json({ message: "イベントを削除しました。" });
-    } catch (error) {
-      console.error("イベント削除エラー:", error);
-      return res.status(500).json({ message: "イベント削除中にエラーが発生しました。" });
     }
   }
 );
