@@ -15,7 +15,7 @@ datasource db {
 
 /// 日程調整プロジェクト。ユーザには「イベント」と表示。
 model Project {
-  id            String         @id @default(uuid())
+  id            String         @id @db.VarChar(21)
   name          String
   /// 注: 日付部分のみ利用。時間は考慮しない。
   startDate     DateTime

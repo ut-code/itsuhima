@@ -9,10 +9,11 @@ import {
 import { z } from "zod";
 import { cookieOptions, prisma } from "../main.js";
 import { validateRequest } from "../middleware.js";
+import { nanoid } from "nanoid";
 
 const router = Router();
 
-const projectIdParamsSchema = z.object({ projectId: z.string().uuid() });
+const projectIdParamsSchema = z.object({ projectId: z.string().length(21) });
 
 // TODO: res の型。エラー時も考慮しないといけない
 
@@ -23,6 +24,7 @@ router.post("/", validateRequest({ body: projectReqSchema }), async (req, res) =
     const data = req.body;
     const event = await prisma.project.create({
       data: {
+        id: nanoid(),
         name: data.name,
         startDate: data.startDate,
         endDate: data.endDate,

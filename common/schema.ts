@@ -8,17 +8,17 @@ const isoStrToDate = z
 
 const host = z.object({
   id: z.string().uuid(),
-  projectId: z.string().uuid(),
+  projectId: z.string().length(21),
 });
 
 const guest = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  projectId: z.string().uuid(),
+  projectId: z.string().length(21),
 });
 
 const project = z.object({
-  id: z.string().uuid(),
+  id: z.string().length(21),
   name: z.string(),
   startDate: isoStrToDate,
   endDate: isoStrToDate,
@@ -26,14 +26,14 @@ const project = z.object({
 
 const allowedRange = z.object({
   id: z.string().uuid(),
-  projectId: z.string().uuid(),
+  projectId: z.string().length(21),
   startTime: isoStrToDate,
   endTime: isoStrToDate,
 });
 
 const slot = z.object({
   id: z.string().uuid(),
-  projectId: z.string().uuid(),
+  projectId: z.string().length(21),
   guestId: z.string().uuid(),
   from: isoStrToDate,
   to: isoStrToDate,
@@ -41,7 +41,7 @@ const slot = z.object({
 
 export const submitReqSchema = z.object({
   name: z.string(),
-  projectId: z.string().uuid(),
+  projectId: z.string().length(21),
   slots: z.array(
     z.object({
       start: isoStrToDate,
