@@ -47,7 +47,7 @@ export const submitReqSchema = z.object({
       start: isoStrToDate,
       end: isoStrToDate,
     }),
-  ), // TODO: should rename
+  ),
 });
 
 export type SubmitReq = z.infer<typeof submitReqSchema>;
@@ -61,37 +61,42 @@ const baseProjectReqSchema = z.object({
   name: z.string().min(1, "イベント名を入力してください"),
   startDate: z
     .string()
-    .min(1, "開始日を入力してください")
-    .refine(
-      (startDate) => {
-        const inputDate = new Date(startDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return inputDate >= today;
-      },
-      {
-        message: "過去の日付は指定できません",
-      }
-    ),
+    .min(1, "開始日を入力してください"),
+    // TODO: 新規作成時のみ、過去日付を制限する必要
+    // .refine(
+    //   (startDate) => {
+    //     const inputDate = new Date(startDate);
+    //     const today = new Date();
+    //     today.setHours(0, 0, 0, 0);
+    //     return inputDate >= today;
+    //   },
+    //   {
+    //     message: "過去の日付は指定できません",
+    //   },
+    // ),
   endDate: z.string().min(1, "終了日を入力してください"),
   allowedRanges: z
     .array(
       z.object({
         startTime: z.string(),
         endTime: z.string(),
-      })
+      }),
     )
-    .refine((ranges) => ranges.every(({ startTime, endTime }) => startTime < endTime), {
-      message: "開始時刻は終了時刻より前でなければなりません",
-    })
+    .refine(
+      (ranges) => ranges.every(({ startTime, endTime }) => startTime < endTime),
+      {
+        message: "開始時刻は終了時刻より前でなければなりません",
+      },
+    )
     .refine(
       (ranges) =>
         ranges.every(
-          ({ startTime, endTime }) => isQuarterHour(startTime) && isQuarterHour(endTime)
+          ({ startTime, endTime }) =>
+            isQuarterHour(startTime) && isQuarterHour(endTime),
         ),
       {
         message: "開始時刻と終了時刻は15分単位で入力してください",
-      }
+      },
     ),
 });
 
@@ -128,22 +133,19 @@ export const projectResSchema = project.extend({
       slots: z.array(slot),
     }),
   ),
+  isHost: z.boolean(),
+  meAsGuest: guest.nullable(),
 });
 
-export type Project = z.infer<typeof projectResSchema>;
+export type ProjectRes = z.infer<typeof projectResSchema>;
 
-export const involvedProjectsResSchema = z.array(project.extend({
-  isHost: z.boolean(),
-}));
+export const involvedProjectsResSchema = z.array(
+  project.extend({
+    isHost: z.boolean(),
+  }),
+);
 
 export type InvolvedProjects = z.infer<typeof involvedProjectsResSchema>;
-
-export const meResSchema = z.object({
-  guests: z.array(guest),
-  hosts: z.array(host),
-});
-
-export type Me = z.infer<typeof meResSchema>;
 
 // export const GuestSchema = z.object({
 //   id: z.string.optional(),

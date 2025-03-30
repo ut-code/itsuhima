@@ -4,9 +4,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   editReqSchema,
-  Me,
-  meResSchema,
-  Project,
+  ProjectRes,
   projectReqSchema,
   projectResSchema,
 } from "../../../common/schema";
@@ -29,14 +27,13 @@ export default function ProjectPage() {
   const formSchema = eventId ? editReqSchema : projectReqSchema;
   type FormSchemaType = z.infer<typeof formSchema>;
 
-  const { data: project, loading: projectLoading } = useData<Project>(
+  const { data: project, loading: projectLoading } = useData<ProjectRes>(
     eventId ? `${API_ENDPOINT}/projects/${eventId}` : null,
     projectResSchema,
   );
-  const { data: me, loading: meLoading } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
 
   const [submitLoading, setSubmitLoading] = useState<boolean>(false);
-  const loading = projectLoading || meLoading || submitLoading;
+  const loading = projectLoading || submitLoading;
 
   const [dialogStatus, setDialogStatus] = useState<{
     projectId: string;
@@ -157,17 +154,17 @@ export default function ProjectPage() {
     }
   };
 
-  const isHost = me?.hosts.some((h) => h.projectId === eventId);
+  const isHost = project?.isHost;
 
   useEffect(() => {
-    if (!loading && me && project && !isHost) {
+    if (!loading && project && !isHost) {
       if (eventId) {
-        navigate(`/${eventId}/submit`);
+        navigate(`/${eventId}`);
       } else {
         navigate("/");
       }
     }
-  }, [loading, me, project, isHost, eventId, navigate]);
+  }, [loading, project, isHost, eventId, navigate]);
 
   return (
     <>
@@ -380,12 +377,12 @@ export default function ProjectPage() {
                 type="text"
                 disabled
                 className="input input-info w-full"
-                value={`${FRONTEND_ORIGIN}/${dialogStatus.projectId}/submit`}
+                value={`${FRONTEND_ORIGIN}/${dialogStatus.projectId}`}
               />
               <button
                 onClick={async () => {
                   await navigator.clipboard.writeText(
-                    `${FRONTEND_ORIGIN}/${dialogStatus.projectId}/submit`,
+                    `${FRONTEND_ORIGIN}/${dialogStatus.projectId}`,
                   );
                   setCopied(true);
                   setTimeout(() => {
@@ -399,7 +396,7 @@ export default function ProjectPage() {
               </button>
             </div>
             <div className="modal-action">
-              <a className="btn btn-primary" href={`/${dialogStatus.projectId}/submit`}>
+              <a className="btn btn-primary" href={`/${dialogStatus.projectId}`}>
                 イベントへ
               </a>
             </div>

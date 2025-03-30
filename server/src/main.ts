@@ -5,7 +5,6 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { PrismaClient } from "@prisma/client";
 import projectsRoutes from "./routes/projects.js";
-import usersRoutes from "./routes/users.js";
 
 export const prisma = new PrismaClient();
 
@@ -25,11 +24,10 @@ app.use(cookieParser());
 
 // テスト用
 app.get("/", (req, res) => {
-  res.json("Hello World!");
+  res.json("Hello! イツヒマ？");
 });
 
 app.use("/projects", projectsRoutes);
-app.use("/users", usersRoutes);
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);

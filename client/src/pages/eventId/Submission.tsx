@@ -1,10 +1,10 @@
 import { NavLink, useParams } from "react-router";
-import { Calendar } from "../../../components/Calendar";
-import { Me, meResSchema, Project, projectResSchema } from "../../../../../common/schema";
-import { useData } from "../../../hooks";
+import { Calendar } from "../../components/Calendar";
+import { ProjectRes, projectResSchema } from "../../../../common/schema";
+import { useData } from "../../hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
-import Header from "../../../components/Header";
-import { API_ENDPOINT } from "../../../utils";
+import Header from "../../components/Header";
+import { API_ENDPOINT } from "../../utils";
 import { HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlinePencil } from "react-icons/hi";
 
 export default function SubmissionPage() {
@@ -13,26 +13,20 @@ export default function SubmissionPage() {
     data: project,
     loading: projectLoading,
     refetch: projectRefetch,
-  } = useData<Project>(
+  } = useData<ProjectRes>(
     projectId ? `${API_ENDPOINT}/projects/${projectId}` : null,
     projectResSchema,
   );
 
-  const {
-    data: me,
-    loading: meLoading,
-    refetch: meRefetch,
-  } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
-
   const [postLoading, setPostLoading] = useState(false);
 
-  const loading = projectLoading || meLoading || postLoading;
+  const loading = projectLoading || postLoading;
 
-  const guestAsMe = me?.guests.find((g) => g.projectId === projectId);
-  const myGuestId = guestAsMe?.id;
-  const isHost = me?.hosts.some((h) => h.projectId === projectId);
+  const meAsGuest = project?.meAsGuest;
+  const myGuestId = meAsGuest?.id;
+  const isHost = project?.isHost;
 
-  const [guestName, setGuestName] = useState(guestAsMe?.name ?? "");
+  const [guestName, setGuestName] = useState(meAsGuest?.name ?? "");
 
   const mySlotsRef = useRef<{ from: Date; to: Date }[]>([]);
 
@@ -41,7 +35,7 @@ export default function SubmissionPage() {
     variant: "success" | "error";
   } | null>(null);
 
-  const postAvailability = useCallback(
+  const postSubmissions = useCallback(
     async (slots: { start: Date; end: Date }[], myGuestId: string) => {
       setPostLoading(true);
       const payload = {
@@ -56,7 +50,7 @@ export default function SubmissionPage() {
         return;
       }
       if (!myGuestId) {
-        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/availabilities`, {
+        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/submissions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -76,7 +70,7 @@ export default function SubmissionPage() {
           setTimeout(() => setToast(null), 3000);
         }
       } else {
-        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/availabilities`, {
+        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/submissions/mine`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -96,17 +90,17 @@ export default function SubmissionPage() {
           setTimeout(() => setToast(null), 3000);
         }
       }
-      await Promise.all([projectRefetch(), meRefetch()]);
+      await Promise.all([projectRefetch()]);
       setPostLoading(false);
     },
-    [guestName, projectId, projectRefetch, meRefetch],
+    [guestName, projectId, projectRefetch],
   );
 
   useEffect(() => {
-    if (guestAsMe) {
-      setGuestName(guestAsMe.name);
+    if (meAsGuest) {
+      setGuestName(meAsGuest.name);
     }
-  }, [guestAsMe]);
+  }, [meAsGuest]);
 
   return (
     <>
@@ -148,7 +142,7 @@ export default function SubmissionPage() {
                 disabled={loading || !guestName}
                 onClick={() => {
                   if (!guestName) return;
-                  postAvailability(
+                  postSubmissions(
                     mySlotsRef.current.map((slot) => {
                       return { start: slot.from, end: slot.to };
                     }),
@@ -156,7 +150,7 @@ export default function SubmissionPage() {
                   );
                 }}
               >
-                日程を{guestAsMe ? "更新" : "提出"}
+                日程を{meAsGuest ? "更新" : "提出"}
               </button>
             </div>
           </div>
