@@ -1,6 +1,6 @@
 import { NavLink, useParams } from "react-router";
 import { Calendar } from "../../components/Calendar";
-import { Me, meResSchema, ProjectRes, projectResSchema } from "../../../../common/schema";
+import { ProjectRes, projectResSchema } from "../../../../common/schema";
 import { useData } from "../../hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Header from "../../components/Header";
@@ -18,21 +18,15 @@ export default function SubmissionPage() {
     projectResSchema,
   );
 
-  const {
-    data: me,
-    loading: meLoading,
-    refetch: meRefetch,
-  } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
-
   const [postLoading, setPostLoading] = useState(false);
 
-  const loading = projectLoading || meLoading || postLoading;
+  const loading = projectLoading || postLoading;
 
-  const guestAsMe = me?.guests.find((g) => g.projectId === projectId);
-  const myGuestId = guestAsMe?.id;
-  const isHost = me?.hosts.some((h) => h.projectId === projectId);
+  const meAsGuest = project?.meAsGuest;
+  const myGuestId = meAsGuest?.id;
+  const isHost = project?.isHost;
 
-  const [guestName, setGuestName] = useState(guestAsMe?.name ?? "");
+  const [guestName, setGuestName] = useState(meAsGuest?.name ?? "");
 
   const mySlotsRef = useRef<{ from: Date; to: Date }[]>([]);
 
@@ -96,17 +90,17 @@ export default function SubmissionPage() {
           setTimeout(() => setToast(null), 3000);
         }
       }
-      await Promise.all([projectRefetch(), meRefetch()]);
+      await Promise.all([projectRefetch()]);
       setPostLoading(false);
     },
-    [guestName, projectId, projectRefetch, meRefetch],
+    [guestName, projectId, projectRefetch],
   );
 
   useEffect(() => {
-    if (guestAsMe) {
-      setGuestName(guestAsMe.name);
+    if (meAsGuest) {
+      setGuestName(meAsGuest.name);
     }
-  }, [guestAsMe]);
+  }, [meAsGuest]);
 
   return (
     <>
@@ -156,7 +150,7 @@ export default function SubmissionPage() {
                   );
                 }}
               >
-                日程を{guestAsMe ? "更新" : "提出"}
+                日程を{meAsGuest ? "更新" : "提出"}
               </button>
             </div>
           </div>

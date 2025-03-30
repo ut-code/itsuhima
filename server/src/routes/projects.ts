@@ -58,6 +58,7 @@ router.get(
   "/:projectId",
   validateRequest({ params: projectIdParamsSchema }),
   async (req, res: Response<ProjectRes>) => {
+    const browserId = req.cookies.browserId;
     try {
       const { projectId } = req.params;
       const project = await prisma.project.findUnique({
@@ -101,6 +102,16 @@ router.get(
 
       res.status(200).json({
         ...project,
+        hosts: project.hosts.map((h) => {
+          const { browserId, ...rest } = h;
+          return rest;
+        }),
+        guests: project.guests.map((g) => {
+          const { browserId, ...rest } = g;
+          return rest;
+        }),
+        isHost: project.hosts.some((h) => h.browserId === browserId),
+        meAsGuest: project.guests.find((g) => g.browserId === browserId) ?? null,
       });
     } catch (error) {
       console.error("イベント取得エラー:", error);

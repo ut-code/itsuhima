@@ -4,8 +4,6 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   editReqSchema,
-  Me,
-  meResSchema,
   ProjectRes,
   projectReqSchema,
   projectResSchema,
@@ -33,10 +31,9 @@ export default function ProjectPage() {
     eventId ? `${API_ENDPOINT}/projects/${eventId}` : null,
     projectResSchema,
   );
-  const { data: me, loading: meLoading } = useData<Me>(`${API_ENDPOINT}/users/me`, meResSchema);
 
   const [submitLoading, setSubmitLoading] = useState<boolean>(false);
-  const loading = projectLoading || meLoading || submitLoading;
+  const loading = projectLoading || submitLoading;
 
   const [dialogStatus, setDialogStatus] = useState<{
     projectId: string;
@@ -157,17 +154,17 @@ export default function ProjectPage() {
     }
   };
 
-  const isHost = me?.hosts.some((h) => h.projectId === eventId);
+  const isHost = project?.isHost;
 
   useEffect(() => {
-    if (!loading && me && project && !isHost) {
+    if (!loading && project && !isHost) {
       if (eventId) {
         navigate(`/${eventId}`);
       } else {
         navigate("/");
       }
     }
-  }, [loading, me, project, isHost, eventId, navigate]);
+  }, [loading, project, isHost, eventId, navigate]);
 
   return (
     <>

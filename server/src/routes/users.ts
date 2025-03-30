@@ -5,60 +5,8 @@ import { InvolvedProjects } from "../../../common/schema.js";
 const router = Router();
 const prisma = new PrismaClient();
 
-// 自分の browserId 　に紐付く guest または host の情報を取得
-router.get("/me", async (req, res) => {
-  const browserId = req.cookies?.browserId;
-  if (!browserId) {
-    // return res.status(401).json({ message: "認証情報がありません。" }); TODO: a
-    return res.status(401).json();
-  }
-
-  try {
-    // Host から検索（browserId を除外）
-    const hosts = await prisma.host.findMany({
-      where: { browserId },
-      select: {
-        id: true,
-        projectId: true,
-        project: {
-          select: {
-            id: true,
-            name: true,
-            startDate: true,
-            endDate: true,
-          },
-        },
-      },
-    });
-
-    // Guest から検索（browserId を除外）
-    const guests = await prisma.guest.findMany({
-      where: { browserId },
-      select: {
-        id: true,
-        name: true,
-        projectId: true,
-        project: {
-          select: {
-            id: true,
-            name: true,
-            startDate: true,
-            endDate: true,
-          },
-        },
-        slots: true, // slots はそのまま返す場合
-      },
-    });
-    return res.status(200).json({
-      hosts,
-      guests,
-    });
-  } catch {
-    return res.status(500).json();
-  }
-});
-
 // TODO: rename (involvedProjects: {hostingProjects / guestingProjects} )
+// projects/mine でいいかも
 // /user GET
 router.get(
   "/",
