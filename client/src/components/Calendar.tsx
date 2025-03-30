@@ -14,6 +14,7 @@ type Props = {
   project: ProjectRes;
   myGuestId: string;
   mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>;
+  editMode: boolean,
 };
 
 const OPACITY = 0.2;
@@ -25,7 +26,7 @@ const SELECT_EVENT = "ih-select-event";
 const CREATE_SELECT_EVENT = "ih-create-select-event";
 const DELETE_SELECT_EVENT = "ih-delete-select-event";
 
-export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
+export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) => {
   const countDays =
     dayjs(project.endDate).startOf("day").diff(dayjs(project.startDate).startOf("day"), "day") + 1;
   // TODO: +1 は不要かも
@@ -66,7 +67,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
       );
       slots.forEach((slot) => {
         const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
-        if (slot.guestId === myGuestId) {
+        if (editMode && slot.guestId === myGuestId) {
           myMatrix.setRange(from, to, 1);
         } else {
           othersMatrix.incrementRange(from, to, slot.guestName);
@@ -100,7 +101,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         });
       });
     }
-  }, [myGuestId, myMatrix, mySlotsRef, othersMatrix, project.guests, calendarRef]);
+  }, [myGuestId, myMatrix, mySlotsRef, othersMatrix, project.guests, calendarRef, editMode]);
 
   useEffect(() => {
     // カレンダー外までドラッグした際に選択を解除
@@ -185,12 +186,14 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         selectAllow={
           // 選択中に選択範囲を表示する
           (info) => {
+            if (!editMode) return false;
             return handleSelect(info, isSelectionDeleting, calendarRef, myMatrixRef);
           }
         }
         select={
           // 選択が完了した際に編集する
           (info) => {
+            if (!editMode) return false;
             handleEdit(info, isSelectionDeleting, calendarRef, myMatrixRef, mySlotsRef);
           }
         }

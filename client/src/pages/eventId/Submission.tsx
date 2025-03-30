@@ -5,7 +5,12 @@ import { useData } from "../../hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Header from "../../components/Header";
 import { API_ENDPOINT } from "../../utils";
-import { HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlinePencil } from "react-icons/hi";
+import {
+  HiOutlineCheckCircle,
+  HiOutlineCog,
+  HiOutlineExclamationCircle,
+  HiPencil,
+} from "react-icons/hi";
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
@@ -25,6 +30,8 @@ export default function SubmissionPage() {
   const meAsGuest = project?.meAsGuest;
   const myGuestId = meAsGuest?.id;
   const isHost = project?.isHost;
+
+  const [editMode, setEditMode] = useState(true);
 
   const [guestName, setGuestName] = useState(meAsGuest?.name ?? "");
 
@@ -99,6 +106,7 @@ export default function SubmissionPage() {
   useEffect(() => {
     if (meAsGuest) {
       setGuestName(meAsGuest.name);
+      setEditMode(false);
     }
   }, [meAsGuest]);
 
@@ -123,35 +131,74 @@ export default function SubmissionPage() {
               <h1 className="text-2xl mb-2">{project.name} の日程調整</h1>
               {isHost && (
                 <NavLink to={`/${projectId}/edit`} className="btn btn-sm font-normal text-gray-600">
-                  <HiOutlinePencil />
-                  編集
+                  <HiOutlineCog />
+                  イベント設定
                 </NavLink>
               )}
             </div>
-            <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef} />
-            <div className="p-2 flex justify-between items-center gap-2">
-              <input
-                type="text"
-                placeholder="あなたの名前"
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                className="input text-base"
-              />
-              <button
-                className="btn btn-primary"
-                disabled={loading || !guestName}
-                onClick={() => {
-                  if (!guestName) return;
-                  postSubmissions(
-                    mySlotsRef.current.map((slot) => {
-                      return { start: slot.from, end: slot.to };
-                    }),
-                    myGuestId ?? "",
-                  );
-                }}
-              >
-                日程を{meAsGuest ? "更新" : "提出"}
-              </button>
+            <Calendar
+              project={project}
+              myGuestId={myGuestId ?? ""}
+              mySlotsRef={mySlotsRef}
+              editMode={editMode}
+            />
+            <div className="w-full p-2 flex justify-between items-center gap-2">
+              {editMode ? (
+                <>
+                  <input
+                    type="text"
+                    placeholder="あなたの名前"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    className="flex-1 input text-base"
+                  />
+                  <div className="flex-1 flex flex-row gap-2">
+                    {!!myGuestId && (
+                      <button
+                        className="btn text-gray-500"
+                        disabled={loading}
+                        onClick={async () => {
+                          if (confirm("更新をキャンセルします。よろしいですか？")) {
+                            mySlotsRef.current = [];
+                            setEditMode(false);
+                          }
+                        }}
+                      >
+                        キャンセル
+                      </button>
+                    )}
+                    <button
+                      className="btn btn-primary"
+                      disabled={loading || !guestName}
+                      onClick={() => {
+                        if (!guestName) return;
+                        postSubmissions(
+                          mySlotsRef.current.map((slot) => {
+                            return { start: slot.from, end: slot.to };
+                          }),
+                          myGuestId ?? "",
+                        );
+                      }}
+                    >
+                      {meAsGuest ? "更新" : "提出"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span></span>
+                  <button
+                    className="btn btn-outline btn-primary"
+                    disabled={loading}
+                    onClick={() => {
+                      setEditMode(true);
+                    }}
+                  >
+                    <HiPencil size={20} />
+                    日程を更新する
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
