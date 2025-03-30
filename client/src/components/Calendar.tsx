@@ -4,14 +4,14 @@ import interactionPlugin from "@fullcalendar/interaction";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/ja";
 import React, { useEffect, useRef } from "react";
-import { Project } from "../../../common/schema";
+import { ProjectRes } from "../../../common/schema";
 import { DateSelectArg, DateSpanApi } from "@fullcalendar/core/index.js";
 import { Tooltip } from "react-tooltip";
 
 dayjs.locale("ja");
 
 type Props = {
-  project: Project;
+  project: ProjectRes;
   myGuestId: string;
   mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>;
 };

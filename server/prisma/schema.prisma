@@ -13,25 +13,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// 日程調整プロジェクト。ユーザには「イベント」と表示。
 model Project {
-  id            String         @id @default(uuid())
+  id            String         @id @db.VarChar(21)
   name          String
+  /// 注: 日付部分のみ利用。時間は考慮しない。
   startDate     DateTime
+  /// 注: 日付部分のみ利用。時間は考慮しない。
   endDate       DateTime
+  /// 注: 現在は 1 つのみ設定可能
   allowedRanges AllowedRange[]
   slots         Slot[]
   hosts         Host[]
   guests        Guest[]
 }
 
+/// 日程調整プロジェクトにおいて入力が許可された時間帯。(注: 現在は 1 つの日程調整プロジェクトにつき 1 つのみ設定可能)
 model AllowedRange {
   id        String   @id @default(uuid())
+  /// 注: 時間部分のみ利用。日付は考慮しない。
   startTime DateTime
+  /// 注: 時間部分のみ利用。日付は考慮しない。
   endTime   DateTime
   projectId String
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
+/// あるゲストが参加可能な時間帯の 1 つ。日を跨がない。
 model Slot {
   id        String   @id @default(uuid())
   from      DateTime
@@ -42,6 +50,7 @@ model Slot {
   guest     Guest    @relation(fields: [guestId], references: [id])
 }
 
+/// 日程調整プロジェクトの作成者。
 model Host {
   id        String  @id @default(uuid())
   browserId String  @default(uuid())
@@ -51,6 +60,7 @@ model Host {
   @@unique([browserId, projectId])
 }
 
+// 日程調整プロジェクトの参加者。
 model Guest {
   id        String  @id @default(uuid())
   name      String
