@@ -14,6 +14,7 @@ type Props = {
   project: ProjectRes;
   myGuestId: string;
   mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>;
+  editMode: boolean;
 };
 
 const OPACITY = 0.2;
@@ -25,7 +26,7 @@ const SELECT_EVENT = "ih-select-event";
 const CREATE_SELECT_EVENT = "ih-create-select-event";
 const DELETE_SELECT_EVENT = "ih-delete-select-event";
 
-export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
+export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) => {
   const countDays =
     dayjs(project.endDate).startOf("day").diff(dayjs(project.startDate).startOf("day"), "day") + 1;
   // TODO: +1 は不要かも
@@ -33,9 +34,6 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
   const othersMatrixRef = useRef<CalendarMatrix>(
     new CalendarMatrix(countDays + 1, project.startDate, true),
   );
-
-  const myMatrix = myMatrixRef.current;
-  const othersMatrix = othersMatrixRef.current;
 
   // TODO: 現在は最初の選択範囲のみ。FullCalendar の制約により、複数の allowedRanges には対応できないため、のちに selectAllow などで独自実装が必要
   const tmpAllowedRange = project.allowedRanges[0] ?? {
@@ -55,8 +53,8 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         event.remove();
       });
       mySlotsRef.current = [];
-      myMatrix.clear();
-      othersMatrix.clear();
+      myMatrixRef.current.clear();
+      othersMatrixRef.current.clear();
 
       const slots = project.guests.flatMap((guest) =>
         guest.slots.map((slot) => ({
@@ -66,13 +64,13 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
       );
       slots.forEach((slot) => {
         const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
-        if (slot.guestId === myGuestId) {
-          myMatrix.setRange(from, to, 1);
+        if (editMode && slot.guestId === myGuestId) {
+          myMatrixRef.current.setRange(from, to, 1);
         } else {
-          othersMatrix.incrementRange(from, to, slot.guestName);
+          othersMatrixRef.current.incrementRange(from, to, slot.guestName);
         }
       });
-      myMatrix.getSlots().forEach((slot) => {
+      myMatrixRef.current.getSlots().forEach((slot) => {
         calendarApi.addEvent({
           id: MY_EVENT,
           className: MY_EVENT,
@@ -85,7 +83,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
           to: slot.to,
         });
       });
-      othersMatrix.getSlots().forEach((slot) => {
+      othersMatrixRef.current.getSlots().forEach((slot) => {
         calendarApi.addEvent({
           id: OTHERS_EVENT,
           className: OTHERS_EVENT,
@@ -100,7 +98,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         });
       });
     }
-  }, [myGuestId, myMatrix, mySlotsRef, othersMatrix, project.guests, calendarRef]);
+  }, [myGuestId, mySlotsRef, project.guests, calendarRef, editMode]);
 
   useEffect(() => {
     // カレンダー外までドラッグした際に選択を解除
@@ -185,12 +183,14 @@ export const Calendar = ({ project, myGuestId, mySlotsRef }: Props) => {
         selectAllow={
           // 選択中に選択範囲を表示する
           (info) => {
+            if (!editMode) return false;
             return handleSelect(info, isSelectionDeleting, calendarRef, myMatrixRef);
           }
         }
         select={
           // 選択が完了した際に編集する
           (info) => {
+            if (!editMode) return false;
             handleEdit(info, isSelectionDeleting, calendarRef, myMatrixRef, mySlotsRef);
           }
         }
@@ -425,6 +425,9 @@ class CalendarMatrix {
   clear() {
     this.matrix = Array.from({ length: this.matrix.length }, () =>
       Array.from({ length: this.quarterCount }, () => 0),
+    );
+    this.guestNames = Array.from({ length: this.matrix.length }, () =>
+      Array.from({ length: this.quarterCount }, () => []),
     );
   }
 }

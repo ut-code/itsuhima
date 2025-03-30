@@ -3,54 +3,13 @@ import { InvolvedProjects, involvedProjectsResSchema } from "../../../common/sch
 import { useData } from "../hooks";
 import Header from "../components/Header";
 import { API_ENDPOINT } from "../utils";
-import {
-  HiOutlineCheckCircle,
-  HiOutlineExclamationCircle,
-  HiPencil,
-  HiTrash,
-} from "react-icons/hi";
-import { useState } from "react";
+import { HiOutlineCog } from "react-icons/hi";
 
 export default function RootPage() {
-  const {
-    data: involvedProjects,
-    loading,
-    refetch,
-  } = useData<InvolvedProjects>(`${API_ENDPOINT}/projects/mine`, involvedProjectsResSchema);
-
-  const [toast, setToast] = useState<{
-    message: string;
-    variant: "success" | "error";
-  } | null>(null);
-
-  async function deleteEvent(id: string) {
-    if (confirm("本当にこのイベントを削除しますか？")) {
-      try {
-        const response = await fetch(`${API_ENDPOINT}/projects/${id}`, {
-          method: "DELETE",
-        });
-        if (!response.ok) {
-          throw new Error("削除に失敗しました。");
-        }
-        setToast({
-          message: "イベントを削除しました。",
-          variant: "success",
-        });
-        setTimeout(() => {
-          setToast(null);
-        }, 3000);
-      } catch (error) {
-        console.error(error);
-        setToast({
-          message: "エラーが発生しました。もう一度お試しください。",
-          variant: "error",
-        });
-        setTimeout(() => {
-          setToast(null);
-        }, 3000);
-      }
-    }
-  }
+  const { data: involvedProjects, loading } = useData<InvolvedProjects>(
+    `${API_ENDPOINT}/projects/mine`,
+    involvedProjectsResSchema,
+  );
 
   return (
     <>
@@ -89,18 +48,8 @@ export default function RootPage() {
                       {p.isHost && (
                         <div className="flex">
                           <NavLink className="btn btn-ghost p-1" to={`/${p.id}/edit`}>
-                            <HiPencil className="text-gray-400 cursor-pointer" size={24} />
+                            <HiOutlineCog className="text-gray-400 cursor-pointer" size={24} />
                           </NavLink>
-                          <button
-                            className="btn btn-ghost p-1"
-                            onClick={async (e) => {
-                              e.preventDefault();
-                              await deleteEvent(p.id);
-                              refetch();
-                            }}
-                          >
-                            <HiTrash className="text-gray-400 cursor-pointer" size={24} />
-                          </button>
                         </div>
                       )}
                     </NavLink>
@@ -115,21 +64,6 @@ export default function RootPage() {
           <Landing />
         )}
       </div>
-      {toast && (
-        <div className="toast toast-top toast-end z-50 mt-18">
-          {toast.variant === "success" ? (
-            <div className="alert bg-gray-200 border-0">
-              <HiOutlineCheckCircle size={20} className="text-green-500" />
-              <span>{toast.message}</span>
-            </div>
-          ) : (
-            <div className="alert bg-gray-200 border-0">
-              <HiOutlineExclamationCircle size={20} className="text-red-500" />
-              <span>{toast.message}</span>
-            </div>
-          )}
-        </div>
-      )}
     </>
   );
 }
