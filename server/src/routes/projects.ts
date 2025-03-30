@@ -7,10 +7,8 @@ import {
   InvolvedProjects,
 } from "../../../common/schema.js";
 import { z } from "zod";
-import { prisma } from "../main.js";
+import { cookieOptions, prisma } from "../main.js";
 import { validateRequest } from "../middleware.js";
-
-const isProduction = process.env.NODE_ENV === "prod";
 
 const router = Router();
 
@@ -40,13 +38,7 @@ router.post("/", validateRequest({ body: projectReqSchema }), async (req, res) =
     });
     const host = event.hosts[0];
 
-    res.cookie("browserId", host.browserId, {
-      domain: process.env.DOMAIN,
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "none" : "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
-    });
+    res.cookie("browserId", host.browserId, cookieOptions);
 
     res.status(201).json({ id: event.id, name: event.name });
   } catch (err) {
@@ -307,13 +299,7 @@ router.post(
         include: { slots: true },
       });
 
-      res.cookie("browserId", guest.browserId, {
-        domain: process.env.DOMAIN,
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? "none" : "lax",
-        maxAge: 1000 * 60 * 60 * 24 * 365, // 1年
-      });
+      res.cookie("browserId", guest.browserId, cookieOptions);
 
       console.log("登録されたデータ:", guest);
       return res.status(201).json("日時が登録されました！");
