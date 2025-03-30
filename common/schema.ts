@@ -61,18 +61,19 @@ const baseProjectReqSchema = z.object({
   name: z.string().min(1, "イベント名を入力してください"),
   startDate: z
     .string()
-    .min(1, "開始日を入力してください")
-    .refine(
-      (startDate) => {
-        const inputDate = new Date(startDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return inputDate >= today;
-      },
-      {
-        message: "過去の日付は指定できません",
-      },
-    ),
+    .min(1, "開始日を入力してください"),
+    // TODO: 新規作成時のみ、過去日付を制限する必要
+    // .refine(
+    //   (startDate) => {
+    //     const inputDate = new Date(startDate);
+    //     const today = new Date();
+    //     today.setHours(0, 0, 0, 0);
+    //     return inputDate >= today;
+    //   },
+    //   {
+    //     message: "過去の日付は指定できません",
+    //   },
+    // ),
   endDate: z.string().min(1, "終了日を入力してください"),
   allowedRanges: z
     .array(
