@@ -20,7 +20,7 @@ app.use(
   })
 );
 app.use(express.json());
-app.use(cookieParser());
+app.use(cookieParser(process.env.COOKIE_SECRET));
 
 // テスト用
 app.get("/", (req, res) => {
@@ -41,4 +41,5 @@ export const cookieOptions: CookieOptions = {
   secure: isProduction,
   sameSite: isProduction ? "none" : "lax",
   maxAge: 1000 * 60 * 60 * 24 * 365,
+  signed: true,
 };
