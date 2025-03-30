@@ -3,15 +3,13 @@ import { InvolvedProjects, involvedProjectsResSchema } from "../../../common/sch
 import { useData } from "../hooks";
 import Header from "../components/Header";
 import { API_ENDPOINT } from "../utils";
-import {
-  HiOutlineCog,
-} from "react-icons/hi";
+import { HiOutlineCog } from "react-icons/hi";
 
 export default function RootPage() {
-  const {
-    data: involvedProjects,
-    loading,
-  } = useData<InvolvedProjects>(`${API_ENDPOINT}/projects/mine`, involvedProjectsResSchema);
+  const { data: involvedProjects, loading } = useData<InvolvedProjects>(
+    `${API_ENDPOINT}/projects/mine`,
+    involvedProjectsResSchema,
+  );
 
   return (
     <>

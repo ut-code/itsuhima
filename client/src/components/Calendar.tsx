@@ -14,7 +14,7 @@ type Props = {
   project: ProjectRes;
   myGuestId: string;
   mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>;
-  editMode: boolean,
+  editMode: boolean;
 };
 
 const OPACITY = 0.2;
