@@ -16,7 +16,7 @@ export default function RootPage() {
     data: involvedProjects,
     loading,
     refetch,
-  } = useData<InvolvedProjects>(`${API_ENDPOINT}/users`, involvedProjectsResSchema);
+  } = useData<InvolvedProjects>(`${API_ENDPOINT}/projects/mine`, involvedProjectsResSchema);
 
   const [toast, setToast] = useState<{
     message: string;
