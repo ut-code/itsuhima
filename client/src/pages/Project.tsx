@@ -396,9 +396,9 @@ export default function ProjectPage() {
               </button>
             </div>
             <div className="modal-action">
-              <a className="btn btn-primary" href={`/${dialogStatus.projectId}`}>
+              <NavLink className="btn btn-primary" to={`/${dialogStatus.projectId}`}>
                 イベントへ
-              </a>
+              </NavLink>
             </div>
           </div>
         </div>

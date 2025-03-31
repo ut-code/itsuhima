@@ -3,9 +3,16 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/ja";
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { ProjectRes } from "../../../common/schema";
-import { DateSelectArg, DateSpanApi } from "@fullcalendar/core/index.js";
+import {
+  DateSelectArg,
+  DateSpanApi,
+  DayHeaderContentArg,
+  EventContentArg,
+  EventMountArg,
+  SlotLabelContentArg,
+} from "@fullcalendar/core/index.js";
 import { Tooltip } from "react-tooltip";
 
 dayjs.locale("ja");
@@ -98,7 +105,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) =>
         });
       });
     }
-  }, [myGuestId, mySlotsRef, project.guests, calendarRef, editMode]);
+  }, [myGuestId, mySlotsRef, project, calendarRef, editMode]);
 
   useEffect(() => {
     // カレンダー外までドラッグした際に選択を解除
@@ -130,6 +137,93 @@ export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) =>
 
   const pageCount = Math.ceil(countDays / 7);
 
+  const headerToolbar = useMemo(
+    () =>
+      pageCount >= 2
+        ? {
+            left: "prev",
+            right: "next",
+          }
+        : false,
+    [pageCount],
+  );
+
+  const views = useMemo(
+    () => ({
+      timeGrid: {
+        type: "timeGrid",
+        duration: { days: Math.min(countDays, 7) },
+        // TODO: not working..?
+        // visibleRange: {
+        //   start: project.startDate,
+        //   end: project.endDate,
+        // },
+        dayHeaderContent: (args: DayHeaderContentArg) => {
+          return (
+            <div className="font-normal text-gray-600">
+              <div>{dayjs(args.date).format("M/D")}</div>
+              <div>{dayjs(args.date).format("(ddd)")}</div>
+            </div>
+          );
+        },
+        slotLabelContent: (args: SlotLabelContentArg) => {
+          return <div className="text-gray-600">{dayjs(args.date).format("HH:mm")}</div>;
+        },
+        slotLabelInterval: "00:30:00",
+        validRange: {
+          start: project.startDate,
+          end: project.endDate,
+        },
+        expandRows: true,
+      },
+    }),
+    [countDays, project],
+  );
+
+  const handleSelectAllow = useCallback(
+    // 選択中に選択範囲を表示する
+    (info: DateSpanApi) => {
+      if (!editMode) return false;
+      return displaySelection(info, isSelectionDeleting, calendarRef, myMatrixRef);
+    },
+    [editMode],
+  );
+
+  const handleSelect = useCallback(
+    // 選択が完了した際に編集する
+    (info: DateSelectArg) => {
+      if (!editMode) return false;
+      edit(info, isSelectionDeleting, calendarRef, myMatrixRef, mySlotsRef);
+    },
+    [editMode, mySlotsRef],
+  );
+
+  const handleEventDidMount = useCallback((info: EventMountArg) => {
+    if (info.event.id === MY_EVENT) {
+      // 既存の event 上で選択できるようにするため。
+      info.el.style.pointerEvents = "none";
+    }
+  }, []);
+
+  const handleEventContent = useCallback((info: EventContentArg) => {
+    if (info.event.id === OTHERS_EVENT) {
+      return (
+        <div className="flex w-full h-full justify-center items-center">
+          <div
+            className="badge badge-sm bg-gray-200 border-0 text-primary font-bold"
+            data-tooltip-id="member-info"
+            data-tooltip-content={info.event.extendedProps.members?.join(", ")}
+            data-tooltip-place="top"
+          >
+            {info.event.extendedProps.countMembers}
+          </div>
+        </div>
+      );
+    } else if (info.event.id === MY_EVENT) {
+      return <div className="h-full w-full text-gray-600 overflow-hidden">{info.timeText}</div>;
+    }
+  }, []);
+
   return (
     <div className="flex-1 my-2" id="ih-cal-wrapper">
       <FullCalendar
@@ -142,91 +236,21 @@ export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) =>
         initialDate={project.startDate}
         slotMinTime={dayjs(tmpAllowedRange.startTime).format("HH:mm:ss")}
         slotMaxTime={dayjs(tmpAllowedRange.endTime).format("HH:mm:ss")}
-        headerToolbar={
-          pageCount >= 2
-            ? {
-                left: "prev",
-                right: "next",
-              }
-            : false
-        }
-        views={{
-          timeGrid: {
-            type: "timeGrid",
-            duration: { days: Math.min(countDays, 7) },
-            // TODO: not working..?
-            // visibleRange: {
-            //   start: project.startDate,
-            //   end: project.endDate,
-            // },
-            dayHeaderContent: (args) => {
-              return (
-                <div className="font-normal text-gray-600">
-                  <div>{dayjs(args.date).format("M/D")}</div>
-                  <div>{dayjs(args.date).format("(ddd)")}</div>
-                </div>
-              );
-            },
-            slotLabelContent: (args) => {
-              return <div className="text-gray-600">{dayjs(args.date).format("HH:mm")}</div>;
-            },
-            slotLabelInterval: "00:30:00",
-            validRange: {
-              start: project.startDate,
-              end: project.endDate,
-            },
-            expandRows: true,
-          },
-        }}
+        headerToolbar={headerToolbar}
+        views={views}
         initialView="timeGrid"
         selectable={true}
-        selectAllow={
-          // 選択中に選択範囲を表示する
-          (info) => {
-            if (!editMode) return false;
-            return handleSelect(info, isSelectionDeleting, calendarRef, myMatrixRef);
-          }
-        }
-        select={
-          // 選択が完了した際に編集する
-          (info) => {
-            if (!editMode) return false;
-            handleEdit(info, isSelectionDeleting, calendarRef, myMatrixRef, mySlotsRef);
-          }
-        }
-        eventDidMount={(info) => {
-          if (info.event.id === MY_EVENT) {
-            // 既存の event 上で選択できるようにするため。
-            info.el.style.pointerEvents = "none";
-          }
-        }}
-        eventContent={(info) => {
-          if (info.event.id === OTHERS_EVENT) {
-            return (
-              <div className="flex w-full h-full justify-center items-center">
-                <div
-                  className="badge badge-sm bg-gray-200 border-0 text-primary font-bold"
-                  data-tooltip-id="member-info"
-                  data-tooltip-content={info.event.extendedProps.members?.join(", ")}
-                  data-tooltip-place="top"
-                >
-                  {info.event.extendedProps.countMembers}
-                </div>
-              </div>
-            );
-          } else if (info.event.id === MY_EVENT) {
-            return (
-              <div className="h-full w-full text-gray-600 overflow-hidden">{info.timeText}</div>
-            );
-          }
-        }}
+        selectAllow={handleSelectAllow}
+        select={handleSelect}
+        eventDidMount={handleEventDidMount}
+        eventContent={handleEventContent}
       />
       <Tooltip id="member-info" />
     </div>
   );
 };
 
-function handleSelect(
+function displaySelection(
   info: DateSpanApi,
   isSelectionDeleting: React.RefObject<boolean | null>,
   calendarRef: React.RefObject<FullCalendar | null>,
@@ -281,7 +305,7 @@ function handleSelect(
   return true;
 }
 
-function handleEdit(
+function edit(
   info: DateSelectArg,
   isSelectionDeleting: React.RefObject<boolean | null>,
   calendarRef: React.RefObject<FullCalendar | null>,
