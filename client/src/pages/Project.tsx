@@ -210,7 +210,7 @@ export default function ProjectPage() {
                       {errors.endDate && <p className="text-red-500">{errors.endDate.message}</p>}
                     </div>
                   </div>
-                  <div>
+                  <fieldset>
                     <legend className="text-sm text-gray-400">時間帯</legend>
                     <div className="flex gap-2 items-center">
                       <div className="flex-1 flex gap-1">
@@ -306,13 +306,13 @@ export default function ProjectPage() {
                     {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
                       <p className="text-red-500">{errors.allowedRanges.message}</p>
                     )}
-                  </div>
+                  </fieldset>
                 </>
               ) : (
                 <p>すでにデータを登録したユーザーがいるため、日時の編集はできません。</p>
               )}
               {project && (
-                <div>
+                <fieldset>
                   <legend className="text-sm text-gray-400">イベントの削除</legend>
                   <div className="flex justify-end py-2">
                     <button
@@ -351,7 +351,7 @@ export default function ProjectPage() {
                       イベントを削除する
                     </button>
                   </div>
-                </div>
+                </fieldset>
               )}
               <div className="p-4 w-full fixed bottom-0 left-0 flex justify-end">
                 <button type="submit" className="btn btn-primary" disabled={!isValid || !isDirty}>
