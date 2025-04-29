@@ -4,6 +4,7 @@
   "workspaces": ["client", "server", "common"],
   "scripts": {
     "prepare": "lefthook install",
+    "dev": "concurrently --kill-others 'npm run dev:server' 'npm run dev:client'",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
     "check": "npx biome check",
@@ -12,6 +13,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "concurrently": "^9.1.2",
     "lefthook": "^1.11.12"
   }
 }
