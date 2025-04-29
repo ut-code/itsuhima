@@ -3,12 +3,15 @@
   "version": "1.0.0",
   "workspaces": ["client", "server", "common"],
   "scripts": {
+    "prepare": "lefthook install",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
     "check": "npx biome check",
-    "fix": "npx biome check --fix --unsafe"
+    "fix": "npx biome check --fix --unsafe",
+    "fix:safe": "npx biome check --fix"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4"
+    "@biomejs/biome": "^1.9.4",
+    "lefthook": "^1.11.12"
   }
 }
