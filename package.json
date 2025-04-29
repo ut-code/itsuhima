@@ -5,8 +5,8 @@
   "scripts": {
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
-    "check": "cd client && npm run lint && npm run format",
-    "fix": "cd client && npm run lint:fix && npm run format:fix"
+    "check": "npx biome check",
+    "fix": "npx biome check --fix --unsafe"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4"
