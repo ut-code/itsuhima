@@ -24,6 +24,12 @@
       "recommended": true,
       "correctness": {
         "noUnknownProperty": "off"
+      },
+      "complexity": {
+        "noForEach": "off"
+      },
+      "a11y": {
+        "useButtonType": "off"
       }
     }
   },

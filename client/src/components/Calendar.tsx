@@ -1,11 +1,9 @@
+import interactionPlugin from "@fullcalendar/interaction";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import "dayjs/locale/ja";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { ProjectRes } from "../../../common/schema";
-import {
+import type {
   DateSelectArg,
   DateSpanApi,
   DayHeaderContentArg,
@@ -13,7 +11,10 @@ import {
   EventMountArg,
   SlotLabelContentArg,
 } from "@fullcalendar/core/index.js";
+import type React from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Tooltip } from "react-tooltip";
+import type { ProjectRes } from "../../../common/schema";
 
 dayjs.locale("ja");
 
@@ -34,13 +35,10 @@ const CREATE_SELECT_EVENT = "ih-create-select-event";
 const DELETE_SELECT_EVENT = "ih-delete-select-event";
 
 export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) => {
-  const countDays =
-    dayjs(project.endDate).startOf("day").diff(dayjs(project.startDate).startOf("day"), "day") + 1;
+  const countDays = dayjs(project.endDate).startOf("day").diff(dayjs(project.startDate).startOf("day"), "day") + 1;
   // TODO: +1 は不要かも
   const myMatrixRef = useRef<CalendarMatrix>(new CalendarMatrix(countDays + 1, project.startDate));
-  const othersMatrixRef = useRef<CalendarMatrix>(
-    new CalendarMatrix(countDays + 1, project.startDate, true),
-  );
+  const othersMatrixRef = useRef<CalendarMatrix>(new CalendarMatrix(countDays + 1, project.startDate, true));
 
   // TODO: 現在は最初の選択範囲のみ。FullCalendar の制約により、複数の allowedRanges には対応できないため、のちに selectAllow などで独自実装が必要
   const tmpAllowedRange = project.allowedRanges[0] ?? {
@@ -96,7 +94,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) =>
           className: OTHERS_EVENT,
           start: slot.from,
           end: slot.to,
-          color: `rgba(${PRIMARY_RGB.join(",")}, ${(1 - Math.pow(1 - OPACITY, slot.weight)).toFixed(3)})`,
+          color: `rgba(${PRIMARY_RGB.join(",")}, ${(1 - (1 - OPACITY) ** slot.weight).toFixed(3)})`,
           display: "background",
           extendedProps: {
             members: slot.guestNames,
@@ -105,7 +103,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) =>
         });
       });
     }
-  }, [myGuestId, mySlotsRef, project, calendarRef, editMode]);
+  }, [myGuestId, mySlotsRef, project, editMode]);
 
   useEffect(() => {
     // カレンダー外までドラッグした際に選択を解除
@@ -219,7 +217,8 @@ export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) =>
           </div>
         </div>
       );
-    } else if (info.event.id === MY_EVENT) {
+    }
+    if (info.event.id === MY_EVENT) {
       return <div className="h-full w-full text-gray-600 overflow-hidden">{info.timeText}</div>;
     }
   }, []);
@@ -287,8 +286,7 @@ function displaySelection(
 
   if (
     info.start.getHours() > info.end.getHours() ||
-    (info.start.getHours() === info.end.getHours() &&
-      info.start.getMinutes() > info.end.getMinutes())
+    (info.start.getHours() === info.end.getHours() && info.start.getMinutes() > info.end.getMinutes())
   ) {
     [startTime, endTime] = [endTime, startTime];
   }
@@ -360,9 +358,7 @@ class CalendarMatrix {
   private initialDate: Dayjs;
 
   constructor(dayCount: number, initialDate: Date, hasGuestNames?: boolean) {
-    this.matrix = Array.from({ length: dayCount }, () =>
-      Array.from({ length: this.quarterCount }, () => 0),
-    );
+    this.matrix = Array.from({ length: dayCount }, () => Array.from({ length: this.quarterCount }, () => 0));
     this.guestNames = hasGuestNames
       ? Array.from({ length: dayCount }, () => Array.from({ length: this.quarterCount }, () => []))
       : null;
@@ -447,9 +443,7 @@ class CalendarMatrix {
   }
 
   clear() {
-    this.matrix = Array.from({ length: this.matrix.length }, () =>
-      Array.from({ length: this.quarterCount }, () => 0),
-    );
+    this.matrix = Array.from({ length: this.matrix.length }, () => Array.from({ length: this.quarterCount }, () => 0));
     this.guestNames = Array.from({ length: this.matrix.length }, () =>
       Array.from({ length: this.quarterCount }, () => []),
     );

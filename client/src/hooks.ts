@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { ZodType } from "zod";
+import type { ZodType } from "zod";
 
 export function useData<T>(
   url: string | null,
-  schema: ZodType<T, any, any>,
+  schema: ZodType<T>,
 ): {
   // TODO: any
   data: T | null;
@@ -44,7 +44,7 @@ export function useData<T>(
 
   useEffect(() => {
     fetchData();
-  }, [url, schema, fetchData]);
+  }, [fetchData]);
 
   return { data, loading, error, refetch: fetchData };
 }

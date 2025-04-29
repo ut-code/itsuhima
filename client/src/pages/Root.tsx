@@ -1,9 +1,9 @@
-import { NavLink } from "react-router";
-import { InvolvedProjects, involvedProjectsResSchema } from "../../../common/schema";
-import { useData } from "../hooks";
-import Header from "../components/Header";
-import { API_ENDPOINT } from "../utils";
 import { HiOutlineCog } from "react-icons/hi";
+import { NavLink } from "react-router";
+import { type InvolvedProjects, involvedProjectsResSchema } from "../../../common/schema";
+import Header from "../components/Header";
+import { useData } from "../hooks";
+import { API_ENDPOINT } from "../utils";
 
 export default function RootPage() {
   const { data: involvedProjects, loading } = useData<InvolvedProjects>(
@@ -25,7 +25,7 @@ export default function RootPage() {
         </div>
         {loading ? (
           <div className="py-4">
-            <span className="loading loading-dots loading-md text-gray-400"></span>
+            <span className="loading loading-dots loading-md text-gray-400" />
           </div>
         ) : involvedProjects ? (
           <div className="mt-4 w-full px-4">
@@ -34,15 +34,11 @@ export default function RootPage() {
               <ul className="w-full">
                 {involvedProjects.map((p) => (
                   <li key={p.id}>
-                    <NavLink
-                      to={`/${p.id}`}
-                      className="btn btn-ghost w-full h-full flex justify-between p-4"
-                    >
+                    <NavLink to={`/${p.id}`} className="btn btn-ghost w-full h-full flex justify-between p-4">
                       <div className="flex flex-col items-start gap-1">
                         <h3 className="font-normal text-xl text-gray-600">{p.name}</h3>
                         <div className="font-normal text-sm text-gray-400">
-                          {formatDate(p.startDate.toLocaleDateString())} ～{" "}
-                          {formatDate(p.endDate.toLocaleDateString())}
+                          {formatDate(p.startDate.toLocaleDateString())} ～ {formatDate(p.endDate.toLocaleDateString())}
                         </div>
                       </div>
                       {p.isHost && (

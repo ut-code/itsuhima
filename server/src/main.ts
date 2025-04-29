@@ -1,9 +1,9 @@
 import dotenv from "dotenv";
 dotenv.config();
-import express, { CookieOptions } from "express";
-import cors from "cors";
-import cookieParser from "cookie-parser";
 import { PrismaClient } from "@prisma/client";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import express, { type CookieOptions } from "express";
 import projectsRoutes from "./routes/projects.js";
 
 export const prisma = new PrismaClient();
@@ -17,7 +17,7 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-  })
+  }),
 );
 app.use(express.json());
 app.use(cookieParser(process.env.COOKIE_SECRET));

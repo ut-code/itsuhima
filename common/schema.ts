@@ -59,21 +59,19 @@ const isQuarterHour = (time: string): boolean => {
 
 const baseProjectReqSchema = z.object({
   name: z.string().min(1, "イベント名を入力してください"),
-  startDate: z
-    .string()
-    .min(1, "開始日を入力してください"),
-    // TODO: 新規作成時のみ、過去日付を制限する必要
-    // .refine(
-    //   (startDate) => {
-    //     const inputDate = new Date(startDate);
-    //     const today = new Date();
-    //     today.setHours(0, 0, 0, 0);
-    //     return inputDate >= today;
-    //   },
-    //   {
-    //     message: "過去の日付は指定できません",
-    //   },
-    // ),
+  startDate: z.string().min(1, "開始日を入力してください"),
+  // TODO: 新規作成時のみ、過去日付を制限する必要
+  // .refine(
+  //   (startDate) => {
+  //     const inputDate = new Date(startDate);
+  //     const today = new Date();
+  //     today.setHours(0, 0, 0, 0);
+  //     return inputDate >= today;
+  //   },
+  //   {
+  //     message: "過去の日付は指定できません",
+  //   },
+  // ),
   endDate: z.string().min(1, "終了日を入力してください"),
   allowedRanges: z
     .array(
@@ -82,22 +80,12 @@ const baseProjectReqSchema = z.object({
         endTime: z.string(),
       }),
     )
-    .refine(
-      (ranges) => ranges.every(({ startTime, endTime }) => startTime < endTime),
-      {
-        message: "開始時刻は終了時刻より前でなければなりません",
-      },
-    )
-    .refine(
-      (ranges) =>
-        ranges.every(
-          ({ startTime, endTime }) =>
-            isQuarterHour(startTime) && isQuarterHour(endTime),
-        ),
-      {
-        message: "開始時刻と終了時刻は15分単位で入力してください",
-      },
-    ),
+    .refine((ranges) => ranges.every(({ startTime, endTime }) => startTime < endTime), {
+      message: "開始時刻は終了時刻より前でなければなりません",
+    })
+    .refine((ranges) => ranges.every(({ startTime, endTime }) => isQuarterHour(startTime) && isQuarterHour(endTime)), {
+      message: "開始時刻と終了時刻は15分単位で入力してください",
+    }),
 });
 
 export const projectReqSchema = baseProjectReqSchema.refine(
