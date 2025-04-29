@@ -16,7 +16,8 @@ export default function Header() {
           </button>
           <div className="dropdown-content z-[1] w-56 rounded-box bg-base-100 p-2 shadow">
             <p className="p-2 text-xs">イツヒマは現在アルファ版です。</p>
-            <ul className="menu p-0">
+            {/* biome-ignore lint/a11y/noNoninteractiveTabindex: daisyUI の仕様。tabIndex を消すとモバイルで開かないなどの問題が起こる */}
+            <ul tabIndex={0} className="menu p-0">
               <li>
                 <a
                   href="https://utcode.notion.site/1e4ca5f557bc80f2b697ca7b9342dc89?pvs=4"
