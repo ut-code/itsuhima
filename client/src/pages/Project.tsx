@@ -236,7 +236,9 @@ export default function ProjectPage() {
                             ]);
                           }}
                         >
-                          <option value="">時</option>
+                          <option value="" disabled>
+                            時
+                          </option>
                           {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map(
                             (h) => (
                               <option key={h} value={h}>
@@ -257,7 +259,9 @@ export default function ProjectPage() {
                             ]);
                           }}
                         >
-                          <option value="">分</option>
+                          <option value="" disabled>
+                            分
+                          </option>
                           {["00", "15", "30", "45"].map((h) => (
                             <option key={h} value={h}>
                               {h}
@@ -279,7 +283,9 @@ export default function ProjectPage() {
                             ]);
                           }}
                         >
-                          <option value="">時</option>
+                          <option value="" disabled>
+                            時
+                          </option>
                           {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map(
                             (h) => (
                               <option key={h} value={h}>
@@ -300,7 +306,9 @@ export default function ProjectPage() {
                             ]);
                           }}
                         >
-                          <option value="">分</option>
+                          <option value="" disabled>
+                            分
+                          </option>
                           {["00", "15", "30", "45"].map((h) => (
                             <option key={h} value={h}>
                               {h}
