@@ -1,8 +1,14 @@
 {
   "name": "itsuhima",
   "version": "1.0.0",
+  "workspaces": ["client", "server", "common"],
   "scripts": {
     "dev:server": "cd server && npm run dev",
-    "dev:client": "cd client && npm run dev"
+    "dev:client": "cd client && npm run dev",
+    "check": "cd client && npm run lint && npm run format",
+    "fix": "cd client && npm run lint:fix && npm run format:fix"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4"
   }
 }
