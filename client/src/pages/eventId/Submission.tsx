@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { HiOutlineCheckCircle, HiOutlineCog, HiOutlineExclamationCircle, HiPencil } from "react-icons/hi";
 import { NavLink, useParams } from "react-router";
-import { type ProjectRes, projectResSchema } from "../../../../common/schema";
+import { projectResSchema } from "../../../../common/schema";
 import { Calendar } from "../../components/Calendar";
 import Header from "../../components/Header";
 import { useData } from "../../hooks";
@@ -13,7 +13,7 @@ export default function SubmissionPage() {
     data: project,
     loading: projectLoading,
     refetch: projectRefetch,
-  } = useData<ProjectRes>(projectId ? `${API_ENDPOINT}/projects/${projectId}` : null, projectResSchema);
+  } = useData(projectId ? `${API_ENDPOINT}/projects/${projectId}` : null, projectResSchema);
 
   const [postLoading, setPostLoading] = useState(false);
 

@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import type { ZodType } from "zod";
+import type { ZodType, ZodTypeDef } from "zod";
 
-export function useData<T>(
+export function useData<O, I>(
   url: string | null,
-  schema: ZodType<T>,
+  schema: ZodType<O, ZodTypeDef, I>,
 ): {
   // TODO: any
-  data: T | null;
+  data: O | null;
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
 } {
-  const [data, setData] = useState<T | null>(null);
+  const [data, setData] = useState<O | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 

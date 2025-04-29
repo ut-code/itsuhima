@@ -5,7 +5,7 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { HiClipboardCheck, HiClipboardCopy, HiOutlineCheckCircle, HiOutlineExclamationCircle } from "react-icons/hi";
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
-import { type ProjectRes, editReqSchema, projectReqSchema, projectResSchema } from "../../../common/schema";
+import { editReqSchema, projectReqSchema, projectResSchema } from "../../../common/schema";
 import Header from "../components/Header";
 import { useData } from "../hooks";
 import { API_ENDPOINT, FRONTEND_ORIGIN } from "../utils";
@@ -17,7 +17,7 @@ export default function ProjectPage() {
   const formSchema = eventId ? editReqSchema : projectReqSchema;
   type FormSchemaType = z.infer<typeof formSchema>;
 
-  const { data: project, loading: projectLoading } = useData<ProjectRes>(
+  const { data: project, loading: projectLoading } = useData(
     eventId ? `${API_ENDPOINT}/projects/${eventId}` : null,
     projectResSchema,
   );

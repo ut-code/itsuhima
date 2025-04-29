@@ -1,15 +1,12 @@
 import { HiOutlineCog } from "react-icons/hi";
 import { NavLink } from "react-router";
-import { type InvolvedProjects, involvedProjectsResSchema } from "../../../common/schema";
+import { involvedProjectsResSchema } from "../../../common/schema";
 import Header from "../components/Header";
 import { useData } from "../hooks";
 import { API_ENDPOINT } from "../utils";
 
 export default function RootPage() {
-  const { data: involvedProjects, loading } = useData<InvolvedProjects>(
-    `${API_ENDPOINT}/projects/mine`,
-    involvedProjectsResSchema,
-  );
+  const { data: involvedProjects, loading } = useData(`${API_ENDPOINT}/projects/mine`, involvedProjectsResSchema);
 
   return (
     <>
