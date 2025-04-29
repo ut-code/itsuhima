@@ -1,15 +1,15 @@
-import { Router, Response } from "express";
+import { type Response, Router } from "express";
+import { nanoid } from "nanoid";
+import { z } from "zod";
 import {
+  type InvolvedProjects,
+  type ProjectRes,
   editReqSchema,
-  ProjectRes,
   projectReqSchema,
   submitReqSchema,
-  InvolvedProjects,
 } from "../../../common/schema.js";
-import { z } from "zod";
 import { cookieOptions, prisma } from "../main.js";
 import { validateRequest } from "../middleware.js";
-import { nanoid } from "nanoid";
 
 const router = Router();
 
@@ -90,7 +90,7 @@ router.get("/mine", async (req, res: Response<InvolvedProjects>) => {
         startDate: p.startDate,
         endDate: p.endDate,
         isHost: p.hosts.some((host) => host.browserId === browserId),
-      }))
+      })),
     );
   } catch (error) {
     console.error("ユーザー検索エラー:", error);
@@ -164,7 +164,7 @@ router.get(
       // TODO:
       res.status(500).json();
     }
-  }
+  },
 );
 
 // プロジェクト編集
@@ -224,7 +224,7 @@ router.put(
       console.error("イベント更新エラー:", error);
       res.status(500).json({ message: "イベント更新中にエラーが発生しました。" });
     }
-  }
+  },
 );
 
 // プロジェクト削除
@@ -257,7 +257,7 @@ router.delete(
       console.error("イベント削除エラー:", error);
       return res.status(500).json({ message: "イベント削除中にエラーが発生しました。" });
     }
-  }
+  },
 );
 
 // 日程の提出。
@@ -307,7 +307,7 @@ router.post(
       console.error("登録エラー:", error);
       return res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
-  }
+  },
 );
 
 // 日程の更新。
@@ -335,7 +335,7 @@ router.put(
         projectId,
       }));
 
-      let guest;
+      let guest: unknown; // FIXME: apply an actual type
 
       if (existingGuest) {
         await prisma.slot.deleteMany({ where: { guestId: existingGuest.id } });
@@ -352,16 +352,14 @@ router.put(
       }
 
       return res.status(existingGuest ? 200 : 201).json({
-        message: existingGuest
-          ? "ゲスト情報が更新されました！"
-          : "ゲスト情報が新規作成されました！",
+        message: existingGuest ? "ゲスト情報が更新されました！" : "ゲスト情報が新規作成されました！",
         guest,
       });
     } catch (error) {
       console.error("処理中のエラー:", error);
       return res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
-  }
+  },
 );
 
 export default router;

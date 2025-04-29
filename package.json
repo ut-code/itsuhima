@@ -1,8 +1,19 @@
 {
   "name": "itsuhima",
   "version": "1.0.0",
+  "workspaces": ["client", "server", "common"],
   "scripts": {
+    "prepare": "lefthook install",
+    "dev": "concurrently --kill-others 'npm run dev:server' 'npm run dev:client'",
     "dev:server": "cd server && npm run dev",
-    "dev:client": "cd client && npm run dev"
+    "dev:client": "cd client && npm run dev",
+    "check": "npx biome check",
+    "fix": "npx @biomejs/biome check --fix --unsafe",
+    "fix:safe": "npx @biomejs/biome check --fix"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "concurrently": "^9.1.2",
+    "lefthook": "^1.11.12"
   }
 }
