@@ -1,5 +1,5 @@
-import { NavLink } from "react-router";
 import { HiOutlineQuestionMarkCircle } from "react-icons/hi";
+import { NavLink } from "react-router";
 
 export default function Header() {
   return (
@@ -16,6 +16,7 @@ export default function Header() {
           </button>
           <div className="dropdown-content z-[1] w-56 rounded-box bg-base-100 p-2 shadow">
             <p className="p-2 text-xs">イツヒマは現在アルファ版です。</p>
+            {/* biome-ignore lint/a11y/noNoninteractiveTabindex: daisyUI の仕様。tabIndex を消すとモバイルで開かないなどの問題が起こる */}
             <ul tabIndex={0} className="menu p-0">
               <li>
                 <a
@@ -27,11 +28,7 @@ export default function Header() {
                 </a>
               </li>
               <li>
-                <a
-                  href="https://forms.gle/AB6xbgKjnDv5m1nm6"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
+                <a href="https://forms.gle/AB6xbgKjnDv5m1nm6" target="_blank" rel="noreferrer noopener">
                   ご意見・バグ報告
                 </a>
               </li>

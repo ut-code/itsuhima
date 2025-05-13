@@ -1,24 +1,14 @@
-import { useEffect, useState } from "react";
-import { NavLink, useNavigate, useParams } from "react-router";
-import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  editReqSchema,
-  ProjectRes,
-  projectReqSchema,
-  projectResSchema,
-} from "../../../common/schema";
-import { z } from "zod";
-import Header from "../components/Header";
-import { API_ENDPOINT, FRONTEND_ORIGIN } from "../utils";
-import { useData } from "../hooks";
 import dayjs from "dayjs";
-import {
-  HiClipboardCheck,
-  HiClipboardCopy,
-  HiOutlineCheckCircle,
-  HiOutlineExclamationCircle,
-} from "react-icons/hi";
+import { useEffect, useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { HiClipboardCheck, HiClipboardCopy, HiOutlineCheckCircle, HiOutlineExclamationCircle } from "react-icons/hi";
+import { NavLink, useNavigate, useParams } from "react-router";
+import type { z } from "zod";
+import { editReqSchema, projectReqSchema, projectResSchema } from "../../../common/schema";
+import Header from "../components/Header";
+import { useData } from "../hooks";
+import { API_ENDPOINT, FRONTEND_ORIGIN } from "../utils";
 
 export default function ProjectPage() {
   const { eventId } = useParams();
@@ -27,7 +17,7 @@ export default function ProjectPage() {
   const formSchema = eventId ? editReqSchema : projectReqSchema;
   type FormSchemaType = z.infer<typeof formSchema>;
 
-  const { data: project, loading: projectLoading } = useData<ProjectRes>(
+  const { data: project, loading: projectLoading } = useData(
     eventId ? `${API_ENDPOINT}/projects/${eventId}` : null,
     projectResSchema,
   );
@@ -90,8 +80,8 @@ export default function ProjectPage() {
     setSubmitLoading(true);
 
     // 日付をISO形式に変換
-    const startDateTime = new Date(data.startDate + "T00:00:00.000Z").toISOString();
-    const endDateTime = new Date(data.endDate + "T23:59:59.999Z").toISOString();
+    const startDateTime = new Date(`${data.startDate}T00:00:00.000Z`).toISOString();
+    const endDateTime = new Date(`${data.endDate}T23:59:59.999Z`).toISOString();
 
     // range もISO形式に変換
     const rangeWithDateTime = data.allowedRanges?.map((range) => ({
@@ -172,7 +162,7 @@ export default function ProjectPage() {
         <Header />
         {loading ? (
           <div className="flex-1 flex justify-center items-center">
-            <span className="loading loading-dots loading-md text-gray-400"></span>
+            <span className="loading loading-dots loading-md text-gray-400" />
           </div>
         ) : eventId !== undefined && !project ? (
           <div className="flex flex-col justify-center items-center py-4 gap-4">
@@ -183,14 +173,15 @@ export default function ProjectPage() {
           </div>
         ) : (
           <div className="container p-4 mx-auto">
-            <h1 className="text-2xl mb-2">
-              {project ? `${project.name} の編集` : "イベントの作成"}
-            </h1>
+            <h1 className="text-2xl mb-2">{project ? `${project.name} の編集` : "イベントの作成"}</h1>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <label className="text-sm text-gray-400">イベント名</label>
+                <label className="text-sm text-gray-400" htmlFor="input-name">
+                  イベント名
+                </label>
                 <input
                   {...register("name")}
+                  id="input-name"
                   className="input w-full text-base"
                   placeholder="イベント名"
                 />
@@ -200,28 +191,27 @@ export default function ProjectPage() {
                 <>
                   <div className="flex gap-2">
                     <div className="flex-1">
-                      <label className="text-sm text-gray-400">開始日</label>
+                      <label htmlFor="input-start" className="text-sm text-gray-400">
+                        開始日
+                      </label>
                       <input
                         type="date"
                         {...register("startDate")}
+                        id="input-start"
                         className="input w-full text-base"
                       />
-                      {errors.startDate && (
-                        <p className="text-red-500">{errors.startDate.message}</p>
-                      )}
+                      {errors.startDate && <p className="text-red-500">{errors.startDate.message}</p>}
                     </div>
                     <div className="flex-1">
-                      <label className="text-sm text-gray-400">終了日</label>
-                      <input
-                        type="date"
-                        {...register("endDate")}
-                        className="input w-full text-base"
-                      />
+                      <label htmlFor="input-end" className="text-sm text-gray-400">
+                        終了日
+                      </label>
+                      <input type="date" {...register("endDate")} id="input-end" className="input w-full text-base" />
                       {errors.endDate && <p className="text-red-500">{errors.endDate.message}</p>}
                     </div>
                   </div>
-                  <div>
-                    <label className="text-sm text-gray-400">時間帯</label>
+                  <fieldset>
+                    <legend className="text-sm text-gray-400">時間帯</legend>
                     <div className="flex gap-2 items-center">
                       <div className="flex-1 flex gap-1">
                         <select
@@ -230,20 +220,20 @@ export default function ProjectPage() {
                           onChange={(e) => {
                             replace([
                               {
-                                startTime: e.target.value + ":" + fields[0].startTime.split(":")[1],
+                                startTime: `${e.target.value}:${fields[0].startTime.split(":")[1]}`,
                                 endTime: fields[0].endTime,
                               },
                             ]);
                           }}
                         >
-                          <option value="">時</option>
-                          {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map(
-                            (h) => (
-                              <option key={h} value={h}>
-                                {h}
-                              </option>
-                            ),
-                          )}
+                          <option value="" disabled>
+                            時
+                          </option>
+                          {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
+                            <option key={h} value={h}>
+                              {h}
+                            </option>
+                          ))}
                         </select>
                         <select
                           className="input flex-1 text-base"
@@ -251,13 +241,15 @@ export default function ProjectPage() {
                           onChange={(e) => {
                             replace([
                               {
-                                startTime: fields[0].startTime.split(":")[0] + ":" + e.target.value,
+                                startTime: `${fields[0].startTime.split(":")[0]}:${e.target.value}`,
                                 endTime: fields[0].endTime,
                               },
                             ]);
                           }}
                         >
-                          <option value="">分</option>
+                          <option value="" disabled>
+                            分
+                          </option>
                           {["00", "15", "30", "45"].map((h) => (
                             <option key={h} value={h}>
                               {h}
@@ -274,19 +266,19 @@ export default function ProjectPage() {
                             replace([
                               {
                                 startTime: fields[0].startTime,
-                                endTime: e.target.value + ":" + fields[0].endTime.split(":")[1],
+                                endTime: `${e.target.value}:${fields[0].endTime.split(":")[1]}`,
                               },
                             ]);
                           }}
                         >
-                          <option value="">時</option>
-                          {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map(
-                            (h) => (
-                              <option key={h} value={h}>
-                                {h}
-                              </option>
-                            ),
-                          )}
+                          <option value="" disabled>
+                            時
+                          </option>
+                          {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
+                            <option key={h} value={h}>
+                              {h}
+                            </option>
+                          ))}
                         </select>
                         <select
                           className="input flex-1 text-base"
@@ -295,12 +287,14 @@ export default function ProjectPage() {
                             replace([
                               {
                                 startTime: fields[0].startTime,
-                                endTime: fields[0].endTime.split(":")[0] + ":" + e.target.value,
+                                endTime: `${fields[0].endTime.split(":")[0]}:${e.target.value}`,
                               },
                             ]);
                           }}
                         >
-                          <option value="">分</option>
+                          <option value="" disabled>
+                            分
+                          </option>
                           {["00", "15", "30", "45"].map((h) => (
                             <option key={h} value={h}>
                               {h}
@@ -312,16 +306,17 @@ export default function ProjectPage() {
                     {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
                       <p className="text-red-500">{errors.allowedRanges.message}</p>
                     )}
-                  </div>
+                  </fieldset>
                 </>
               ) : (
                 <p>すでにデータを登録したユーザーがいるため、日時の編集はできません。</p>
               )}
               {project && (
-                <div>
-                  <label className="text-sm text-gray-400">イベントの削除</label>
+                <fieldset>
+                  <legend className="text-sm text-gray-400">イベントの削除</legend>
                   <div className="flex justify-end py-2">
                     <button
+                      id="delete-button"
                       className="btn bg-red-700 text-white"
                       onClick={async () => {
                         if (confirm("本当にこのイベントを削除しますか？")) {
@@ -356,7 +351,7 @@ export default function ProjectPage() {
                       イベントを削除する
                     </button>
                   </div>
-                </div>
+                </fieldset>
               )}
               <div className="p-4 w-full fixed bottom-0 left-0 flex justify-end">
                 <button type="submit" className="btn btn-primary" disabled={!isValid || !isDirty}>
@@ -381,9 +376,7 @@ export default function ProjectPage() {
               />
               <button
                 onClick={async () => {
-                  await navigator.clipboard.writeText(
-                    `${FRONTEND_ORIGIN}/${dialogStatus.projectId}`,
-                  );
+                  await navigator.clipboard.writeText(`${FRONTEND_ORIGIN}/${dialogStatus.projectId}`);
                   setCopied(true);
                   setTimeout(() => {
                     setCopied(false);

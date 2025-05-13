@@ -1,8 +1,8 @@
 import { BrowserRouter, Outlet, Route, Routes } from "react-router";
-import RootPage from "./pages/Root.tsx";
-import ProjectPage from "./pages/Project.tsx";
-import SubmissionPage from "./pages/eventId/Submission.tsx";
 import NotFoundPage from "./pages/NotFound.tsx";
+import ProjectPage from "./pages/Project.tsx";
+import RootPage from "./pages/Root.tsx";
+import SubmissionPage from "./pages/eventId/Submission.tsx";
 
 export default function App() {
   return (

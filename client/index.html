@@ -1,13 +1,21 @@
 <!doctype html>
-<html lang="ja" style="height: 100%">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>イツヒマ</title>
-  </head>
-  <body style="height: 100%" class="text-gray-600">
-    <div id="root" style="height: 100%"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<html lang="ja" style="height: 100%" prefix="og: http://ogp.me/ns#">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>イツヒマ</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="イツヒマ - 「いつ暇？」で日程調整しよう" />
+  <meta property="og:image" content="https://itsuhima.utcode.net/og-image.webp" />
+  <meta property="og:site_name" content="イツヒマ" />
+  <meta property="og:locale" content="ja_JP" />
+</head>
+
+<body style="height: 100%" class="text-gray-600">
+  <div id="root" style="height: 100%"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

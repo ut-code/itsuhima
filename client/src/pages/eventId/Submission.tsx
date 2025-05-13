@@ -1,16 +1,11 @@
-import { NavLink, useParams } from "react-router";
-import { Calendar } from "../../components/Calendar";
-import { ProjectRes, projectResSchema } from "../../../../common/schema";
-import { useData } from "../../hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { HiOutlineCheckCircle, HiOutlineCog, HiOutlineExclamationCircle, HiPencil } from "react-icons/hi";
+import { NavLink, useParams } from "react-router";
+import { projectResSchema } from "../../../../common/schema";
+import { Calendar } from "../../components/Calendar";
 import Header from "../../components/Header";
+import { useData } from "../../hooks";
 import { API_ENDPOINT } from "../../utils";
-import {
-  HiOutlineCheckCircle,
-  HiOutlineCog,
-  HiOutlineExclamationCircle,
-  HiPencil,
-} from "react-icons/hi";
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
@@ -18,10 +13,7 @@ export default function SubmissionPage() {
     data: project,
     loading: projectLoading,
     refetch: projectRefetch,
-  } = useData<ProjectRes>(
-    projectId ? `${API_ENDPOINT}/projects/${projectId}` : null,
-    projectResSchema,
-  );
+  } = useData(projectId ? `${API_ENDPOINT}/projects/${projectId}` : null, projectResSchema);
 
   const [postLoading, setPostLoading] = useState(false);
 
@@ -52,6 +44,7 @@ export default function SubmissionPage() {
       };
       try {
         // submitReqSchema.parse(payload) TODO:
+        1 + 1;
       } catch (err) {
         console.error(err);
         return;
@@ -116,7 +109,7 @@ export default function SubmissionPage() {
         <Header />
         {loading ? (
           <div className="w-full flex-1 flex justify-center items-center">
-            <span className="loading loading-dots loading-md text-gray-400"></span>
+            <span className="loading loading-dots loading-md text-gray-400" />
           </div>
         ) : !project ? (
           <div className="flex flex-col justify-center items-center py-4 gap-4">
@@ -136,12 +129,7 @@ export default function SubmissionPage() {
                 </NavLink>
               )}
             </div>
-            <Calendar
-              project={project}
-              myGuestId={myGuestId ?? ""}
-              mySlotsRef={mySlotsRef}
-              editMode={editMode}
-            />
+            <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef} editMode={editMode} />
             <div className="w-full p-2 flex justify-between items-center gap-2">
               {editMode ? (
                 <>
@@ -186,7 +174,7 @@ export default function SubmissionPage() {
                 </>
               ) : (
                 <>
-                  <span></span>
+                  <span />
                   <button
                     className="btn btn-outline btn-primary"
                     disabled={loading}

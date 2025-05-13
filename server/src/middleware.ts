@@ -1,5 +1,5 @@
-import { z, ZodTypeAny } from "zod";
-import { RequestHandler, Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, RequestHandler, Response } from "express";
+import type { ZodTypeAny, z } from "zod";
 
 type ZodRequestSchema = {
   body?: ZodTypeAny;
@@ -8,12 +8,12 @@ type ZodRequestSchema = {
 };
 
 export function validateRequest<T extends ZodRequestSchema>(
-  schema: T
+  schema: T,
 ): RequestHandler<
-  T["params"] extends ZodTypeAny ? z.infer<T["params"]> : {},
+  T["params"] extends ZodTypeAny ? z.infer<T["params"]> : never,
   unknown,
-  T["body"] extends ZodTypeAny ? z.infer<T["body"]> : {},
-  T["query"] extends ZodTypeAny ? z.infer<T["query"]> : {}
+  T["body"] extends ZodTypeAny ? z.infer<T["body"]> : never,
+  T["query"] extends ZodTypeAny ? z.infer<T["query"]> : never
 > {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
