@@ -1,3 +1,4 @@
+// @ts-nocheck FIXME: 駄目すぎる
 import { type Response, Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";

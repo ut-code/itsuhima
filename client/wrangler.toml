@@ -1,0 +1,14 @@
+name = "itsuhima"
+compatibility_date = "2024-12-01"
+
+[env.production.vars]
+API_ENDPOINT = "https://api.itsuhima.utcode.net"
+
+[env.preview.vars]
+API_ENDPOINT = ""
+
+[vars]
+API_ENDPOINT = "http://localhost:3000"
+
+[env.development.vars]
+API_ENDPOINT = "http://localhost:3000"
