@@ -1,7 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
 interface Env {
-  VITE_API_ENDPOINT: string;
+  API_ENDPOINT: string;
 }
 
 interface ProjectData {
@@ -47,16 +47,17 @@ class OGDescriptionRewriter {
   }
 }
 
-// 日付を YYYY/MM/DD 形式にフォーマット
+// 日付を YYYY/MM/DD 形式にフォーマット（日本時間）
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
-  return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
-}
-
-// 時刻を HH:MM 形式にフォーマット
-function formatTime(dateString: string): string {
-  const date = new Date(dateString);
-  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Asia/Tokyo",
+  })
+    .format(date)
+    .replace(/-/g, "/");
 }
 
 // プロジェクト情報を取得
@@ -124,7 +125,7 @@ export async function onRequest(context: EventContext<Env, any, any>): Promise<R
   }
 
   // プロジェクト情報を取得
-  const projectData = await fetchProjectData(eventId, env.VITE_API_ENDPOINT);
+  const projectData = await fetchProjectData(eventId, env.API_ENDPOINT);
 
   if (!projectData) {
     return response;
@@ -138,15 +139,7 @@ export async function onRequest(context: EventContext<Env, any, any>): Promise<R
   const endDate = formatDate(projectData.endDate);
   const dateRange = startDate === endDate ? startDate : `${startDate} - ${endDate}`;
 
-  let timeRange = "";
-  if (projectData.allowedRanges && projectData.allowedRanges.length > 0) {
-    const range = projectData.allowedRanges[0];
-    const startTime = formatTime(range.startTime);
-    const endTime = formatTime(range.endTime);
-    timeRange = `${startTime} - ${endTime}`;
-  }
-
-  const ogDescription = timeRange ? `日程: ${dateRange} | 時間: ${timeRange}` : `日程: ${dateRange}`;
+  const ogDescription = `日程範囲: ${dateRange}`;
 
   return new HTMLRewriter()
     .on('meta[property="og:title"]', new OGTitleRewriter(ogTitle))
