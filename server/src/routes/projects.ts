@@ -200,7 +200,6 @@ router.put(
       }
 
       // 更新処理
-      console.log(projectId);
       const updatedEvent = await prisma.project.update({
         where: { id: projectId },
         data: existingGuest
@@ -301,8 +300,6 @@ router.post(
       });
 
       res.cookie("browserId", guest.browserId, cookieOptions);
-
-      console.log("登録されたデータ:", guest);
       return res.status(201).json("日時が登録されました！");
     } catch (error) {
       console.error("登録エラー:", error);
