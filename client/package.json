@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "build:local:watch": "tsc -b && vite build --watch --mode dev",
+    "build:local": "tsc -b && vite build --mode dev",
+    "build:preview": "tsc -b && vite build --mode preview",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier . --check",

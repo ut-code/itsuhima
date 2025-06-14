@@ -1,7 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
 interface Env {
-  VITE_API_ENDPOINT: string;
+  API_ENDPOINT: string;
 }
 
 interface ProjectData {
@@ -123,7 +123,7 @@ export async function onRequest(context: EventContext<Env, any, any>): Promise<R
   }
 
   // プロジェクト情報を取得
-  const projectData = await fetchProjectData(eventId, env.VITE_API_ENDPOINT);
+  const projectData = await fetchProjectData(eventId, env.API_ENDPOINT);
 
   if (!projectData) {
     return response;
