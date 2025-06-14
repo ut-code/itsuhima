@@ -7,7 +7,7 @@ pages_build_output_dir = "./dist"
 VITE_API_ENDPOINT = "https://api.itsuhima.utcode.net"
 
 [env.preview.vars]
-VITE_API_ENDPOINT = ""
+VITE_API_ENDPOINT = "https://api.itsuhima-staging.utcode.net"
 
 [vars]
 VITE_API_ENDPOINT = "http://localhost:3000"
