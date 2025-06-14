@@ -173,7 +173,9 @@ export default function ProjectPage() {
           </div>
         ) : (
           <div className="container p-4 mx-auto">
-            <h1 className="text-2xl mb-2">{project ? `${project.name} の編集` : "イベントの作成"}</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">
+              {project ? `${project.name} の編集` : "イベントの作成"}
+            </h1>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
                 <label className="text-sm text-gray-400" htmlFor="input-name">
@@ -353,7 +355,10 @@ export default function ProjectPage() {
                   </div>
                 </fieldset>
               )}
-              <div className="p-4 w-full fixed bottom-0 left-0 flex justify-end">
+              <div className="p-4 w-full fixed bottom-0 left-0 flex justify-between">
+                <NavLink to={"/home"} className="btn btn-outline btn-primary">
+                  ホームに戻る
+                </NavLink>
                 <button type="submit" className="btn btn-primary" disabled={!isValid || !isDirty}>
                   イベントを{project ? "更新" : "作成"}する
                 </button>
