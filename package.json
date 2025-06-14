@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "workspaces": ["client", "server", "common"],
   "scripts": {
-    "dev": "concurrently --kill-others 'npm run dev:server' 'npm run dev:client'",
     "dev:client-og": "cd client && npm run build && npx wrangler pages dev dist --compatibility-date=2024-12-01",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
+    "dev:db": "docker compose up",
     "check": "npx biome check",
     "fix": "npx @biomejs/biome check --fix --unsafe",
     "fix:safe": "npx @biomejs/biome check --fix"
