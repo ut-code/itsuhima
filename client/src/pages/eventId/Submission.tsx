@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { HiOutlineCheckCircle, HiOutlineCog, HiOutlineExclamationCircle, HiPencil } from "react-icons/hi";
+import {
+  HiOutlineCheckCircle,
+  HiOutlineCog,
+  HiOutlineExclamationCircle,
+  HiOutlineHome,
+  HiPencil,
+} from "react-icons/hi";
 import { NavLink, useParams } from "react-router";
 import { projectResSchema } from "../../../../common/schema";
 import { Calendar } from "../../components/Calendar";
@@ -121,7 +127,7 @@ export default function SubmissionPage() {
         ) : (
           <div className="p-4 flex flex-col flex-1 h-full overflow-y-auto">
             <div className="flex justify-between items-center">
-              <h1 className="text-2xl mb-2">{project.name} の日程調整</h1>
+              <h1 className="text-2xl mb-2 font-bold text-gray-800">{project.name} の日程調整</h1>
               {isHost && (
                 <NavLink to={`/${projectId}/edit`} className="btn btn-sm font-normal text-gray-600">
                   <HiOutlineCog />
@@ -174,9 +180,12 @@ export default function SubmissionPage() {
                 </>
               ) : (
                 <>
-                  <span />
+                  <NavLink to={"/home"} className="btn btn-outline btn-primary">
+                    <HiOutlineHome size={20} />
+                    ホームに戻る
+                  </NavLink>
                   <button
-                    className="btn btn-outline btn-primary"
+                    className="btn btn-primary"
                     disabled={loading}
                     onClick={() => {
                       setEditMode(true);
