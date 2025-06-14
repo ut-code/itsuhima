@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ZodType, ZodTypeDef } from "zod";
+import { API_ENDPOINT } from "./utils";
 
 export function useData<O, I>(
   url: string | null,
@@ -47,4 +48,43 @@ export function useData<O, I>(
   }, [fetchData]);
 
   return { data, loading, error, refetch: fetchData };
+}
+
+export function useAuth(): { isAuthenticated: boolean | null } {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const checkAuth = async () => {
+      try {
+        const res = await fetch(`${API_ENDPOINT}/projects/mine`, {
+          method: "GET",
+          credentials: "include",
+          signal: controller.signal,
+        });
+
+        if (res.ok) {
+          setIsAuthenticated(true);
+        } else if (res.status === 401 || res.status === 403) {
+          setIsAuthenticated(false);
+        } else {
+          setIsAuthenticated(false);
+          console.error(`Unexpected response: ${res.status} ${res.statusText}`);
+        }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return;
+        }
+        setIsAuthenticated(false);
+        console.error("Auth check failed:", err);
+      }
+    };
+
+    checkAuth();
+
+    return () => controller.abort();
+  }, []);
+
+  return { isAuthenticated };
 }
