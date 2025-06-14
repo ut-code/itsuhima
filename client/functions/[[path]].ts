@@ -55,7 +55,9 @@ function formatDate(dateString: string): string {
     month: "2-digit",
     day: "2-digit",
     timeZone: "Asia/Tokyo",
-  }).format(date).replace(/-/g, "/");
+  })
+    .format(date)
+    .replace(/-/g, "/");
 }
 
 // プロジェクト情報を取得
