@@ -1,32 +1,7 @@
-import { useEffect } from "react";
-import { NavLink, useNavigate } from "react-router";
+import { NavLink } from "react-router";
 import Header from "../components/Header";
-import { useAuth } from "../hooks";
 
 export default function LandingPage() {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-
-  useEffect(() => {
-    // If user is authenticated (has cookie), redirect to home
-    if (isAuthenticated === true) {
-      navigate("/home", { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-
-  if (isAuthenticated === null) {
-    return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-          <div className="text-center">
-            <span className="loading loading-dots loading-lg text-primary" />
-          </div>
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
       <Header />

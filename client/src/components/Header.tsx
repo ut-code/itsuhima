@@ -1,16 +1,22 @@
-import { HiOutlineQuestionMarkCircle } from "react-icons/hi";
+import { HiOutlineHome, HiOutlineQuestionMarkCircle } from "react-icons/hi";
 import { NavLink } from "react-router";
 
 export default function Header() {
   return (
     <div className="navbar bg-primary shadow-sm sticky top-0 left-0 z-50">
-      <div className="flex-1">
-        <NavLink className="flex text-2xl text-white items-center px-2 gap-1 font-mplus" to="/home">
+      <div className="text-2xl text-white px-2 font-mplus">
+        <NavLink className="flex items-center gap-1" to="/">
           <img src="/logo-white.svg" alt="logo" width={24} />
           <span className="px-2">イツヒマ</span>
           <span className="text-xs">(アルファ版)</span>
         </NavLink>
+      </div>
+      <div>
         <div className="dropdown dropdown-end -translate-y-1/2 absolute top-1/2 right-3 transform text-gray-600">
+          <NavLink className="btn btn-primary" to="/home">
+            <HiOutlineHome size={24} className="text-white" />
+            <span className="hidden md:block">ホーム</span>
+          </NavLink>
           <button tabIndex={0} className="btn btn-circle btn-primary" type="button">
             <HiOutlineQuestionMarkCircle size={28} className="text-white" />
           </button>
