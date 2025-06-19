@@ -49,6 +49,7 @@ export default function ProjectPage() {
     handleSubmit,
     control,
     reset,
+    trigger,
     formState: { errors, isValid, isDirty },
   } = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
@@ -60,6 +61,10 @@ export default function ProjectPage() {
       allowedRanges: [{ startTime: "00:00", endTime: "23:45" }],
     },
   });
+
+  const handleFieldFocus = () => {
+    trigger("name");
+  };
 
   const { fields, replace } = useFieldArray({
     control,
@@ -191,10 +196,11 @@ export default function ProjectPage() {
                 <input
                   {...register("name")}
                   id="input-name"
-                  className="input w-full text-base"
+                  className={`input w-full text-base ${errors.name ? "input-error border-red-500" : ""}`}
                   placeholder="イベント名"
+                  onBlur={() => trigger("name")}
                 />
-                {errors.name && <p className="text-red-500">{errors.name.message}</p>}
+                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
               </div>
               {!project || (project && project.guests.length === 0) ? (
                 <>
@@ -236,16 +242,23 @@ export default function ProjectPage() {
                         type="date"
                         {...register("startDate")}
                         id="input-start"
-                        className="input w-full text-base"
+                        className={`input w-full text-base ${errors.startDate ? "input-error border-red-500" : ""}`}
+                        onFocus={handleFieldFocus}
                       />
-                      {errors.startDate && <p className="text-red-500">{errors.startDate.message}</p>}
+                      {errors.startDate && <p className="text-red-500 text-sm mt-1">{errors.startDate.message}</p>}
                     </div>
                     <div className="flex-1">
                       <label htmlFor="input-end" className="text-sm text-gray-400">
                         終了日
                       </label>
-                      <input type="date" {...register("endDate")} id="input-end" className="input w-full text-base" />
-                      {errors.endDate && <p className="text-red-500">{errors.endDate.message}</p>}
+                      <input
+                        type="date"
+                        {...register("endDate")}
+                        id="input-end"
+                        className={`input w-full text-base ${errors.endDate ? "input-error border-red-500" : ""}`}
+                        onFocus={handleFieldFocus}
+                      />
+                      {errors.endDate && <p className="text-red-500 text-sm mt-1">{errors.endDate.message}</p>}
                     </div>
                   </div>
                   <fieldset>
@@ -253,7 +266,7 @@ export default function ProjectPage() {
                     <div className="flex gap-2 items-center">
                       <div className="flex-1 flex gap-1">
                         <select
-                          className="input flex-1 text-base"
+                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
                           value={fields[0].startTime.split(":")[0]}
                           onChange={(e) => {
                             replace([
@@ -263,6 +276,7 @@ export default function ProjectPage() {
                               },
                             ]);
                           }}
+                          onFocus={handleFieldFocus}
                         >
                           <option value="" disabled>
                             時
@@ -274,7 +288,7 @@ export default function ProjectPage() {
                           ))}
                         </select>
                         <select
-                          className="input flex-1 text-base"
+                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
                           value={fields[0].startTime.split(":")[1]}
                           onChange={(e) => {
                             replace([
@@ -284,6 +298,7 @@ export default function ProjectPage() {
                               },
                             ]);
                           }}
+                          onFocus={handleFieldFocus}
                         >
                           <option value="" disabled>
                             分
@@ -298,7 +313,7 @@ export default function ProjectPage() {
                       <span>〜</span>
                       <div className="flex-1 flex gap-1">
                         <select
-                          className="input flex-1 text-base"
+                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
                           value={fields[0].endTime.split(":")[0]}
                           onChange={(e) => {
                             replace([
@@ -308,6 +323,7 @@ export default function ProjectPage() {
                               },
                             ]);
                           }}
+                          onFocus={handleFieldFocus}
                         >
                           <option value="" disabled>
                             時
@@ -319,7 +335,7 @@ export default function ProjectPage() {
                           ))}
                         </select>
                         <select
-                          className="input flex-1 text-base"
+                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
                           value={fields[0].endTime.split(":")[1]}
                           onChange={(e) => {
                             replace([
@@ -329,6 +345,7 @@ export default function ProjectPage() {
                               },
                             ]);
                           }}
+                          onFocus={handleFieldFocus}
                         >
                           <option value="" disabled>
                             分
@@ -342,7 +359,7 @@ export default function ProjectPage() {
                       </div>
                     </div>
                     {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
-                      <p className="text-red-500">{errors.allowedRanges.message}</p>
+                      <p className="text-red-500 text-sm mt-1">{errors.allowedRanges.message}</p>
                     )}
                   </fieldset>
                 </>
