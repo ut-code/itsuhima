@@ -9,7 +9,7 @@ import projectsRoutes from "./routes/projects.js";
 export const prisma = new PrismaClient();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 const allowedOrigins = process.env.CORS_ALLOW_ORIGINS?.split(",") || [];
 
@@ -29,8 +29,8 @@ app.get("/", (req, res) => {
 
 app.use("/projects", projectsRoutes);
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+app.listen(Number(port), "0.0.0.0", () => {
+  console.log(`Server listening on 0.0.0.0:${port}`);
 });
 
 const isProduction = process.env.NODE_ENV === "prod";
