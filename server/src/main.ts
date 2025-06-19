@@ -29,7 +29,7 @@ app.get("/", (req, res) => {
 
 app.use("/projects", projectsRoutes);
 
-app.listen(Number(port), '0.0.0.0', () => {
+app.listen(Number(port), "0.0.0.0", () => {
   console.log(`Server listening on 0.0.0.0:${port}`);
 });
 
