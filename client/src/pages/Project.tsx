@@ -382,7 +382,7 @@ export default function ProjectPage() {
                             if (!response.ok) {
                               throw new Error("削除に失敗しました。");
                             }
-                            navigate("/");
+                            navigate("/home");
                             setToast({
                               message: "イベントを削除しました。",
                               variant: "success",
