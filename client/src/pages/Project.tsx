@@ -2,7 +2,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
-import { HiClipboardCheck, HiClipboardCopy, HiOutlineCheckCircle, HiOutlineExclamationCircle } from "react-icons/hi";
+import {
+  HiClipboardCheck,
+  HiClipboardCopy,
+  HiInformationCircle,
+  HiOutlineCheckCircle,
+  HiOutlineExclamationCircle,
+} from "react-icons/hi";
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
 import { editReqSchema, projectReqSchema, projectResSchema } from "../../../common/schema";
@@ -36,6 +42,7 @@ export default function ProjectPage() {
   } | null>(null);
 
   const [copied, setCopied] = useState(false);
+  const [isInfoExpanded, setIsInfoExpanded] = useState(!eventId); // 新規作成時は展開、編集時は折りたたみ
 
   const {
     register,
@@ -48,8 +55,8 @@ export default function ProjectPage() {
     mode: "onChange",
     defaultValues: {
       name: "",
-      startDate: "",
-      endDate: "",
+      startDate: eventId ? "" : dayjs().format("YYYY-MM-DD"),
+      endDate: eventId ? "" : dayjs().add(6, "day").format("YYYY-MM-DD"),
       allowedRanges: [{ startTime: "00:00", endTime: "23:45" }],
     },
   });
@@ -191,6 +198,35 @@ export default function ProjectPage() {
               </div>
               {!project || (project && project.guests.length === 0) ? (
                 <>
+                  <div className="collapse collapse-arrow bg-blue-50 border border-blue-200 mb-4">
+                    <input
+                      type="checkbox"
+                      checked={isInfoExpanded}
+                      onChange={(e) => setIsInfoExpanded(e.target.checked)}
+                    />
+                    <div className="collapse-title text-sm font-medium text-primary flex items-center gap-2">
+                      <HiInformationCircle className="w-5 h-5" />
+                      開始日・終了日／時間帯について
+                    </div>
+                    <div className="collapse-content text-sm text-primary">
+                      <p>
+                        イツヒマでは、<strong>主催者側で候補日程を設定せずに</strong>日程調整します。
+                        <br />
+                        ここでは、参加者の日程を知りたい日付の範囲と時間帯の範囲を設定してください。
+                        <br />
+                        詳しくは、
+                        <a
+                          href="https://utcode.notion.site/1e4ca5f557bc80f2b697ca7b9342dc89?pvs=4"
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="link"
+                        >
+                          使い方ページ
+                        </a>
+                        をご覧ください。
+                      </p>
+                    </div>
+                  </div>
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <label htmlFor="input-start" className="text-sm text-gray-400">
