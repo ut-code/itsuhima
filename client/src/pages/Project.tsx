@@ -92,8 +92,8 @@ export default function ProjectPage() {
     setSubmitLoading(true);
 
     // 日付をISO形式に変換
-    const startDateTime = new Date(`${data.startDate}T00:00:00.000Z`).toISOString();
-    const endDateTime = new Date(`${data.endDate}T23:59:59.999Z`).toISOString();
+    const startDateTime = new Date(`${data.startDate}T00:00:00.000`).toISOString();
+    const endDateTime = new Date(`${data.endDate}T23:59:59.999`).toISOString();
 
     // range もISO形式に変換
     const rangeWithDateTime = data.allowedRanges?.map((range) => ({

@@ -18,9 +18,9 @@ model Project {
   id            String         @id @db.VarChar(21)
   name          String
   /// 注: 日付部分のみ利用。時間は考慮しない。
-  startDate     DateTime
+  startDate     DateTime       @db.Timestamptz(3)
   /// 注: 日付部分のみ利用。時間は考慮しない。
-  endDate       DateTime
+  endDate       DateTime       @db.Timestamptz(3)
   /// 注: 現在は 1 つのみ設定可能
   allowedRanges AllowedRange[]
   slots         Slot[]
@@ -32,9 +32,9 @@ model Project {
 model AllowedRange {
   id        String   @id @default(uuid())
   /// 注: 時間部分のみ利用。日付は考慮しない。
-  startTime DateTime
+  startTime DateTime @db.Timestamptz(3)
   /// 注: 時間部分のみ利用。日付は考慮しない。
-  endTime   DateTime
+  endTime   DateTime @db.Timestamptz(3)
   projectId String
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
@@ -42,8 +42,8 @@ model AllowedRange {
 /// あるゲストが参加可能な時間帯の 1 つ。日を跨がない。
 model Slot {
   id        String   @id @default(uuid())
-  from      DateTime
-  to        DateTime
+  from      DateTime @db.Timestamptz(3)
+  to        DateTime @db.Timestamptz(3)
   projectId String
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   guestId   String
