@@ -30,7 +30,7 @@ router.post("/", validateRequest({ body: projectReqSchema }), async (req, res) =
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
         allowedRanges: {
-          create: data.allowedRanges.map(range => ({
+          create: data.allowedRanges.map((range) => ({
             startTime: new Date(range.startTime),
             endTime: new Date(range.endTime),
           })),
