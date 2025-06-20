@@ -55,7 +55,7 @@ function ProjectDashboard({ involvedProjects }: { involvedProjects: InvolvedProj
           </NavLink>
         </div>
 
-        {involvedProjects.length > 0 ? (
+        {involvedProjects.length > 0 && (
           <div className="space-y-8">
             {/* All Projects */}
             <section>
@@ -70,8 +70,6 @@ function ProjectDashboard({ involvedProjects }: { involvedProjects: InvolvedProj
               </div>
             </section>
           </div>
-        ) : (
-          <EmptyState />
         )}
       </div>
     </div>
