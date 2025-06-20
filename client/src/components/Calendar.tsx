@@ -219,7 +219,9 @@ export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) =>
       );
     }
     if (info.event.id === MY_EVENT) {
-      return <div className="h-full w-full text-gray-600 overflow-hidden">{info.timeText}</div>;
+      return (
+        <div className="h-full w-full text-gray-600 overflow-hidden">{`${dayjs(info.event.start).format("HH:mm")} - ${dayjs(info.event.end).format("HH:mm")}`}</div>
+      );
     }
   }, []);
 

@@ -2,7 +2,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
-import { HiClipboardCheck, HiClipboardCopy, HiOutlineCheckCircle, HiOutlineExclamationCircle } from "react-icons/hi";
+import {
+  HiClipboardCheck,
+  HiClipboardCopy,
+  HiInformationCircle,
+  HiOutlineCheckCircle,
+  HiOutlineExclamationCircle,
+} from "react-icons/hi";
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
 import { editReqSchema, projectReqSchema, projectResSchema } from "../../../common/schema";
@@ -36,23 +42,29 @@ export default function ProjectPage() {
   } | null>(null);
 
   const [copied, setCopied] = useState(false);
+  const [isInfoExpanded, setIsInfoExpanded] = useState(!eventId); // 新規作成時は展開、編集時は折りたたみ
 
   const {
     register,
     handleSubmit,
     control,
     reset,
+    trigger,
     formState: { errors, isValid, isDirty },
   } = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
     mode: "onChange",
     defaultValues: {
       name: "",
-      startDate: "",
-      endDate: "",
+      startDate: eventId ? "" : dayjs().format("YYYY-MM-DD"),
+      endDate: eventId ? "" : dayjs().add(6, "day").format("YYYY-MM-DD"),
       allowedRanges: [{ startTime: "00:00", endTime: "23:45" }],
     },
   });
+
+  const handleFieldFocus = () => {
+    trigger("name");
+  };
 
   const { fields, replace } = useFieldArray({
     control,
@@ -80,8 +92,8 @@ export default function ProjectPage() {
     setSubmitLoading(true);
 
     // 日付をISO形式に変換
-    const startDateTime = new Date(`${data.startDate}T00:00:00.000Z`).toISOString();
-    const endDateTime = new Date(`${data.endDate}T23:59:59.999Z`).toISOString();
+    const startDateTime = new Date(`${data.startDate}T00:00:00.000`).toISOString();
+    const endDateTime = new Date(`${data.endDate}T23:59:59.999`).toISOString();
 
     // range もISO形式に変換
     const rangeWithDateTime = data.allowedRanges?.map((range) => ({
@@ -184,13 +196,43 @@ export default function ProjectPage() {
                 <input
                   {...register("name")}
                   id="input-name"
-                  className="input w-full text-base"
+                  className={`input w-full text-base ${errors.name ? "input-error border-red-500" : ""}`}
                   placeholder="イベント名"
+                  onBlur={() => trigger("name")}
                 />
-                {errors.name && <p className="text-red-500">{errors.name.message}</p>}
+                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
               </div>
               {!project || (project && project.guests.length === 0) ? (
                 <>
+                  <div className="collapse collapse-arrow bg-blue-50 border border-blue-200 mb-4">
+                    <input
+                      type="checkbox"
+                      checked={isInfoExpanded}
+                      onChange={(e) => setIsInfoExpanded(e.target.checked)}
+                    />
+                    <div className="collapse-title text-sm font-medium text-primary flex items-center gap-2">
+                      <HiInformationCircle className="w-5 h-5" />
+                      開始日・終了日／時間帯について
+                    </div>
+                    <div className="collapse-content text-sm text-primary">
+                      <p>
+                        イツヒマでは、<strong>主催者側で候補日程を設定せずに</strong>日程調整します。
+                        <br />
+                        ここでは、参加者の日程を知りたい日付の範囲と時間帯の範囲を設定してください。
+                        <br />
+                        詳しくは、
+                        <a
+                          href="https://utcode.notion.site/1e4ca5f557bc80f2b697ca7b9342dc89?pvs=4"
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="link"
+                        >
+                          使い方ページ
+                        </a>
+                        をご覧ください。
+                      </p>
+                    </div>
+                  </div>
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <label htmlFor="input-start" className="text-sm text-gray-400">
@@ -200,16 +242,23 @@ export default function ProjectPage() {
                         type="date"
                         {...register("startDate")}
                         id="input-start"
-                        className="input w-full text-base"
+                        className={`input w-full text-base ${errors.startDate ? "input-error border-red-500" : ""}`}
+                        onFocus={handleFieldFocus}
                       />
-                      {errors.startDate && <p className="text-red-500">{errors.startDate.message}</p>}
+                      {errors.startDate && <p className="text-red-500 text-sm mt-1">{errors.startDate.message}</p>}
                     </div>
                     <div className="flex-1">
                       <label htmlFor="input-end" className="text-sm text-gray-400">
                         終了日
                       </label>
-                      <input type="date" {...register("endDate")} id="input-end" className="input w-full text-base" />
-                      {errors.endDate && <p className="text-red-500">{errors.endDate.message}</p>}
+                      <input
+                        type="date"
+                        {...register("endDate")}
+                        id="input-end"
+                        className={`input w-full text-base ${errors.endDate ? "input-error border-red-500" : ""}`}
+                        onFocus={handleFieldFocus}
+                      />
+                      {errors.endDate && <p className="text-red-500 text-sm mt-1">{errors.endDate.message}</p>}
                     </div>
                   </div>
                   <fieldset>
@@ -217,7 +266,7 @@ export default function ProjectPage() {
                     <div className="flex gap-2 items-center">
                       <div className="flex-1 flex gap-1">
                         <select
-                          className="input flex-1 text-base"
+                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
                           value={fields[0].startTime.split(":")[0]}
                           onChange={(e) => {
                             replace([
@@ -227,6 +276,7 @@ export default function ProjectPage() {
                               },
                             ]);
                           }}
+                          onFocus={handleFieldFocus}
                         >
                           <option value="" disabled>
                             時
@@ -238,7 +288,7 @@ export default function ProjectPage() {
                           ))}
                         </select>
                         <select
-                          className="input flex-1 text-base"
+                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
                           value={fields[0].startTime.split(":")[1]}
                           onChange={(e) => {
                             replace([
@@ -248,6 +298,7 @@ export default function ProjectPage() {
                               },
                             ]);
                           }}
+                          onFocus={handleFieldFocus}
                         >
                           <option value="" disabled>
                             分
@@ -262,7 +313,7 @@ export default function ProjectPage() {
                       <span>〜</span>
                       <div className="flex-1 flex gap-1">
                         <select
-                          className="input flex-1 text-base"
+                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
                           value={fields[0].endTime.split(":")[0]}
                           onChange={(e) => {
                             replace([
@@ -272,6 +323,7 @@ export default function ProjectPage() {
                               },
                             ]);
                           }}
+                          onFocus={handleFieldFocus}
                         >
                           <option value="" disabled>
                             時
@@ -283,7 +335,7 @@ export default function ProjectPage() {
                           ))}
                         </select>
                         <select
-                          className="input flex-1 text-base"
+                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
                           value={fields[0].endTime.split(":")[1]}
                           onChange={(e) => {
                             replace([
@@ -293,6 +345,7 @@ export default function ProjectPage() {
                               },
                             ]);
                           }}
+                          onFocus={handleFieldFocus}
                         >
                           <option value="" disabled>
                             分
@@ -306,7 +359,7 @@ export default function ProjectPage() {
                       </div>
                     </div>
                     {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
-                      <p className="text-red-500">{errors.allowedRanges.message}</p>
+                      <p className="text-red-500 text-sm mt-1">{errors.allowedRanges.message}</p>
                     )}
                   </fieldset>
                 </>
@@ -329,7 +382,7 @@ export default function ProjectPage() {
                             if (!response.ok) {
                               throw new Error("削除に失敗しました。");
                             }
-                            navigate("/");
+                            navigate("/home");
                             setToast({
                               message: "イベントを削除しました。",
                               variant: "success",

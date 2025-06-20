@@ -27,10 +27,13 @@ router.post("/", validateRequest({ body: projectReqSchema }), async (req, res) =
       data: {
         id: nanoid(),
         name: data.name,
-        startDate: data.startDate,
-        endDate: data.endDate,
+        startDate: new Date(data.startDate),
+        endDate: new Date(data.endDate),
         allowedRanges: {
-          create: data.allowedRanges,
+          create: data.allowedRanges.map((range) => ({
+            startTime: new Date(range.startTime),
+            endTime: new Date(range.endTime),
+          })),
         },
         hosts: {
           create: {
@@ -206,13 +209,13 @@ router.put(
           ? { name } // ゲストがいれば名前だけ
           : {
               name,
-              startDate,
-              endDate,
+              startDate: startDate ? new Date(startDate) : undefined,
+              endDate: endDate ? new Date(endDate) : undefined,
               allowedRanges: {
                 deleteMany: {}, // 既存削除
                 create: allowedRanges?.map((r) => ({
-                  startTime: r.startTime,
-                  endTime: r.endTime,
+                  startTime: new Date(r.startTime),
+                  endTime: new Date(r.endTime),
                 })),
               },
             },
