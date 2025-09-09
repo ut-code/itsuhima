@@ -3,13 +3,7 @@ import { Hono } from "hono";
 import { getSignedCookie, setSignedCookie } from "hono/cookie";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import {
-  type InvolvedProjects,
-  // type ProjectRes,
-  editReqSchema,
-  projectReqSchema,
-  submitReqSchema,
-} from "../../../common/schema.js";
+import { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/schema.js";
 import { cookieOptions, prisma } from "../main.js";
 
 import dotenv from "dotenv";
@@ -248,88 +242,95 @@ const router = new Hono()
       console.error("イベント削除エラー:", error);
       return c.json({ message: "イベント削除中にエラーが発生しました。" }, 500);
     }
-  });
+  })
 
-// 日程の提出。
-router.post(
-  "/:projectId/submissions",
-  validateRequest({
-    params: projectIdParamsSchema,
-    body: submitReqSchema,
-  }),
-  async (req, res: Response) => {
-    const { projectId } = req.params;
-    const browserId = req.signedCookies?.browserId;
-
-    if (browserId) {
-      const existingGuest = await prisma.guest.findFirst({
-        where: { projectId, browserId },
-      });
-      if (existingGuest) {
-        return res.status(403).json({ message: "すでに登録済みです" });
+  // 日程の提出。
+  .post(
+    "/:projectId/submissions",
+    zValidator("param", projectIdParamsSchema),
+    zValidator("json", submitReqSchema),
+    async (c) => {
+      const cookieSecret = process.env.COOKIE_SECRET;
+      if (!cookieSecret) {
+        console.error("COOKIE_SECRET is not set");
+        return c.json({ message: "サーバー設定エラー" }, 500);
       }
-    }
+      const { projectId } = c.req.valid("param");
+      const browserId = (await getSignedCookie(c, cookieSecret, "browserId")) || undefined;
 
-    const { name, slots } = req.body;
+      if (browserId) {
+        const existingGuest = await prisma.guest.findFirst({
+          where: { projectId, browserId },
+        });
+        if (existingGuest) {
+          return c.json({ message: "すでに登録済みです" }, 403);
+        }
+      }
+      const { name, slots } = c.req.valid("json");
 
-    try {
-      const guest = await prisma.guest.create({
-        data: {
-          name,
-          browserId,
-          project: { connect: { id: projectId } },
-          slots: {
-            create: slots?.map((slot) => ({
-              from: slot.start,
-              to: slot.end,
-              projectId,
-            })),
+      try {
+        const guest = await prisma.guest.create({
+          data: {
+            name,
+            browserId,
+            project: { connect: { id: projectId } },
+            slots: {
+              create: slots?.map((slot) => ({
+                from: slot.start,
+                to: slot.end,
+                projectId,
+              })),
+            },
           },
-        },
-        include: { slots: true },
-      });
+          include: { slots: true },
+        });
+        await setSignedCookie(c, "browserId", guest.browserId, cookieSecret, cookieOptions);
+        return c.json("日時が登録されました！", 201);
+      } catch (error) {
+        console.error("登録エラー:", error);
+        return c.json({ message: "サーバーエラーが発生しました" }, 500);
+      }
+    },
+  )
 
-      res.cookie("browserId", guest.browserId, cookieOptions);
-      return res.status(201).json("日時が登録されました！");
-    } catch (error) {
-      console.error("登録エラー:", error);
-      return res.status(500).json({ message: "サーバーエラーが発生しました" });
-    }
-  },
-);
+  // 日程の更新。
+  .put(
+    "/:projectId/submissions/mine",
+    zValidator("param", projectIdParamsSchema),
+    zValidator("json", submitReqSchema),
+    async (c) => {
+      const cookieSecret = process.env.COOKIE_SECRET;
+      if (!cookieSecret) {
+        console.error("COOKIE_SECRET is not set");
+        return c.json({ message: "サーバー設定エラー" }, 500);
+      }
+      const { projectId } = c.req.valid("param");
+      const browserId = (await getSignedCookie(c, cookieSecret, "browserId")) || undefined;
 
-// 日程の更新。
-router.put(
-  "/:projectId/submissions/mine",
-  validateRequest({
-    params: projectIdParamsSchema,
-    body: submitReqSchema,
-  }),
-  async (req, res: Response) => {
-    const { projectId } = req.params;
-    const browserId = req.signedCookies?.browserId;
+      if (!browserId) {
+        return c.json({ message: "認証されていません。" }, 401);
+      }
+      const { name, slots } = c.req.valid("json");
 
-    const { slots, name } = req.body;
+      try {
+        const existingGuest = await prisma.guest.findFirst({
+          where: { projectId, browserId },
+          include: { slots: true },
+        });
 
-    try {
-      const existingGuest = await prisma.guest.findFirst({
-        where: { projectId, browserId },
-        include: { slots: true },
-      });
+        if (!existingGuest) {
+          return c.json({ message: "ゲスト情報が見つかりません。" }, 404);
+        }
+        const slotData = slots?.map((slot) => ({
+          from: slot.start,
+          to: slot.end,
+          projectId,
+        }));
 
-      const slotData = slots?.map((slot) => ({
-        from: slot.start,
-        to: slot.end,
-        projectId,
-      }));
-
-      let guest: unknown; // FIXME: apply an actual type
-
-      if (existingGuest) {
         await prisma.slot.deleteMany({ where: { guestId: existingGuest.id } });
 
         // ゲスト情報更新
-        guest = await prisma.guest.update({
+        const guest = await prisma.guest.update({
           where: { id: existingGuest.id },
           data: {
             slots: { create: slotData },
@@ -337,17 +338,13 @@ router.put(
           },
           include: { slots: true },
         });
-      }
 
-      return res.status(existingGuest ? 200 : 201).json({
-        message: existingGuest ? "ゲスト情報が更新されました！" : "ゲスト情報が新規作成されました！",
-        guest,
-      });
-    } catch (error) {
-      console.error("処理中のエラー:", error);
-      return res.status(500).json({ message: "サーバーエラーが発生しました" });
-    }
-  },
-);
+        return c.json({ message: "ゲスト情報が更新されました！", guest }, 200);
+      } catch (error) {
+        console.error("処理中のエラー:", error);
+        return c.json({ message: "サーバーエラーが発生しました" }, 500);
+      }
+    },
+  );
 
 export default router;
