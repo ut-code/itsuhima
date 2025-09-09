@@ -1,3 +1,8 @@
+import { hc } from "hono/client";
+import type { AppType } from "../../../../server/src/main";
+
+const client = hc<AppType>(import.meta.env.VITE_API_ENDPOINT || "http://localhost:3000");
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   HiOutlineCheckCircle,
@@ -45,23 +50,22 @@ export default function SubmissionPage() {
       setPostLoading(true);
       const payload = {
         name: guestName,
-        projectId,
-        slots,
+        projectId: projectId || "",
+        slots: slots.map((slot) => ({
+          start: slot.start.toISOString(),
+          end: slot.end.toISOString(),
+        })),
       };
-      try {
-        // submitReqSchema.parse(payload) TODO:
-        1 + 1;
-      } catch (err) {
-        console.error(err);
-        return;
-      }
       if (!myGuestId) {
-        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/submissions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          credentials: "include",
-        });
+        const response = await client.projects[":projectId"].submissions.$post(
+          {
+            param: { projectId: projectId || "" },
+            json: payload,
+          },
+          {
+            init: { credentials: "include" },
+          },
+        );
         if (response.ok) {
           setToast({
             message: "提出しました。",
@@ -76,12 +80,15 @@ export default function SubmissionPage() {
           setTimeout(() => setToast(null), 3000);
         }
       } else {
-        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/submissions/mine`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          credentials: "include",
-        });
+        const response = await client.projects[":projectId"].submissions.mine.$put(
+          {
+            param: { projectId: projectId || "" },
+            json: payload,
+          },
+          {
+            init: { credentials: "include" },
+          },
+        );
         if (response.ok) {
           setToast({
             message: "更新しました。",
