@@ -1,5 +1,6 @@
-// @ts-nocheck FIXME: 駄目すぎる
-import { type Response, Router } from "express";
+import { Hono } from "hono";
+import { zValidator } from "@hono/zod-validator";
+import { getSignedCookie, setSignedCookie } from "hono/cookie";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import {
@@ -10,19 +11,25 @@ import {
   submitReqSchema,
 } from "../../../common/schema.js";
 import { cookieOptions, prisma } from "../main.js";
-import { validateRequest } from "../middleware.js";
 
-const router = Router();
+import dotenv from "dotenv";
+dotenv.config();
+
+const router = new Hono();
 
 const projectIdParamsSchema = z.object({ projectId: z.string().length(21) });
 
-// TODO: res の型。エラー時も考慮しないといけない
-
 // プロジェクト作成
-router.post("/", validateRequest({ body: projectReqSchema }), async (req, res) => {
-  const browserId = req.signedCookies.browserId;
+router.post("/", zValidator("json", projectReqSchema), async (c) => {
+  const cookieSecret = process.env.COOKIE_SECRET;
+  if (!cookieSecret) {
+    console.error("COOKIE_SECRET is not set");
+    c.status(500);
+    return c.json({ message: "サーバー設定エラー" });
+  }
+  const browserId = (await getSignedCookie(c, cookieSecret, "browserId")) || undefined;
   try {
-    const data = req.body;
+    const data = c.req.valid("json");
     const event = await prisma.project.create({
       data: {
         id: nanoid(),
@@ -45,11 +52,12 @@ router.post("/", validateRequest({ body: projectReqSchema }), async (req, res) =
     });
     const host = event.hosts[0];
 
-    res.cookie("browserId", host.browserId, cookieOptions);
-
-    res.status(201).json({ id: event.id, name: event.name });
+    await setSignedCookie(c, "browserId", host.browserId, cookieSecret, cookieOptions);
+    c.status(201);
+    return c.json({ id: event.id, name: event.name });
   } catch (err) {
-    res.status(500).json({ message: "イベント作成時にエラーが発生しました" });
+    c.status(500);
+    return c.json({ message: "イベント作成時にエラーが発生しました" });
   }
 });
 
@@ -106,7 +114,7 @@ router.get("/mine", async (req, res: Response<InvolvedProjects>) => {
 // プロジェクト取得
 router.get(
   "/:projectId",
-  validateRequest({ params: projectIdParamsSchema }),
+   validateRequest({ params: projectIdParamsSchema }),
   async (req, res: Response<ProjectRes>) => {
     const browserId = req.signedCookies?.browserId;
     try {

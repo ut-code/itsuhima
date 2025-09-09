@@ -32,7 +32,7 @@ app.get("/", (c) => {
   return c.json({ message: "Hello! イツヒマ？" });
 });
 
-// app.route("/projects", projectsRoutes); // TODO: projectsRoutes を Hono に対応させる
+app.route("/projects", projectsRoutes);
 
 // app.listen(Number(port), "0.0.0.0", () => {
 //   console.log(`Server listening on 0.0.0.0:${port}`);
