@@ -160,20 +160,19 @@ const router = new Hono()
       console.error("イベント取得エラー:", error);
       return c.json({ message: "イベント取得中にエラーが発生しました。" }, 500);
     }
-  });
+  })
 
-// プロジェクト編集
-router.put(
-  "/:projectId",
-  validateRequest({
-    params: projectIdParamsSchema,
-    body: editReqSchema,
-  }),
-  async (req, res: Response) => {
-    const { projectId } = req.params;
-    const browserId = req.signedCookies?.browserId;
+  // プロジェクト編集
+  .put("/:projectId", zValidator("param", projectIdParamsSchema), zValidator("json", editReqSchema), async (c) => {
+    const cookieSecret = process.env.COOKIE_SECRET;
+    if (!cookieSecret) {
+      console.error("COOKIE_SECRET is not set");
+      return c.json({ message: "サーバー設定エラー" }, 500);
+    }
+    const browserId = (await getSignedCookie(c, cookieSecret, "browserId")) || undefined;
     try {
-      const { name, startDate, endDate, allowedRanges } = req.body;
+      const { projectId } = c.req.valid("param");
+      const data = c.req.valid("json");
 
       // ホスト認証とゲスト存在確認を一括取得
       const [host, existingGuest] = await Promise.all([
@@ -190,21 +189,20 @@ router.put(
 
       // ホストが存在しなければ403
       if (!host) {
-        return res.status(403).json({ message: "認証エラー: アクセス権限がありません。" });
+        return c.json({ message: "アクセス権限がありません。" }, 403);
       }
-
       // 更新処理
       const updatedEvent = await prisma.project.update({
         where: { id: projectId },
         data: existingGuest
-          ? { name } // ゲストがいれば名前だけ
+          ? { name: data.name } // ゲストがいれば名前だけ
           : {
-              name,
-              startDate: startDate ? new Date(startDate) : undefined,
-              endDate: endDate ? new Date(endDate) : undefined,
+              name: data.name,
+              startDate: data.startDate ? new Date(data.startDate) : undefined,
+              endDate: data.endDate ? new Date(data.endDate) : undefined,
               allowedRanges: {
                 deleteMany: {}, // 既存削除
-                create: allowedRanges?.map((r) => ({
+                create: data.allowedRanges?.map((r) => ({
                   startTime: new Date(r.startTime),
                   endTime: new Date(r.endTime),
                 })),
@@ -213,46 +211,44 @@ router.put(
         include: { allowedRanges: true },
       });
 
-      res.status(200).json({ event: updatedEvent });
+      return c.json({ event: updatedEvent }, 200);
     } catch (error) {
       console.error("イベント更新エラー:", error);
-      res.status(500).json({ message: "イベント更新中にエラーが発生しました。" });
+      return c.json({ message: "イベント更新中にエラーが発生しました。" }, 500);
     }
-  },
-);
+  })
 
-// プロジェクト削除
-router.delete(
-  "/:projectId",
-  validateRequest({
-    params: projectIdParamsSchema,
-  }),
-  async (req, res: Response) => {
-    const { projectId } = req.params;
-    const browserId = req.signedCookies?.browserId;
-
+  // プロジェクト削除
+  .delete("/:projectId", zValidator("param", projectIdParamsSchema), async (c) => {
+    const cookieSecret = process.env.COOKIE_SECRET;
+    if (!cookieSecret) {
+      console.error("COOKIE_SECRET is not set");
+      return c.json({ message: "サーバー設定エラー" }, 500);
+    }
+    const browserId = await getSignedCookie(c, cookieSecret, "browserId");
+    if (!browserId) {
+      return c.json({ message: "認証されていません。" }, 401);
+    }
     try {
+      const { projectId } = c.req.valid("param");
       // Host 認証
       const host = await prisma.host.findFirst({
         where: { projectId, browserId },
       });
 
       if (!host) {
-        return res.status(403).json({ message: "認証エラー: 削除権限がありません。" });
+        return c.json({ message: "削除権限がありません。" }, 403);
       }
-
       // 関連データを削除（Cascade を使っていない場合）
       await prisma.project.delete({
         where: { id: projectId },
       });
-
-      return res.status(200).json({ message: "イベントを削除しました。" });
+      return c.json({ message: "イベントを削除しました。" }, 200);
     } catch (error) {
       console.error("イベント削除エラー:", error);
-      return res.status(500).json({ message: "イベント削除中にエラーが発生しました。" });
+      return c.json({ message: "イベント削除中にエラーが発生しました。" }, 500);
     }
-  },
-);
+  });
 
 // 日程の提出。
 router.post(

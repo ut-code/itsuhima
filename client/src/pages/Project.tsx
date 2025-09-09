@@ -139,15 +139,13 @@ export default function ProjectPage() {
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      const res = await fetch(`${API_ENDPOINT}/projects/${eventId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(eventData),
-        credentials: "include",
-      });
-
+      const res = await client.projects[":projectId"].$put(
+        { param: { projectId: project.id }, json: eventData },
+        { init: { credentials: "include" } },
+      );
       setSubmitLoading(false);
       if (res.ok) {
+        // TODO: 更新したデータで再レンダリング
         setToast({
           message: "更新しました。",
           variant: "success",
@@ -155,7 +153,7 @@ export default function ProjectPage() {
         setTimeout(() => setToast(null), 3000);
       } else {
         setToast({
-          message: res.status === 403 ? "認証に失敗しました。" : "更新に失敗しました。",
+          message: res.status === 403 ? "権限がありません。" : "更新に失敗しました。",
           variant: "error",
         });
         setTimeout(() => setToast(null), 3000);
@@ -383,10 +381,11 @@ export default function ProjectPage() {
                       onClick={async () => {
                         if (confirm("本当にこのイベントを削除しますか？")) {
                           try {
-                            const response = await fetch(`${API_ENDPOINT}/projects/${project.id}`, {
-                              method: "DELETE",
-                            });
-                            if (!response.ok) {
+                            const res = await client.projects[":projectId"].$delete(
+                              { param: { projectId: project.id } },
+                              { init: { credentials: "include" } },
+                            );
+                            if (!res.ok) {
                               throw new Error("削除に失敗しました。");
                             }
                             navigate("/home");
