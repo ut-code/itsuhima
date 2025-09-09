@@ -12,31 +12,21 @@ import { PrismaClient } from "@prisma/client";
 import projectsRoutes from "./routes/projects.js";
 
 export const prisma = new PrismaClient();
-
-// const app = express();
-const app = new Hono();
 const port = process.env.PORT || 3000;
-
 const allowedOrigins = process.env.CORS_ALLOW_ORIGINS?.split(",") || [];
-app.use(
-  "*",
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
-  }),
-);
 
-// app.use(cookieParser(process.env.COOKIE_SECRET));
-
-app.get("/", (c) => {
-  return c.json({ message: "Hello! イツヒマ？" });
-});
-
-app.route("/projects", projectsRoutes);
-
-// app.listen(Number(port), "0.0.0.0", () => {
-//   console.log(`Server listening on 0.0.0.0:${port}`);
-// });
+const app = new Hono()
+  .use(
+    "*",
+    cors({
+      origin: allowedOrigins,
+      credentials: true,
+    }),
+  )
+  .get("/", (c) => {
+    return c.json({ message: "Hello! イツヒマ？" });
+  })
+  .route("/projects", projectsRoutes);
 
 serve(
   {
@@ -58,3 +48,5 @@ export const cookieOptions = {
   sameSite: isProduction ? "none" : "lax",
   maxAge: 60 * 60 * 24 * 365, // Express だとミリ秒だったが、Hono では秒らしい
 } as const;
+
+export type AppType = typeof app;

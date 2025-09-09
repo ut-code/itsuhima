@@ -1,5 +1,5 @@
-import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
 import { getSignedCookie, setSignedCookie } from "hono/cookie";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -15,51 +15,47 @@ import { cookieOptions, prisma } from "../main.js";
 import dotenv from "dotenv";
 dotenv.config();
 
-const router = new Hono();
-
 const projectIdParamsSchema = z.object({ projectId: z.string().length(21) });
 
-// プロジェクト作成
-router.post("/", zValidator("json", projectReqSchema), async (c) => {
-  const cookieSecret = process.env.COOKIE_SECRET;
-  if (!cookieSecret) {
-    console.error("COOKIE_SECRET is not set");
-    c.status(500);
-    return c.json({ message: "サーバー設定エラー" });
-  }
-  const browserId = (await getSignedCookie(c, cookieSecret, "browserId")) || undefined;
-  try {
-    const data = c.req.valid("json");
-    const event = await prisma.project.create({
-      data: {
-        id: nanoid(),
-        name: data.name,
-        startDate: new Date(data.startDate),
-        endDate: new Date(data.endDate),
-        allowedRanges: {
-          create: data.allowedRanges.map((range) => ({
-            startTime: new Date(range.startTime),
-            endTime: new Date(range.endTime),
-          })),
-        },
-        hosts: {
-          create: {
-            browserId,
+const router = new Hono()
+  // プロジェクト作成
+  .post("/", zValidator("json", projectReqSchema), async (c) => {
+    const cookieSecret = process.env.COOKIE_SECRET;
+    if (!cookieSecret) {
+      console.error("COOKIE_SECRET is not set");
+      return c.json({ message: "サーバー設定エラー" }, 500);
+    }
+    const browserId = (await getSignedCookie(c, cookieSecret, "browserId")) || undefined;
+    try {
+      const data = c.req.valid("json");
+      const event = await prisma.project.create({
+        data: {
+          id: nanoid(),
+          name: data.name,
+          startDate: new Date(data.startDate),
+          endDate: new Date(data.endDate),
+          allowedRanges: {
+            create: data.allowedRanges.map((range) => ({
+              startTime: new Date(range.startTime),
+              endTime: new Date(range.endTime),
+            })),
+          },
+          hosts: {
+            create: {
+              browserId,
+            },
           },
         },
-      },
-      include: { hosts: true },
-    });
-    const host = event.hosts[0];
+        include: { hosts: true },
+      });
+      const host = event.hosts[0];
 
-    await setSignedCookie(c, "browserId", host.browserId, cookieSecret, cookieOptions);
-    c.status(201);
-    return c.json({ id: event.id, name: event.name });
-  } catch (err) {
-    c.status(500);
-    return c.json({ message: "イベント作成時にエラーが発生しました" });
-  }
-});
+      await setSignedCookie(c, "browserId", host.browserId, cookieSecret, cookieOptions);
+      return c.json({ id: event.id, name: event.name }, 201);
+    } catch (err) {
+      return c.json({ message: "イベント作成時にエラーが発生しました" }, 500);
+    }
+  });
 
 // 自分が関連するプロジェクト取得
 router.get("/mine", async (req, res: Response<InvolvedProjects>) => {
@@ -114,7 +110,7 @@ router.get("/mine", async (req, res: Response<InvolvedProjects>) => {
 // プロジェクト取得
 router.get(
   "/:projectId",
-   validateRequest({ params: projectIdParamsSchema }),
+  validateRequest({ params: projectIdParamsSchema }),
   async (req, res: Response<ProjectRes>) => {
     const browserId = req.signedCookies?.browserId;
     try {

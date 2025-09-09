@@ -1,3 +1,8 @@
+import { hc } from "hono/client";
+import type { AppType } from "../../../server/src/main";
+
+const client = hc<AppType>(import.meta.env.VITE_API_ENDPOINT || "http://localhost:3000");
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
@@ -109,24 +114,26 @@ export default function ProjectPage() {
     } satisfies z.infer<typeof projectReqSchema>;
 
     if (!project) {
-      const res = await fetch(`${API_ENDPOINT}/projects`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(eventData),
-        credentials: "include",
-      });
-
-      const { id: projectId, name: projectName } = await res.json(); // TODO:
+      const res = await client.projects.$post(
+        {
+          json: eventData,
+        },
+        {
+          init: { credentials: "include" },
+        },
+      );
 
       setSubmitLoading(false);
-      if (res.ok) {
+      if (res.status === 201) {
+        const { id, name } = await res.json();
         setDialogStatus({
-          projectId: projectId,
-          projectName: projectName,
+          projectId: id,
+          projectName: name,
         });
       } else {
+        const { message } = await res.json();
         setToast({
-          message: "送信に失敗しました",
+          message,
           variant: "error",
         });
         setTimeout(() => setToast(null), 3000);
