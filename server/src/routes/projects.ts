@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import {
   type InvolvedProjects,
-  type ProjectRes,
+  // type ProjectRes,
   editReqSchema,
   projectReqSchema,
   submitReqSchema,
@@ -55,66 +55,74 @@ const router = new Hono()
     } catch (err) {
       return c.json({ message: "イベント作成時にエラーが発生しました" }, 500);
     }
-  });
+  })
 
-// 自分が関連するプロジェクト取得
-router.get("/mine", async (req, res: Response<InvolvedProjects>) => {
-  const browserId = req.signedCookies?.browserId;
+  // 自分が関連するプロジェクト取得
+  .get("/mine", async (c) => {
+    const cookieSecret = process.env.COOKIE_SECRET;
+    if (!cookieSecret) {
+      console.error("COOKIE_SECRET is not set");
+      return c.json({ message: "サーバー側でエラーが発生しています。" }, 500);
+    }
 
-  if (!browserId) {
-    // return res.status(401).json({ message: "認証情報がありません。" }); TODO: a
-    return res.status(401).json([]);
-  }
+    const browserId = await getSignedCookie(c, cookieSecret, "browserId");
+    if (!browserId) {
+      return c.json({ message: "認証されていません。" }, 401);
+    }
 
-  try {
-    const involvedProjects = await prisma.project.findMany({
-      where: {
-        OR: [
-          { hosts: { some: { browserId } } },
-          {
-            guests: {
-              some: { browserId },
+    try {
+      const involvedProjects = await prisma.project.findMany({
+        where: {
+          OR: [
+            { hosts: { some: { browserId } } },
+            {
+              guests: {
+                some: { browserId },
+              },
+            },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          startDate: true,
+          endDate: true,
+          hosts: {
+            select: {
+              browserId: true,
             },
           },
-        ],
-      },
-      select: {
-        id: true,
-        name: true,
-        startDate: true,
-        endDate: true,
-        hosts: {
-          select: {
-            browserId: true,
-          },
         },
-      },
-    });
+      });
 
-    return res.status(200).json(
-      involvedProjects.map((p) => ({
-        id: p.id,
-        name: p.name,
-        startDate: p.startDate,
-        endDate: p.endDate,
-        isHost: p.hosts.some((host) => host.browserId === browserId),
-      })),
-    );
-  } catch (error) {
-    console.error("ユーザー検索エラー:", error);
-    return res.status(500).json(); // TODO:
-    // .json({ message: "ユーザー検索中にエラーが発生しました。" });
-  }
-});
+      return c.json(
+        involvedProjects.map((p) => ({
+          id: p.id,
+          name: p.name,
+          startDate: p.startDate,
+          endDate: p.endDate,
+          isHost: p.hosts.some((host) => host.browserId === browserId),
+        })),
+        200,
+      );
+    } catch (error) {
+      console.error(error);
+      return c.json({ message: "エラーが発生しました。" }, 500);
+    }
+  })
 
-// プロジェクト取得
-router.get(
-  "/:projectId",
-  validateRequest({ params: projectIdParamsSchema }),
-  async (req, res: Response<ProjectRes>) => {
-    const browserId = req.signedCookies?.browserId;
+  // プロジェクト取得
+  .get("/:projectId", zValidator("param", projectIdParamsSchema), async (c) => {
+    const cookieSecret = process.env.COOKIE_SECRET;
+    if (!cookieSecret) {
+      console.error("COOKIE_SECRET is not set");
+      return c.json({ message: "サーバー側でエラーが発生しています。" }, 500);
+    }
+
+    const browserId = await getSignedCookie(c, cookieSecret, "browserId");
+
     try {
-      const { projectId } = req.params;
+      const { projectId } = c.req.valid("param");
       const project = await prisma.project.findUnique({
         where: { id: projectId },
         include: {
@@ -129,51 +137,30 @@ router.get(
       });
 
       if (!project) {
-        // TODO:
-        return res.status(404).json();
+        return c.json({ message: "イベントが見つかりません。" }, 404);
       }
 
-      // // クッキーのブラウザIDと一致するゲスト・ホストを絞り込む TODO: SQL で
-      // const guest = project.guests.find((g) => g.browserId === browserId) || null;
-      // const host = project.hosts.find((h) => h.browserId === browserId) || null;
-
-      // // browserIdを外した guest と host を整形
-      // const filteredGuest = guest
-      //   ? {
-      //       id: guest.id,
-      //       name: guest.name,
-      //       eventId: guest.eventId,
-      //       slots: guest.slots,
-      //     }
-      //   : null;
-
-      // const filteredHost = host
-      //   ? {
-      //       id: host.id,
-      //       eventId: host.eventId,
-      //     }
-      //   : null;
-
-      res.status(200).json({
-        ...project,
-        hosts: project.hosts.map((h) => {
-          const { browserId, ...rest } = h;
-          return rest;
-        }),
-        guests: project.guests.map((g) => {
-          const { browserId, ...rest } = g;
-          return rest;
-        }),
-        isHost: project.hosts.some((h) => h.browserId === browserId),
-        meAsGuest: project.guests.find((g) => g.browserId === browserId) ?? null,
-      });
+      return c.json(
+        {
+          ...project,
+          hosts: project.hosts.map((h) => {
+            const { browserId, ...rest } = h;
+            return rest;
+          }),
+          guests: project.guests.map((g) => {
+            const { browserId, ...rest } = g;
+            return rest;
+          }),
+          isHost: browserId ? project.hosts.some((h) => h.browserId === browserId) : false,
+          meAsGuest: browserId ? (project.guests.find((g) => g.browserId === browserId) ?? null) : null,
+        },
+        200,
+      );
     } catch (error) {
       console.error("イベント取得エラー:", error);
-      // TODO:
-      res.status(500).json();
+      return c.json({ message: "イベント取得中にエラーが発生しました。" }, 500);
     }
-  },
-);
+  });
 
 // プロジェクト編集
 router.put(
