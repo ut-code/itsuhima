@@ -1,12 +1,44 @@
+import { hc } from "hono/client";
+import { useEffect, useState } from "react";
 import { HiOutlineCalendar, HiOutlineCog, HiOutlinePlus, HiOutlineUser, HiOutlineUsers } from "react-icons/hi";
 import { NavLink } from "react-router";
-import { type InvolvedProjects, involvedProjectsResSchema } from "../../../common/schema";
+import type { InvolvedProjects } from "../../../common/schema";
+import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
-import { useData } from "../hooks";
 import { API_ENDPOINT } from "../utils";
 
+const client = hc<AppType>(API_ENDPOINT);
+
 export default function HomePage() {
-  const { data: involvedProjects, loading } = useData(`${API_ENDPOINT}/projects/mine`, involvedProjectsResSchema);
+  const [involvedProjects, setInvolvedProjects] = useState<InvolvedProjects | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchInvolvedProjects = async () => {
+      setLoading(true);
+      try {
+        const res = await client.projects.mine.$get({}, { init: { credentials: "include" } });
+        if (res.status === 200) {
+          const data = await res.json();
+          // TODO: ここで変換しない
+          const validatedData = data.map((project) => ({
+            ...project,
+            startDate: new Date(project.startDate),
+            endDate: new Date(project.endDate),
+          }));
+          setInvolvedProjects(validatedData);
+        } else {
+          setInvolvedProjects(null);
+        }
+      } catch (error) {
+        console.error("Error fetching involved projects:", error);
+        setInvolvedProjects(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInvolvedProjects();
+  }, []);
 
   return (
     <>
