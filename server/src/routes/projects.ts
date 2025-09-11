@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { getSignedCookie, setSignedCookie } from "hono/cookie";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/schema.js";
+import { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/validator.js";
 import { cookieOptions, prisma } from "../main.js";
 
 import dotenv from "dotenv";

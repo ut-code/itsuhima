@@ -2,7 +2,7 @@ import { hc } from "hono/client";
 import { useEffect, useState } from "react";
 import { HiOutlineCalendar, HiOutlineCog, HiOutlinePlus, HiOutlineUser, HiOutlineUsers } from "react-icons/hi";
 import { NavLink } from "react-router";
-import type { InvolvedProjects } from "../../../common/schema";
+import type { InvolvedProjects } from "../../../common/validator";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
 import { API_ENDPOINT } from "../utils";

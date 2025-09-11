@@ -8,7 +8,7 @@ import {
   HiPencil,
 } from "react-icons/hi";
 import { NavLink, useParams } from "react-router";
-import type { ProjectRes } from "../../../../common/schema";
+import type { ProjectRes } from "../../../../common/validator";
 import type { AppType } from "../../../../server/src/main";
 import { Calendar } from "../../components/Calendar";
 import Header from "../../components/Header";

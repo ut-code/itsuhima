@@ -14,7 +14,7 @@ import type {
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Tooltip } from "react-tooltip";
-import type { ProjectRes } from "../../../common/schema";
+import type { ProjectRes } from "../../../common/validator";
 
 dayjs.locale("ja");
 

@@ -12,7 +12,7 @@ import {
 } from "react-icons/hi";
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
-import { type ProjectRes, editReqSchema, projectReqSchema } from "../../../common/schema";
+import { type ProjectRes, editReqSchema, projectReqSchema } from "../../../common/validator";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
 import { API_ENDPOINT, FRONTEND_ORIGIN } from "../utils";
