@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { getSignedCookie, setSignedCookie } from "hono/cookie";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/validator.js";
+import { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/validators.js";
 import { cookieOptions, prisma } from "../main.js";
 
 import dotenv from "dotenv";
@@ -117,7 +117,7 @@ const router = new Hono()
 
     try {
       const { projectId } = c.req.valid("param");
-      const project = await prisma.project.findUnique({
+      const projectRow = await prisma.project.findUnique({
         where: { id: projectId },
         include: {
           allowedRanges: true,
@@ -130,26 +130,24 @@ const router = new Hono()
         },
       });
 
-      if (!project) {
+      if (!projectRow) {
         return c.json({ message: "イベントが見つかりません。" }, 404);
       }
 
-      return c.json(
-        {
-          ...project,
-          hosts: project.hosts.map((h) => {
-            const { browserId, ...rest } = h;
-            return rest;
-          }),
-          guests: project.guests.map((g) => {
-            const { browserId, ...rest } = g;
-            return rest;
-          }),
-          isHost: browserId ? project.hosts.some((h) => h.browserId === browserId) : false,
-          meAsGuest: browserId ? (project.guests.find((g) => g.browserId === browserId) ?? null) : null,
-        },
-        200,
-      );
+      const data = {
+        ...projectRow,
+        hosts: projectRow.hosts.map((h) => {
+          const { browserId, ...rest } = h;
+          return rest;
+        }),
+        guests: projectRow.guests.map((g) => {
+          const { browserId, ...rest } = g;
+          return rest;
+        }),
+        isHost: browserId ? projectRow.hosts.some((h) => h.browserId === browserId) : false,
+        meAsGuest: browserId ? (projectRow.guests.find((g) => g.browserId === browserId) ?? null) : null,
+      };
+      return c.json(data, 200);
     } catch (error) {
       console.error("イベント取得エラー:", error);
       return c.json({ message: "イベント取得中にエラーが発生しました。" }, 500);

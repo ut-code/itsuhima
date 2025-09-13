@@ -8,18 +8,18 @@ import {
   HiPencil,
 } from "react-icons/hi";
 import { NavLink, useParams } from "react-router";
-import type { ProjectRes } from "../../../../common/validator";
 import type { AppType } from "../../../../server/src/main";
 import { Calendar } from "../../components/Calendar";
 import Header from "../../components/Header";
+import { projectReviver } from "../../revivers";
+import type { Project } from "../../types";
 import { API_ENDPOINT } from "../../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
-  // TODO: any
-  const [project, setProject] = useState<ProjectRes | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [projectLoading, setProjectLoading] = useState(true);
 
   const [postLoading, setPostLoading] = useState(false);
@@ -36,7 +36,7 @@ export default function SubmissionPage() {
     try {
       const res = await client.projects[":projectId"].$get(
         {
-          param: { projectId: projectId || "" },
+          param: { projectId },
         },
         {
           init: { credentials: "include" },
@@ -44,36 +44,8 @@ export default function SubmissionPage() {
       );
       if (res.status === 200) {
         const data = await res.json();
-        // TODO: ここで変換しない
-        const validatedData = {
-          ...data,
-          startDate: new Date(data.startDate),
-          endDate: new Date(data.endDate),
-          allowedRanges: data.allowedRanges.map((range) => ({
-            startTime: new Date(range.startTime),
-            endTime: new Date(range.endTime),
-            id: range.id,
-            projectId: range.projectId,
-          })),
-          guests: data.guests.map((guest) => ({
-            ...guest,
-            slots: guest.slots.map((slot) => ({
-              ...slot,
-              from: new Date(slot.from),
-              to: new Date(slot.to),
-            })),
-          })),
-          meAsGuest: data.meAsGuest
-            ? {
-                ...data.meAsGuest,
-                slots: data.meAsGuest.slots.map((slot: { from: string; to: string }) => ({
-                  start: new Date(slot.from),
-                  end: new Date(slot.to),
-                })),
-              }
-            : null,
-        };
-        setProject(validatedData);
+        const parsedData = projectReviver(data);
+        setProject(parsedData);
       }
     } catch (error) {
       console.error("Error fetching project:", error);
