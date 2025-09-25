@@ -1,12 +1,40 @@
+import { hc } from "hono/client";
+import { useEffect, useState } from "react";
 import { HiOutlineCalendar, HiOutlineCog, HiOutlinePlus, HiOutlineUser, HiOutlineUsers } from "react-icons/hi";
 import { NavLink } from "react-router";
-import { type InvolvedProjects, involvedProjectsResSchema } from "../../../common/schema";
+import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
-import { useData } from "../hooks";
+import { briefProjectReviver } from "../revivers";
+import type { BriefProject } from "../types";
 import { API_ENDPOINT } from "../utils";
 
+const client = hc<AppType>(API_ENDPOINT);
+
 export default function HomePage() {
-  const { data: involvedProjects, loading } = useData(`${API_ENDPOINT}/projects/mine`, involvedProjectsResSchema);
+  const [involvedProjects, setInvolvedProjects] = useState<BriefProject[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchInvolvedProjects = async () => {
+      setLoading(true);
+      try {
+        const res = await client.projects.mine.$get({}, { init: { credentials: "include" } });
+        if (res.status === 200) {
+          const data = await res.json();
+          const parsedData = data.map((p) => briefProjectReviver(p));
+          setInvolvedProjects(parsedData);
+        } else {
+          setInvolvedProjects(null);
+        }
+      } catch (error) {
+        console.error("Error fetching involved projects:", error);
+        setInvolvedProjects(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInvolvedProjects();
+  }, []);
 
   return (
     <>
@@ -28,7 +56,7 @@ export default function HomePage() {
   );
 }
 
-function ProjectDashboard({ involvedProjects }: { involvedProjects: InvolvedProjects }) {
+function ProjectDashboard({ involvedProjects }: { involvedProjects: BriefProject[] }) {
   const sortedProjects = [...involvedProjects].sort((a, b) => {
     if (a.isHost !== b.isHost) {
       return a.isHost ? -1 : 1;
@@ -76,7 +104,7 @@ function ProjectDashboard({ involvedProjects }: { involvedProjects: InvolvedProj
   );
 }
 
-function ProjectCard({ project }: { project: InvolvedProjects[0] }) {
+function ProjectCard({ project }: { project: BriefProject }) {
   return (
     <NavLink
       to={`/${project.id}`}

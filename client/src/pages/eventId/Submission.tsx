@@ -1,3 +1,4 @@
+import { hc } from "hono/client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   HiOutlineCheckCircle,
@@ -7,23 +8,54 @@ import {
   HiPencil,
 } from "react-icons/hi";
 import { NavLink, useParams } from "react-router";
-import { projectResSchema } from "../../../../common/schema";
+import type { AppType } from "../../../../server/src/main";
 import { Calendar } from "../../components/Calendar";
 import Header from "../../components/Header";
-import { useData } from "../../hooks";
+import { projectReviver } from "../../revivers";
+import type { Project } from "../../types";
 import { API_ENDPOINT } from "../../utils";
+
+const client = hc<AppType>(API_ENDPOINT);
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
-  const {
-    data: project,
-    loading: projectLoading,
-    refetch: projectRefetch,
-  } = useData(projectId ? `${API_ENDPOINT}/projects/${projectId}` : null, projectResSchema);
+  const [project, setProject] = useState<Project | null>(null);
+  const [projectLoading, setProjectLoading] = useState(true);
 
   const [postLoading, setPostLoading] = useState(false);
 
   const loading = projectLoading || postLoading;
+
+  const fetchProject = useCallback(async () => {
+    if (!projectId) {
+      setProject(null);
+      setProjectLoading(false);
+      return;
+    }
+    setProjectLoading(true);
+    try {
+      const res = await client.projects[":projectId"].$get(
+        {
+          param: { projectId },
+        },
+        {
+          init: { credentials: "include" },
+        },
+      );
+      if (res.status === 200) {
+        const data = await res.json();
+        const parsedData = projectReviver(data);
+        setProject(parsedData);
+      }
+    } catch (error) {
+      console.error("Error fetching project:", error);
+    } finally {
+      setProjectLoading(false);
+    }
+  }, [projectId]);
+  useEffect(() => {
+    fetchProject();
+  }, [fetchProject]);
 
   const meAsGuest = project?.meAsGuest;
   const myGuestId = meAsGuest?.id;
@@ -45,23 +77,22 @@ export default function SubmissionPage() {
       setPostLoading(true);
       const payload = {
         name: guestName,
-        projectId,
-        slots,
+        projectId: projectId || "",
+        slots: slots.map((slot) => ({
+          start: slot.start.toISOString(),
+          end: slot.end.toISOString(),
+        })),
       };
-      try {
-        // submitReqSchema.parse(payload) TODO:
-        1 + 1;
-      } catch (err) {
-        console.error(err);
-        return;
-      }
       if (!myGuestId) {
-        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/submissions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          credentials: "include",
-        });
+        const response = await client.projects[":projectId"].submissions.$post(
+          {
+            param: { projectId: projectId || "" },
+            json: payload,
+          },
+          {
+            init: { credentials: "include" },
+          },
+        );
         if (response.ok) {
           setToast({
             message: "提出しました。",
@@ -76,12 +107,15 @@ export default function SubmissionPage() {
           setTimeout(() => setToast(null), 3000);
         }
       } else {
-        const response = await fetch(`${API_ENDPOINT}/projects/${projectId}/submissions/mine`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          credentials: "include",
-        });
+        const response = await client.projects[":projectId"].submissions.mine.$put(
+          {
+            param: { projectId: projectId || "" },
+            json: payload,
+          },
+          {
+            init: { credentials: "include" },
+          },
+        );
         if (response.ok) {
           setToast({
             message: "更新しました。",
@@ -96,10 +130,10 @@ export default function SubmissionPage() {
           setTimeout(() => setToast(null), 3000);
         }
       }
-      await Promise.all([projectRefetch()]);
+      await Promise.all([fetchProject()]);
       setPostLoading(false);
     },
-    [guestName, projectId, projectRefetch],
+    [guestName, projectId, fetchProject],
   );
 
   useEffect(() => {

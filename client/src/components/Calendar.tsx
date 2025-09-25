@@ -14,12 +14,12 @@ import type {
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Tooltip } from "react-tooltip";
-import type { ProjectRes } from "../../../common/schema";
+import type { Project } from "../types";
 
 dayjs.locale("ja");
 
 type Props = {
-  project: ProjectRes;
+  project: Project;
   myGuestId: string;
   mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>;
   editMode: boolean;

@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
+import { hc } from "hono/client";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import {
@@ -11,10 +12,14 @@ import {
 } from "react-icons/hi";
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
-import { editReqSchema, projectReqSchema, projectResSchema } from "../../../common/schema";
+import { editReqSchema, projectReqSchema } from "../../../common/validators";
+import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
-import { useData } from "../hooks";
+import { projectReviver } from "../revivers";
+import type { Project } from "../types";
 import { API_ENDPOINT, FRONTEND_ORIGIN } from "../utils";
+
+const client = hc<AppType>(API_ENDPOINT);
 
 export default function ProjectPage() {
   const { eventId } = useParams();
@@ -23,10 +28,38 @@ export default function ProjectPage() {
   const formSchema = eventId ? editReqSchema : projectReqSchema;
   type FormSchemaType = z.infer<typeof formSchema>;
 
-  const { data: project, loading: projectLoading } = useData(
-    eventId ? `${API_ENDPOINT}/projects/${eventId}` : null,
-    projectResSchema,
-  );
+  const [project, setProject] = useState<Project | null>(null);
+  const [projectLoading, setProjectLoading] = useState(true);
+  useEffect(() => {
+    const fetchProject = async () => {
+      if (!eventId) {
+        setProject(null);
+        setProjectLoading(false);
+        return;
+      }
+      setProjectLoading(true);
+      try {
+        const res = await client.projects[":projectId"].$get(
+          {
+            param: { projectId: eventId },
+          },
+          {
+            init: { credentials: "include" },
+          },
+        );
+        if (res.status === 200) {
+          const data = await res.json();
+          const parsedData = projectReviver(data);
+          setProject(parsedData);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setProjectLoading(false);
+      }
+    };
+    fetchProject();
+  }, [eventId]);
 
   const [submitLoading, setSubmitLoading] = useState<boolean>(false);
   const loading = projectLoading || submitLoading;
@@ -109,38 +142,38 @@ export default function ProjectPage() {
     } satisfies z.infer<typeof projectReqSchema>;
 
     if (!project) {
-      const res = await fetch(`${API_ENDPOINT}/projects`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(eventData),
-        credentials: "include",
-      });
-
-      const { id: projectId, name: projectName } = await res.json(); // TODO:
+      const res = await client.projects.$post(
+        {
+          json: eventData,
+        },
+        {
+          init: { credentials: "include" },
+        },
+      );
 
       setSubmitLoading(false);
-      if (res.ok) {
+      if (res.status === 201) {
+        const { id, name } = await res.json();
         setDialogStatus({
-          projectId: projectId,
-          projectName: projectName,
+          projectId: id,
+          projectName: name,
         });
       } else {
+        const { message } = await res.json();
         setToast({
-          message: "送信に失敗しました",
+          message,
           variant: "error",
         });
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      const res = await fetch(`${API_ENDPOINT}/projects/${eventId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(eventData),
-        credentials: "include",
-      });
-
+      const res = await client.projects[":projectId"].$put(
+        { param: { projectId: project.id }, json: eventData },
+        { init: { credentials: "include" } },
+      );
       setSubmitLoading(false);
       if (res.ok) {
+        // TODO: 更新したデータで再レンダリング
         setToast({
           message: "更新しました。",
           variant: "success",
@@ -148,7 +181,7 @@ export default function ProjectPage() {
         setTimeout(() => setToast(null), 3000);
       } else {
         setToast({
-          message: res.status === 403 ? "認証に失敗しました。" : "更新に失敗しました。",
+          message: res.status === 403 ? "権限がありません。" : "更新に失敗しました。",
           variant: "error",
         });
         setTimeout(() => setToast(null), 3000);
@@ -376,10 +409,11 @@ export default function ProjectPage() {
                       onClick={async () => {
                         if (confirm("本当にこのイベントを削除しますか？")) {
                           try {
-                            const response = await fetch(`${API_ENDPOINT}/projects/${project.id}`, {
-                              method: "DELETE",
-                            });
-                            if (!response.ok) {
+                            const res = await client.projects[":projectId"].$delete(
+                              { param: { projectId: project.id } },
+                              { init: { credentials: "include" } },
+                            );
+                            if (!res.ok) {
                               throw new Error("削除に失敗しました。");
                             }
                             navigate("/home");
