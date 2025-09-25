@@ -16,3 +16,24 @@ jobs:
           node-version: "20"
       - run: npm ci
       - run: npx biome ci
+  client-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+      - run: cd client && npm ci
+      - run: cd client && npm run build
+  server-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+
+        with:
+          node-version: "20"
+      - run: cd server && npm ci
+      - run: cd server && npm run build
