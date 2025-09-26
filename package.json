@@ -1,7 +1,11 @@
 {
   "name": "itsuhima",
   "version": "1.0.0",
-  "workspaces": ["client", "server", "common"],
+  "workspaces": [
+    "client",
+    "server",
+    "common"
+  ],
   "scripts": {
     "watch:client": "cd client && npm run build:local:watch",
     "dev:functions": "cd client && npx wrangler pages dev dist --compatibility-date=2024-12-01",
@@ -15,7 +19,7 @@
     "fix:safe": "npx @biomejs/biome check --fix"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "2.0.6",
     "concurrently": "^9.1.2"
   }
 }
