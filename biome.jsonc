@@ -26,9 +26,6 @@
       "complexity": {
         "noForEach": "off"
       },
-      "a11y": {
-        "useButtonType": "off"
-      },
       "style": {
         "noParameterAssign": "error",
         "useAsConstAssertion": "error",

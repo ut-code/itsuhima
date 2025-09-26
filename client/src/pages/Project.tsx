@@ -404,6 +404,7 @@ export default function ProjectPage() {
                   <legend className="text-sm text-gray-400">イベントの削除</legend>
                   <div className="flex justify-end py-2">
                     <button
+                      type="button"
                       id="delete-button"
                       className="btn bg-red-700 text-white"
                       onClick={async () => {
@@ -467,6 +468,7 @@ export default function ProjectPage() {
                 value={`${FRONTEND_ORIGIN}/${dialogStatus.projectId}`}
               />
               <button
+                type="button"
                 onClick={async () => {
                   await navigator.clipboard.writeText(`${FRONTEND_ORIGIN}/${dialogStatus.projectId}`);
                   setCopied(true);

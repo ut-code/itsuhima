@@ -183,6 +183,7 @@ export default function SubmissionPage() {
                   <div className="flex flex-row gap-2">
                     {!!myGuestId && (
                       <button
+                        type="button"
                         className="btn text-gray-500"
                         disabled={loading}
                         onClick={async () => {
@@ -196,6 +197,7 @@ export default function SubmissionPage() {
                       </button>
                     )}
                     <button
+                      type="button"
                       className="btn btn-primary"
                       disabled={loading || !guestName}
                       onClick={() => {
@@ -219,6 +221,7 @@ export default function SubmissionPage() {
                     ホームに戻る
                   </NavLink>
                   <button
+                    type="button"
                     className="btn btn-primary"
                     disabled={loading}
                     onClick={() => {
