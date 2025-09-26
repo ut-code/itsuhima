@@ -19,7 +19,6 @@
     "fix:safe": "npx @biomejs/biome check --fix"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.0.6",
-    "concurrently": "^9.1.2"
+    "@biomejs/biome": "2.0.6"
   }
 }
