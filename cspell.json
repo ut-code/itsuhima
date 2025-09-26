@@ -3,7 +3,11 @@
   "ignorePaths": [],
   "dictionaryDefinitions": [],
   "dictionaries": [],
-  "words": ["itsuhima"],
+  "words": [
+    "fullcalendar",
+    "itsuhima",
+    "timegrid"
+  ],
   "ignoreWords": [],
   "import": []
 }
