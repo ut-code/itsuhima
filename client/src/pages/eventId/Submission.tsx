@@ -145,23 +145,23 @@ export default function SubmissionPage() {
 
   return (
     <>
-      <div className="h-[100dvh] flex flex-col">
+      <div className="flex h-[100dvh] flex-col">
         <Header />
         {loading ? (
-          <div className="w-full flex-1 flex justify-center items-center">
+          <div className="flex w-full flex-1 items-center justify-center">
             <span className="loading loading-dots loading-md text-gray-400" />
           </div>
         ) : !project ? (
-          <div className="flex flex-col justify-center items-center py-4 gap-4">
-            <p className="text-xl text-gray-600">イベントが見つかりませんでした。</p>
+          <div className="flex flex-col items-center justify-center gap-4 py-4">
+            <p className="text-gray-600 text-xl">イベントが見つかりませんでした。</p>
             <NavLink to={"/"} className="link">
               ホームに戻る
             </NavLink>
           </div>
         ) : (
-          <div className="p-4 flex flex-col flex-1 h-full overflow-y-auto">
-            <div className="flex justify-between items-center">
-              <h1 className="text-2xl mb-2 font-bold text-gray-800">{project.name} の日程調整</h1>
+          <div className="flex h-full flex-1 flex-col overflow-y-auto p-4">
+            <div className="flex items-center justify-between">
+              <h1 className="mb-2 font-bold text-2xl text-gray-800">{project.name} の日程調整</h1>
               {isHost && (
                 <NavLink to={`/${projectId}/edit`} className="btn btn-sm font-normal text-gray-600">
                   <HiOutlineCog />
@@ -170,7 +170,7 @@ export default function SubmissionPage() {
               )}
             </div>
             <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef} editMode={editMode} />
-            <div className="w-full p-2 flex justify-between items-center gap-2">
+            <div className="flex w-full items-center justify-between gap-2 p-2">
               {editMode ? (
                 <>
                   <input
@@ -178,11 +178,12 @@ export default function SubmissionPage() {
                     placeholder="あなたの名前"
                     value={guestName}
                     onChange={(e) => setGuestName(e.target.value)}
-                    className="flex-1 input text-base"
+                    className="input flex-1 text-base"
                   />
                   <div className="flex flex-row gap-2">
                     {!!myGuestId && (
                       <button
+                        type="button"
                         className="btn text-gray-500"
                         disabled={loading}
                         onClick={async () => {
@@ -196,6 +197,7 @@ export default function SubmissionPage() {
                       </button>
                     )}
                     <button
+                      type="button"
                       className="btn btn-primary"
                       disabled={loading || !guestName}
                       onClick={() => {
@@ -219,6 +221,7 @@ export default function SubmissionPage() {
                     ホームに戻る
                   </NavLink>
                   <button
+                    type="button"
                     className="btn btn-primary"
                     disabled={loading}
                     onClick={() => {
@@ -237,12 +240,12 @@ export default function SubmissionPage() {
       {toast && (
         <div className="toast toast-top toast-end z-50 mt-18">
           {toast.variant === "success" ? (
-            <div className="alert bg-gray-200 border-0">
+            <div className="alert border-0 bg-gray-200">
               <HiOutlineCheckCircle size={20} className="text-green-500" />
               <span>{toast.message}</span>
             </div>
           ) : (
-            <div className="alert bg-gray-200 border-0">
+            <div className="alert border-0 bg-gray-200">
               <HiOutlineExclamationCircle size={20} className="text-red-500" />
               <span>{toast.message}</span>
             </div>

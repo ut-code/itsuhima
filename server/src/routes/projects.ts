@@ -1,4 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
+import dotenv from "dotenv";
 import { Hono } from "hono";
 import { getSignedCookie, setSignedCookie } from "hono/cookie";
 import { nanoid } from "nanoid";
@@ -6,7 +7,6 @@ import { z } from "zod";
 import { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/validators.js";
 import { cookieOptions, prisma } from "../main.js";
 
-import dotenv from "dotenv";
 dotenv.config();
 
 const projectIdParamsSchema = z.object({ projectId: z.string().length(21) });
@@ -46,7 +46,7 @@ const router = new Hono()
 
       await setSignedCookie(c, "browserId", host.browserId, cookieSecret, cookieOptions);
       return c.json({ id: event.id, name: event.name }, 201);
-    } catch (err) {
+    } catch (_err) {
       return c.json({ message: "イベント作成時にエラーが発生しました" }, 500);
     }
   })
@@ -137,11 +137,11 @@ const router = new Hono()
       const data = {
         ...projectRow,
         hosts: projectRow.hosts.map((h) => {
-          const { browserId, ...rest } = h;
+          const { browserId: _, ...rest } = h;
           return rest;
         }),
         guests: projectRow.guests.map((g) => {
-          const { browserId, ...rest } = g;
+          const { browserId: _, ...rest } = g;
           return rest;
         }),
         isHost: browserId ? projectRow.hosts.some((h) => h.browserId === browserId) : false,

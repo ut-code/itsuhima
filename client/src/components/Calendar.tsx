@@ -206,9 +206,9 @@ export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) =>
   const handleEventContent = useCallback((info: EventContentArg) => {
     if (info.event.id === OTHERS_EVENT) {
       return (
-        <div className="flex w-full h-full justify-center items-center">
+        <div className="flex h-full w-full items-center justify-center">
           <div
-            className="badge badge-sm bg-gray-200 border-0 text-primary font-bold"
+            className="badge badge-sm border-0 bg-gray-200 font-bold text-primary"
             data-tooltip-id="member-info"
             data-tooltip-content={info.event.extendedProps.members?.join(", ")}
             data-tooltip-place="top"
@@ -220,13 +220,13 @@ export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) =>
     }
     if (info.event.id === MY_EVENT) {
       return (
-        <div className="h-full w-full text-gray-600 overflow-hidden">{`${dayjs(info.event.start).format("HH:mm")} - ${dayjs(info.event.end).format("HH:mm")}`}</div>
+        <div className="h-full w-full overflow-hidden text-gray-600">{`${dayjs(info.event.start).format("HH:mm")} - ${dayjs(info.event.end).format("HH:mm")}`}</div>
       );
     }
   }, []);
 
   return (
-    <div className="flex-1 my-2" id="ih-cal-wrapper">
+    <div className="my-2 flex-1" id="ih-cal-wrapper">
       <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, interactionPlugin]}

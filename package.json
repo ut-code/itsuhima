@@ -1,7 +1,11 @@
 {
   "name": "itsuhima",
   "version": "1.0.0",
-  "workspaces": ["client", "server", "common"],
+  "workspaces": [
+    "client",
+    "server",
+    "common"
+  ],
   "scripts": {
     "watch:client": "cd client && npm run build:local:watch",
     "dev:functions": "cd client && npx wrangler pages dev dist --compatibility-date=2024-12-01",
@@ -10,12 +14,11 @@
     "dev:db": "docker compose up",
     "build:server": "cd server && npm run build",
     "start:server": "node server/dist/server/src/main.js",
-    "check": "npx biome check",
+    "check": "npx @biomejs/biome check",
     "fix": "npx @biomejs/biome check --fix --unsafe",
     "fix:safe": "npx @biomejs/biome check --fix"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
-    "concurrently": "^9.1.2"
+    "@biomejs/biome": "2.0.6"
   }
 }
