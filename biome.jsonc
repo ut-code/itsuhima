@@ -23,9 +23,6 @@
       "correctness": {
         "noUnknownProperty": "off"
       },
-      "complexity": {
-        "noForEach": "off"
-      },
       "style": {
         "noParameterAssign": "error",
         "useAsConstAssertion": "error",

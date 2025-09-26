@@ -14,7 +14,7 @@
     "dev:db": "docker compose up",
     "build:server": "cd server && npm run build",
     "start:server": "node server/dist/server/src/main.js",
-    "check": "npx biome check",
+    "check": "npx @biomejs/biome check",
     "fix": "npx @biomejs/biome check --fix --unsafe",
     "fix:safe": "npx @biomejs/biome check --fix"
   },
