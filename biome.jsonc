@@ -37,6 +37,9 @@
         "useNumberNamespace": "error",
         "noInferrableTypes": "error",
         "noUselessElse": "error"
+      },
+      "nursery": {
+        "useSortedClasses": "warn"
       }
     }
   },

@@ -203,27 +203,27 @@ export default function ProjectPage() {
 
   return (
     <>
-      <div className="h-full w-full flex flex-col">
+      <div className="flex h-full w-full flex-col">
         <Header />
         {loading ? (
-          <div className="flex-1 flex justify-center items-center">
+          <div className="flex flex-1 items-center justify-center">
             <span className="loading loading-dots loading-md text-gray-400" />
           </div>
         ) : eventId !== undefined && !project ? (
-          <div className="flex flex-col justify-center items-center py-4 gap-4">
-            <p className="text-xl text-gray-600">イベントが見つかりませんでした。</p>
+          <div className="flex flex-col items-center justify-center gap-4 py-4">
+            <p className="text-gray-600 text-xl">イベントが見つかりませんでした。</p>
             <NavLink to={"/"} className="link">
               ホームに戻る
             </NavLink>
           </div>
         ) : (
-          <div className="container p-4 mx-auto">
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          <div className="container mx-auto p-4">
+            <h1 className="mb-2 font-bold text-2xl text-gray-800">
               {project ? `${project.name} の編集` : "イベントの作成"}
             </h1>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <label className="text-sm text-gray-400" htmlFor="input-name">
+                <label className="text-gray-400 text-sm" htmlFor="input-name">
                   イベント名
                 </label>
                 <input
@@ -233,21 +233,21 @@ export default function ProjectPage() {
                   placeholder="イベント名"
                   onBlur={() => trigger("name")}
                 />
-                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+                {errors.name && <p className="mt-1 text-red-500 text-sm">{errors.name.message}</p>}
               </div>
               {!project || (project && project.guests.length === 0) ? (
                 <>
-                  <div className="collapse collapse-arrow bg-blue-50 border border-blue-200 mb-4">
+                  <div className="collapse-arrow collapse mb-4 border border-blue-200 bg-blue-50">
                     <input
                       type="checkbox"
                       checked={isInfoExpanded}
                       onChange={(e) => setIsInfoExpanded(e.target.checked)}
                     />
-                    <div className="collapse-title text-sm font-medium text-primary flex items-center gap-2">
-                      <HiInformationCircle className="w-5 h-5" />
+                    <div className="collapse-title flex items-center gap-2 font-medium text-primary text-sm">
+                      <HiInformationCircle className="h-5 w-5" />
                       開始日・終了日／時間帯について
                     </div>
-                    <div className="collapse-content text-sm text-primary">
+                    <div className="collapse-content text-primary text-sm">
                       <p>
                         イツヒマでは、<strong>主催者側で候補日程を設定せずに</strong>日程調整します。
                         <br />
@@ -268,7 +268,7 @@ export default function ProjectPage() {
                   </div>
                   <div className="flex gap-2">
                     <div className="flex-1">
-                      <label htmlFor="input-start" className="text-sm text-gray-400">
+                      <label htmlFor="input-start" className="text-gray-400 text-sm">
                         開始日
                       </label>
                       <input
@@ -278,10 +278,10 @@ export default function ProjectPage() {
                         className={`input w-full text-base ${errors.startDate ? "input-error border-red-500" : ""}`}
                         onFocus={handleFieldFocus}
                       />
-                      {errors.startDate && <p className="text-red-500 text-sm mt-1">{errors.startDate.message}</p>}
+                      {errors.startDate && <p className="mt-1 text-red-500 text-sm">{errors.startDate.message}</p>}
                     </div>
                     <div className="flex-1">
-                      <label htmlFor="input-end" className="text-sm text-gray-400">
+                      <label htmlFor="input-end" className="text-gray-400 text-sm">
                         終了日
                       </label>
                       <input
@@ -291,13 +291,13 @@ export default function ProjectPage() {
                         className={`input w-full text-base ${errors.endDate ? "input-error border-red-500" : ""}`}
                         onFocus={handleFieldFocus}
                       />
-                      {errors.endDate && <p className="text-red-500 text-sm mt-1">{errors.endDate.message}</p>}
+                      {errors.endDate && <p className="mt-1 text-red-500 text-sm">{errors.endDate.message}</p>}
                     </div>
                   </div>
                   <fieldset>
-                    <legend className="text-sm text-gray-400">時間帯</legend>
-                    <div className="flex gap-2 items-center">
-                      <div className="flex-1 flex gap-1">
+                    <legend className="text-gray-400 text-sm">時間帯</legend>
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-1 gap-1">
                         <select
                           className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
                           value={fields[0].startTime.split(":")[0]}
@@ -344,7 +344,7 @@ export default function ProjectPage() {
                         </select>
                       </div>
                       <span>〜</span>
-                      <div className="flex-1 flex gap-1">
+                      <div className="flex flex-1 gap-1">
                         <select
                           className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
                           value={fields[0].endTime.split(":")[0]}
@@ -392,7 +392,7 @@ export default function ProjectPage() {
                       </div>
                     </div>
                     {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
-                      <p className="text-red-500 text-sm mt-1">{errors.allowedRanges.message}</p>
+                      <p className="mt-1 text-red-500 text-sm">{errors.allowedRanges.message}</p>
                     )}
                   </fieldset>
                 </>
@@ -401,7 +401,7 @@ export default function ProjectPage() {
               )}
               {project && (
                 <fieldset>
-                  <legend className="text-sm text-gray-400">イベントの削除</legend>
+                  <legend className="text-gray-400 text-sm">イベントの削除</legend>
                   <div className="flex justify-end py-2">
                     <button
                       type="button"
@@ -443,7 +443,7 @@ export default function ProjectPage() {
                   </div>
                 </fieldset>
               )}
-              <div className="p-4 w-full fixed bottom-0 left-0 flex justify-between">
+              <div className="fixed bottom-0 left-0 flex w-full justify-between p-4">
                 <NavLink to={"/home"} className="btn btn-outline btn-primary">
                   ホームに戻る
                 </NavLink>
@@ -493,12 +493,12 @@ export default function ProjectPage() {
       {toast && (
         <div className="toast toast-top toast-end z-50 mt-18">
           {toast.variant === "success" ? (
-            <div className="alert bg-gray-200 border-0">
+            <div className="alert border-0 bg-gray-200">
               <HiOutlineCheckCircle size={20} className="text-green-500" />
               <span>{toast.message}</span>
             </div>
           ) : (
-            <div className="alert bg-gray-200 border-0">
+            <div className="alert border-0 bg-gray-200">
               <HiOutlineExclamationCircle size={20} className="text-red-500" />
               <span>{toast.message}</span>
             </div>
