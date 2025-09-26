@@ -1,9 +1,9 @@
 import { BrowserRouter, Outlet, Route, Routes } from "react-router";
+import SubmissionPage from "./pages/eventId/Submission.tsx";
 import HomePage from "./pages/Home.tsx";
 import LandingPage from "./pages/Landing.tsx";
 import NotFoundPage from "./pages/NotFound.tsx";
 import ProjectPage from "./pages/Project.tsx";
-import SubmissionPage from "./pages/eventId/Submission.tsx";
 
 export default function App() {
   return (
