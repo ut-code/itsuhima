@@ -23,6 +23,7 @@ const isQuarterHour = (time: string): boolean => {
 
 const baseProjectReqSchema = z.object({
   name: z.string().min(1, "イベント名を入力してください"),
+  description: z.string(),
   startDate: z.string().min(1, "開始日を入力してください"),
   // TODO: 新規作成時のみ、過去日付を制限する必要
   // .refine(

@@ -26,6 +26,7 @@ const router = new Hono()
         data: {
           id: nanoid(),
           name: data.name,
+          description: data.description.trim() || null,
           startDate: new Date(data.startDate),
           endDate: new Date(data.endDate),
           allowedRanges: {
@@ -79,6 +80,7 @@ const router = new Hono()
         select: {
           id: true,
           name: true,
+          description: true,
           startDate: true,
           endDate: true,
           hosts: {
@@ -93,6 +95,7 @@ const router = new Hono()
         involvedProjects.map((p) => ({
           id: p.id,
           name: p.name,
+          description: p.description ?? "",
           startDate: p.startDate,
           endDate: p.endDate,
           isHost: p.hosts.some((host) => host.browserId === browserId),
@@ -136,6 +139,7 @@ const router = new Hono()
 
       const data = {
         ...projectRow,
+        description: projectRow.description ?? "",
         hosts: projectRow.hosts.map((h) => {
           const { browserId: _, ...rest } = h;
           return rest;
@@ -187,9 +191,13 @@ const router = new Hono()
       const updatedEvent = await prisma.project.update({
         where: { id: projectId },
         data: existingGuest
-          ? { name: data.name } // ゲストがいれば名前だけ
+          ? {
+              name: data.name,
+              description: data.description?.trim() || null,
+            } // ゲストがいれば名前と説明だけ
           : {
               name: data.name,
+              description: data.description?.trim() || null,
               startDate: data.startDate ? new Date(data.startDate) : undefined,
               endDate: data.endDate ? new Date(data.endDate) : undefined,
               allowedRanges: {

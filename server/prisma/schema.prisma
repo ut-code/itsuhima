@@ -17,8 +17,9 @@ datasource db {
 model Project {
   id            String         @id @db.VarChar(21)
   name          String
+  description   String? /// イベントの説明（オプショナル）
   /// 注: 日付部分のみ利用。時間は考慮しない。
-  startDate     DateTime 
+  startDate     DateTime
   /// 注: 日付部分のみ利用。時間は考慮しない。
   endDate       DateTime
   /// 注: 現在は 1 つのみ設定可能
