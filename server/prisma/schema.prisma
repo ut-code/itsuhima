@@ -15,18 +15,19 @@ datasource db {
 
 /// 日程調整プロジェクト。ユーザには「イベント」と表示。
 model Project {
-  id            String         @id @db.VarChar(21)
-  name          String
-  description   String? /// イベントの説明（オプショナル）
+  id                   String                @id @db.VarChar(21)
+  name                 String
+  description          String?
   /// 注: 日付部分のみ利用。時間は考慮しない。
-  startDate     DateTime
+  startDate            DateTime
   /// 注: 日付部分のみ利用。時間は考慮しない。
-  endDate       DateTime
+  endDate              DateTime
   /// 注: 現在は 1 つのみ設定可能
-  allowedRanges AllowedRange[]
-  slots         Slot[]
-  hosts         Host[]
-  guests        Guest[]
+  allowedRanges        AllowedRange[]
+  slots                Slot[]
+  hosts                Host[]
+  guests               Guest[]
+  participationOptions ParticipationOption[]
 }
 
 /// 日程調整プロジェクトにおいて入力が許可された時間帯。(注: 現在は 1 つの日程調整プロジェクトにつき 1 つのみ設定可能)
@@ -42,13 +43,15 @@ model AllowedRange {
 
 /// あるゲストが参加可能な時間帯の 1 つ。日を跨がない。
 model Slot {
-  id        String   @id @default(uuid())
-  from      DateTime
-  to        DateTime
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  guestId   String
-  guest     Guest    @relation(fields: [guestId], references: [id])
+  id                    String              @id @default(uuid())
+  from                  DateTime
+  to                    DateTime
+  projectId             String
+  project               Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  guestId               String
+  guest                 Guest               @relation(fields: [guestId], references: [id])
+  participationOptionId String
+  participationOption   ParticipationOption @relation(fields: [participationOptionId], references: [id])
 }
 
 /// 日程調整プロジェクトの作成者。
@@ -71,4 +74,16 @@ model Guest {
   slots     Slot[]
 
   @@unique([browserId, projectId])
+}
+
+/// 参加形態。
+model ParticipationOption {
+  id        String  @id @default(uuid())
+  label     String
+  color     String
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  slots     Slot[]
+
+  @@unique([projectId, label])
 }
