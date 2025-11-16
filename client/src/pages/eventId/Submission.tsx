@@ -169,6 +169,9 @@ export default function SubmissionPage() {
                 </NavLink>
               )}
             </div>
+            {project.description && (
+              <p className="mb-4 whitespace-pre-wrap text-gray-600 text-sm">{project.description}</p>
+            )}
             <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef} editMode={editMode} />
             <div className="flex w-full items-center justify-between gap-2 p-2">
               {editMode ? (

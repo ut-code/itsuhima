@@ -89,6 +89,7 @@ export default function ProjectPage() {
     mode: "onChange",
     defaultValues: {
       name: "",
+      description: "",
       startDate: eventId ? "" : dayjs().format("YYYY-MM-DD"),
       endDate: eventId ? "" : dayjs().add(6, "day").format("YYYY-MM-DD"),
       allowedRanges: [{ startTime: "00:00", endTime: "23:45" }],
@@ -109,6 +110,7 @@ export default function ProjectPage() {
     if (!project) return;
     reset({
       name: project.name,
+      description: project.description,
       startDate: dayjs(project.startDate).format("YYYY-MM-DD"),
       endDate: dayjs(project.endDate).format("YYYY-MM-DD"),
       allowedRanges: [
@@ -136,6 +138,7 @@ export default function ProjectPage() {
 
     const eventData = {
       name: data.name ?? "",
+      description: data.description ?? "",
       startDate: startDateTime,
       endDate: endDateTime,
       allowedRanges: rangeWithDateTime ?? [],
@@ -234,6 +237,19 @@ export default function ProjectPage() {
                   onBlur={() => trigger("name")}
                 />
                 {errors.name && <p className="mt-1 text-red-500 text-sm">{errors.name.message}</p>}
+              </div>
+              <div>
+                <label className="text-gray-400 text-sm" htmlFor="input-description">
+                  イベントの説明（任意）
+                </label>
+                <textarea
+                  {...register("description")}
+                  id="input-description"
+                  className={`textarea w-full text-base ${errors.description ? "textarea-error border-red-500" : ""}`}
+                  placeholder="イベントの詳細や注意事項などを入力"
+                  rows={3}
+                />
+                {errors.description && <p className="mt-1 text-red-500 text-sm">{errors.description.message}</p>}
               </div>
               {!project || (project && project.guests.length === 0) ? (
                 <>

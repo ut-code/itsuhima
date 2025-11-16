@@ -28,6 +28,7 @@ type Guest = {
 export type Project = {
   id: string;
   name: string;
+  description: string;
   startDate: Date;
   endDate: Date;
   allowedRanges: AllowedRange[];
@@ -41,6 +42,7 @@ export type Project = {
 export type ISOStringProject = {
   id: string;
   name: string;
+  description: string;
   startDate: string;
   endDate: string;
   allowedRanges: {
