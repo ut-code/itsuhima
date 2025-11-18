@@ -5,6 +5,19 @@ const isoStrToDate = z
   .datetime()
   .transform((str) => new Date(str));
 
+export const participationOptionSchema = z.object({
+  id: z.string().uuid(),
+  label: z.string().min(1).max(50),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+});
+
+// 作成時（id はフロントエンドで UUID を生成）
+export const participationOptionCreateSchema = z.object({
+  id: z.string().uuid(), // フロントエンドで生成
+  label: z.string().min(1, "ラベルを入力してください").max(50, "ラベルは50文字以内で入力してください"),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "無効なカラーコードです"),
+});
+
 export const submitReqSchema = z.object({
   name: z.string(),
   projectId: z.string().length(21),
@@ -12,6 +25,7 @@ export const submitReqSchema = z.object({
     z.object({
       start: isoStrToDate,
       end: isoStrToDate,
+      participationOptionId: z.string().uuid(),
     }),
   ),
 });
@@ -51,6 +65,7 @@ const baseProjectReqSchema = z.object({
     .refine((ranges) => ranges.every(({ startTime, endTime }) => isQuarterHour(startTime) && isQuarterHour(endTime)), {
       message: "開始時刻と終了時刻は15分単位で入力してください",
     }),
+  participationOptions: z.array(participationOptionCreateSchema).optional(),
 });
 
 export const projectReqSchema = baseProjectReqSchema.refine(
