@@ -22,16 +22,23 @@
 npm ci
 ```
 
-Prisma Client の生成
-
-```sh
-cd server
-npx prisma generate
-```
-
 `server/.env.sample` をコピーして `server/.env` を作成
 
 `client/.env.local.sample` をコピーして `client/.env.local` を作成
+
+開発用データベースの起動
+
+```sh
+docker compose up
+```
+
+スキーマの反映
+
+```sh
+cd server
+npx prisma migrate dev
+```
+
 ### 起動
 
 開発用データベースの起動
