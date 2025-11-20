@@ -14,6 +14,7 @@ import type {
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Tooltip } from "react-tooltip";
+import type { EditingSlot } from "../pages/eventId/Submission";
 import type { Project } from "../types";
 
 dayjs.locale("ja");
@@ -21,7 +22,8 @@ dayjs.locale("ja");
 type Props = {
   project: Project;
   myGuestId: string;
-  mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>;
+  editingSlots: EditingSlot[];
+  setEditingSlots: React.Dispatch<React.SetStateAction<EditingSlot[]>>;
   editMode: boolean;
 };
 
@@ -34,7 +36,7 @@ const SELECT_EVENT = "ih-select-event";
 const CREATE_SELECT_EVENT = "ih-create-select-event";
 const DELETE_SELECT_EVENT = "ih-delete-select-event";
 
-export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) => {
+export const Calendar = ({ project, myGuestId, editingSlots, setEditingSlots, editMode }: Props) => {
   const countDays = dayjs(project.endDate).startOf("day").diff(dayjs(project.startDate).startOf("day"), "day") + 1;
   // TODO: +1 は不要かも
   const myMatrixRef = useRef<CalendarMatrix>(new CalendarMatrix(countDays + 1, project.startDate));
@@ -57,7 +59,7 @@ export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) =>
       calendarApi.getEvents().forEach((event) => {
         event.remove();
       });
-      mySlotsRef.current = [];
+      setEditingSlots([]);
       myMatrixRef.current.clear();
       othersMatrixRef.current.clear();
 
@@ -83,10 +85,13 @@ export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) =>
           end: slot.to,
           textColor: "black",
         });
-        mySlotsRef.current.push({
-          from: slot.from,
-          to: slot.to,
-        });
+        setEditingSlots((prev) => [
+          ...prev,
+          {
+            from: slot.from,
+            to: slot.to,
+          },
+        ]);
       });
       othersMatrixRef.current.getSlots().forEach((slot) => {
         calendarApi.addEvent({
@@ -103,10 +108,10 @@ export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) =>
         });
       });
     }
-  }, [myGuestId, mySlotsRef, project, editMode]);
+  }, [myGuestId, setEditingSlots, project, editMode]);
 
+  // カレンダー外までドラッグした際に選択を解除するためのイベントハンドラを登録
   useEffect(() => {
-    // カレンダー外までドラッグした際に選択を解除
     const handleMouseUp = (e: MouseEvent | TouchEvent) => {
       const calendarEl = document.getElementById("ih-cal-wrapper");
 
@@ -191,9 +196,9 @@ export const Calendar = ({ project, myGuestId, mySlotsRef, editMode }: Props) =>
     // 選択が完了した際に編集する
     (info: DateSelectArg) => {
       if (!editMode) return false;
-      edit(info, isSelectionDeleting, calendarRef, myMatrixRef, mySlotsRef);
+      edit(info, isSelectionDeleting, calendarRef, myMatrixRef, setEditingSlots);
     },
-    [editMode, mySlotsRef],
+    [editMode, setEditingSlots],
   );
 
   const handleEventDidMount = useCallback((info: EventMountArg) => {
@@ -310,7 +315,7 @@ function edit(
   isSelectionDeleting: React.RefObject<boolean | null>,
   calendarRef: React.RefObject<FullCalendar | null>,
   myMatrixRef: React.RefObject<CalendarMatrix>,
-  mySlotsRef: React.RefObject<{ from: Date; to: Date }[]>,
+  setEditingSlots: React.Dispatch<React.SetStateAction<EditingSlot[]>>,
 ) {
   const { from, to } = getVertexes(info.start, info.end);
 
@@ -325,7 +330,7 @@ function edit(
     if (event.id !== MY_EVENT) return;
     event.remove();
   });
-  mySlotsRef.current = [];
+  setEditingSlots([]);
 
   myMatrixRef.current.setRange(from, to, isDeletion ? 0 : 1);
   myMatrixRef.current.getSlots().forEach((slot) => {
@@ -336,10 +341,13 @@ function edit(
       className: MY_EVENT,
       textColor: "black",
     });
-    mySlotsRef.current.push({
-      from: slot.from,
-      to: slot.to,
-    });
+    setEditingSlots((prev) => [
+      ...prev,
+      {
+        from: slot.from,
+        to: slot.to,
+      },
+    ]);
   });
 
   // 選択範囲をクリア

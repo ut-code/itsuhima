@@ -1,5 +1,5 @@
 import { hc } from "hono/client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   HiOutlineCheckCircle,
   HiOutlineCog,
@@ -12,10 +12,12 @@ import type { AppType } from "../../../../server/src/main";
 import { Calendar } from "../../components/Calendar";
 import Header from "../../components/Header";
 import { projectReviver } from "../../revivers";
-import type { Project } from "../../types";
+import type { Project, Slot } from "../../types";
 import { API_ENDPOINT } from "../../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
+
+export type EditingSlot = Pick<Slot, "from" | "to">;
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
@@ -65,7 +67,7 @@ export default function SubmissionPage() {
 
   const [guestName, setGuestName] = useState(meAsGuest?.name ?? "");
 
-  const mySlotsRef = useRef<{ from: Date; to: Date }[]>([]);
+  const [editingSlots, setEditingSlots] = useState<EditingSlot[]>([]);
 
   const [toast, setToast] = useState<{
     message: string;
@@ -172,7 +174,13 @@ export default function SubmissionPage() {
             {project.description && (
               <p className="mb-4 whitespace-pre-wrap text-gray-600 text-sm">{project.description}</p>
             )}
-            <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef} editMode={editMode} />
+            <Calendar
+              project={project}
+              myGuestId={myGuestId ?? ""}
+              editingSlots={editingSlots}
+              setEditingSlots={setEditingSlots}
+              editMode={editMode}
+            />
             <div className="flex w-full items-center justify-between gap-2 p-2">
               {editMode ? (
                 <>
@@ -191,7 +199,7 @@ export default function SubmissionPage() {
                         disabled={loading}
                         onClick={async () => {
                           if (confirm("更新をキャンセルします。よろしいですか？")) {
-                            mySlotsRef.current = [];
+                            setEditingSlots([]);
                             setEditMode(false);
                           }
                         }}
@@ -206,7 +214,7 @@ export default function SubmissionPage() {
                       onClick={() => {
                         if (!guestName) return;
                         postSubmissions(
-                          mySlotsRef.current.map((slot) => {
+                          editingSlots.map((slot) => {
                             return { start: slot.from, end: slot.to };
                           }),
                           myGuestId ?? "",
