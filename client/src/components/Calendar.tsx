@@ -14,7 +14,7 @@ import type {
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Tooltip } from "react-tooltip";
-import { CalendarMatrix } from "../lib/CalendarMatrix";
+import { EditingMatrix, ViewingMatrix } from "../lib/CalendarMatrix";
 import type { EditingSlot } from "../pages/eventId/Submission";
 
 dayjs.locale("ja");
@@ -60,8 +60,8 @@ export const Calendar = ({
 }: Props) => {
   const countDays = dayjs(endDate).startOf("day").diff(dayjs(startDate).startOf("day"), "day") + 1;
   // TODO: +1 は不要かも
-  const editingMatrixRef = useRef<CalendarMatrix>(new CalendarMatrix(countDays + 1, startDate));
-  const viewingMatrixRef = useRef<CalendarMatrix>(new CalendarMatrix(countDays + 1, startDate, true));
+  const editingMatrixRef = useRef<EditingMatrix>(new EditingMatrix(countDays + 1, startDate));
+  const viewingMatrixRef = useRef<ViewingMatrix>(new ViewingMatrix(countDays + 1, startDate));
 
   // TODO: 現在は最初の選択範囲のみ。FullCalendar の制約により、複数の allowedRanges には対応できないため、のちに selectAllow などで独自実装が必要
   const tmpAllowedRange = allowedRanges[0] ?? {
@@ -295,7 +295,7 @@ function displaySelection(
   info: DateSpanApi,
   isSelectionDeleting: React.RefObject<boolean | null>,
   calendarRef: React.RefObject<FullCalendar | null>,
-  myMatrixRef: React.RefObject<CalendarMatrix>,
+  myMatrixRef: React.RefObject<EditingMatrix>,
 ) {
   // 選択範囲の表示
   // 通常の selection では矩形選択ができないため、イベントを作成することで選択範囲を表現している。
