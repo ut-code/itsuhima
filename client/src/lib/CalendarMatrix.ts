@@ -127,22 +127,24 @@ export class ViewingMatrix extends CalendarMatrixBase {
   }
 
   private convertRunsToSlots(runs: { start: number; end: number; value: number }[], day: number): ViewingMatrixSlot[] {
-    return runs
-      // TODO: 値は null か非 null かで管理するようにしたい
-      .filter((run) => run.value !== 0)
-      .map((run) => {
-        const from = this.initialDate
-          .add(day, "day")
-          .add(run.start * 15, "minute")
-          .toDate();
-        const to = this.initialDate
-          .add(day, "day")
-          .add(run.end * 15, "minute")
-          .toDate();
-        const weight = run.value;
-        const guestNames = this.guestNames[day][run.start];
-        return { from, to, weight, guestNames };
-      });
+    return (
+      runs
+        // TODO: 値は null か非 null かで管理するようにしたい
+        .filter((run) => run.value !== 0)
+        .map((run) => {
+          const from = this.initialDate
+            .add(day, "day")
+            .add(run.start * 15, "minute")
+            .toDate();
+          const to = this.initialDate
+            .add(day, "day")
+            .add(run.end * 15, "minute")
+            .toDate();
+          const weight = run.value;
+          const guestNames = this.guestNames[day][run.start];
+          return { from, to, weight, guestNames };
+        })
+    );
   }
 
   clear(): void {
