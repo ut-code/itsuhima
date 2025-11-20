@@ -44,34 +44,29 @@ export class CalendarMatrix {
   getSlots(): MatrixSlot[] {
     const slots: MatrixSlot[] = [];
     for (let day = 0; day < this.matrix.length; day++) {
-      let eventCount: number | null = null;
-      let start: Date | null = null;
-      let startGuestNames: string[] | null = null;
-      for (let q = 0; q < this.matrix[day].length; q++) {
-        const currentCell = this.matrix[day][q];
-        if (eventCount !== currentCell) {
-          if (start && eventCount !== null) {
-            const from = start;
-            const to = this.initialDate
-              .add(day, "day")
-              .add(q * 15, "minute")
-              .toDate();
-            const weight = eventCount;
-            slots.push({ from, to, weight, guestNames: startGuestNames ?? undefined });
-            start = null;
-          }
-          if (currentCell !== 0) {
-            start = this.initialDate
-              .add(day, "day")
-              .add(q * 15, "minute")
-              .toDate();
-            startGuestNames = this.guestNames?.[day][q] ?? null;
-          }
-          eventCount = currentCell;
-        }
-      }
+      const runs = findRuns(this.matrix[day], (a, b) => a === b);
+      slots.push(...this.convertRunsToSlots(runs, day));
     }
     return slots;
+  }
+
+  private convertRunsToSlots(runs: { start: number; end: number; value: number }[], day: number): MatrixSlot[] {
+    return runs
+      // TODO: 値は null か非 null かで管理するようにしたい
+      .filter((run) => run.value !== 0)
+      .map((run) => {
+        const from = this.initialDate
+          .add(day, "day")
+          .add(run.start * 15, "minute")
+          .toDate();
+        const to = this.initialDate
+          .add(day, "day")
+          .add(run.end * 15, "minute")
+          .toDate();
+        const weight = run.value;
+        const guestNames = this.guestNames?.[day][run.start] ?? undefined;
+        return { from, to, weight, guestNames };
+      });
   }
 
   setRange(from: Date, to: Date, newValue: number): void {
@@ -103,4 +98,43 @@ export class CalendarMatrix {
       ? Array.from({ length: this.matrix.length }, () => Array.from({ length: this.quarterCount }, () => []))
       : null;
   }
+}
+
+/**
+ * 配列から、同じ値が連続する区間 (run) を抽出して返す。null の区間は含まない。
+ */
+function findRuns<T>(array: ReadonlyArray<T | null>, isSame: (a: T, b: T) => boolean) {
+  const runs: {
+    start: number; // inclusive
+    end: number; // exclusive
+    value: T;
+  }[] = [];
+
+  let currentRun: {
+    value: T;
+    start: number;
+  } | null = null;
+
+  for (let i = 0; i <= array.length; i++) {
+    // 番兵として、ループを 1 回余分に回し、その際の値は null とする
+    const value = i < array.length ? array[i] : null;
+
+    // 値が連続している場合は何もしない
+    const isContinuation = currentRun && value !== null && isSame(currentRun.value, value);
+    if (isContinuation) continue;
+
+    // 値が変わっている場合は
+    // 作成中の run があれば、その run を閉じる
+    if (currentRun) {
+      runs.push({
+        start: currentRun.start,
+        end: i,
+        value: currentRun.value,
+      });
+    }
+    // 新しい run の開始
+    currentRun = value !== null ? { value, start: i } : null;
+  }
+
+  return runs;
 }
