@@ -55,7 +55,7 @@
 /* 編集中のイベント */
 .ih-editing-event {
   border: 3px solid var(--color-primary) !important;
-  background-color: var(--ih-color-primary-transparent) !important;
+  /* background-color: var(--ih-color-primary-transparent) !important; */
 }
 
 /* 閲覧中のイベント */

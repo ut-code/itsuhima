@@ -12,6 +12,7 @@ import {
 } from "react-icons/hi";
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
+import { generateDistinctColor } from "../../../common/colors";
 import { editReqSchema, projectReqSchema } from "../../../common/validators";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
@@ -77,6 +78,8 @@ export default function ProjectPage() {
   const [copied, setCopied] = useState(false);
   const [isInfoExpanded, setIsInfoExpanded] = useState(!eventId); // 新規作成時は展開、編集時は折りたたみ
 
+  const [participationOptions, setParticipationOptions] = useState<{ id: string; label: string; color: string }[]>([]);
+
   const {
     register,
     handleSubmit,
@@ -120,6 +123,14 @@ export default function ProjectPage() {
         },
       ],
     });
+    // 参加形態の初期化
+    setParticipationOptions(
+      project.participationOptions.map((opt) => ({
+        id: opt.id,
+        label: opt.label,
+        color: opt.color,
+      })),
+    );
   }, [eventId, project, reset]);
 
   // 送信処理
@@ -142,6 +153,13 @@ export default function ProjectPage() {
       startDate: startDateTime,
       endDate: endDateTime,
       allowedRanges: rangeWithDateTime ?? [],
+      participationOptions: participationOptions
+        .filter((opt) => opt.label.trim()) // 空のラベルは除外
+        .map((opt) => ({
+          id: opt.id,
+          label: opt.label.trim(),
+          color: opt.color,
+        })),
     } satisfies z.infer<typeof projectReqSchema>;
 
     if (!project) {
@@ -415,6 +433,66 @@ export default function ProjectPage() {
               ) : (
                 <p>すでにデータを登録したユーザーがいるため、日時の編集はできません。</p>
               )}
+              <fieldset>
+                <legend className="text-gray-400 text-sm">参加形態（任意）</legend>
+                <p className="mb-2 text-gray-500 text-xs">
+                  参加形態を設定すると、参加者は「対面」「オンライン」などの形態を選んで日程を登録できます。
+                  設定しない場合は、デフォルトの参加形態が自動的に作成されます。
+                </p>
+
+                {participationOptions.map((option, index) => (
+                  <div key={option.id} className="mb-2 flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={option.color}
+                      onChange={(e) => {
+                        const newOptions = [...participationOptions];
+                        newOptions[index].color = e.target.value;
+                        setParticipationOptions(newOptions);
+                      }}
+                      className="h-10 w-10 cursor-pointer rounded border-0"
+                    />
+                    <input
+                      type="text"
+                      value={option.label}
+                      onChange={(e) => {
+                        const newOptions = [...participationOptions];
+                        newOptions[index].label = e.target.value;
+                        setParticipationOptions(newOptions);
+                      }}
+                      placeholder="参加形態名（例：対面、オンライン）"
+                      className="input input-bordered flex-1 text-base"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setParticipationOptions(participationOptions.filter((_, i) => i !== index));
+                      }}
+                      className="btn btn-ghost btn-sm text-error"
+                    >
+                      削除
+                    </button>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const existingColors = participationOptions.map((o) => o.color);
+                    setParticipationOptions([
+                      ...participationOptions,
+                      {
+                        id: crypto.randomUUID(),
+                        label: "",
+                        color: generateDistinctColor(existingColors),
+                      },
+                    ]);
+                  }}
+                  className="btn btn-outline btn-sm"
+                >
+                  + 参加形態を追加
+                </button>
+              </fieldset>
               {project && (
                 <fieldset>
                   <legend className="text-gray-400 text-sm">イベントの削除</legend>
