@@ -1,5 +1,5 @@
 import { hc } from "hono/client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   HiOutlineCheckCircle,
   HiOutlineCog,
@@ -145,6 +145,45 @@ export default function SubmissionPage() {
     }
   }, [meAsGuest]);
 
+  // init editing slots
+  useEffect(() => {
+    if (project?.meAsGuest?.slots && editMode) {
+      setEditingSlots(
+        project.meAsGuest.slots.map((slot) => ({
+          from: slot.from,
+          to: slot.to,
+        })),
+      );
+    }
+  }, [project, editMode]);
+
+  // init viewing slots
+  const viewingSlots = useMemo(() => {
+    if (!project) return [];
+
+    if (editMode) {
+      // 編集モードの場合、自分のスロットは editingSlots に入るので、こちらには自分以外のスロットのみ含める
+      return project.guests
+        .filter((g) => g.id !== myGuestId)
+        .flatMap((g) =>
+          g.slots.map((s) => ({
+            from: s.from,
+            to: s.to,
+            guestName: g.name,
+          })),
+        );
+    }
+
+    // 閲覧モードの場合は自分も含めて全て
+    return project.guests.flatMap((g) =>
+      g.slots.map((s) => ({
+        from: s.from,
+        to: s.to,
+        guestName: g.name,
+      })),
+    );
+  }, [project, myGuestId, editMode]);
+
   return (
     <>
       <div className="flex h-[100dvh] flex-col">
@@ -175,11 +214,13 @@ export default function SubmissionPage() {
               <p className="mb-4 whitespace-pre-wrap text-gray-600 text-sm">{project.description}</p>
             )}
             <Calendar
-              project={project}
-              myGuestId={myGuestId ?? ""}
-              editingSlots={editingSlots}
-              setEditingSlots={setEditingSlots}
+              startDate={project.startDate}
+              endDate={project.endDate}
+              allowedRanges={project.allowedRanges}
+              editingSlots={editMode ? editingSlots : []}
+              viewingSlots={viewingSlots}
               editMode={editMode}
+              onChangeEditingSlots={setEditingSlots}
             />
             <div className="flex w-full items-center justify-between gap-2 p-2">
               {editMode ? (
