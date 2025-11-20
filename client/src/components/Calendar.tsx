@@ -54,60 +54,59 @@ export const Calendar = ({ project, myGuestId, editingSlots, setEditingSlots, ed
   // init
   useEffect(() => {
     const calendarApi = calendarRef.current?.getApi();
+    if (!calendarApi) return;
 
-    if (calendarApi) {
-      calendarApi.getEvents().forEach((event) => {
-        event.remove();
-      });
-      setEditingSlots([]);
-      myMatrixRef.current.clear();
-      othersMatrixRef.current.clear();
+    calendarApi.getEvents().forEach((event) => {
+      event.remove();
+    });
+    setEditingSlots([]);
+    myMatrixRef.current.clear();
+    othersMatrixRef.current.clear();
 
-      const slots = project.guests.flatMap((guest) =>
-        guest.slots.map((slot) => ({
-          ...slot,
-          guestName: guest.name,
-        })),
-      );
-      slots.forEach((slot) => {
-        const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
-        if (editMode && slot.guestId === myGuestId) {
-          myMatrixRef.current.setRange(from, to, 1);
-        } else {
-          othersMatrixRef.current.incrementRange(from, to, slot.guestName);
-        }
+    const slots = project.guests.flatMap((guest) =>
+      guest.slots.map((slot) => ({
+        ...slot,
+        guestName: guest.name,
+      })),
+    );
+    slots.forEach((slot) => {
+      const { from, to } = getVertexes(new Date(slot.from), new Date(slot.to));
+      if (editMode && slot.guestId === myGuestId) {
+        myMatrixRef.current.setRange(from, to, 1);
+      } else {
+        othersMatrixRef.current.incrementRange(from, to, slot.guestName);
+      }
+    });
+    myMatrixRef.current.getSlots().forEach((slot) => {
+      calendarApi.addEvent({
+        id: MY_EVENT,
+        className: MY_EVENT,
+        start: slot.from,
+        end: slot.to,
+        textColor: "black",
       });
-      myMatrixRef.current.getSlots().forEach((slot) => {
-        calendarApi.addEvent({
-          id: MY_EVENT,
-          className: MY_EVENT,
-          start: slot.from,
-          end: slot.to,
-          textColor: "black",
-        });
-        setEditingSlots((prev) => [
-          ...prev,
-          {
-            from: slot.from,
-            to: slot.to,
-          },
-        ]);
+      setEditingSlots((prev) => [
+        ...prev,
+        {
+          from: slot.from,
+          to: slot.to,
+        },
+      ]);
+    });
+    othersMatrixRef.current.getSlots().forEach((slot) => {
+      calendarApi.addEvent({
+        id: OTHERS_EVENT,
+        className: OTHERS_EVENT,
+        start: slot.from,
+        end: slot.to,
+        color: `rgba(${PRIMARY_RGB.join(",")}, ${(1 - (1 - OPACITY) ** slot.weight).toFixed(3)})`,
+        display: "background",
+        extendedProps: {
+          members: slot.guestNames,
+          countMembers: slot.weight,
+        },
       });
-      othersMatrixRef.current.getSlots().forEach((slot) => {
-        calendarApi.addEvent({
-          id: OTHERS_EVENT,
-          className: OTHERS_EVENT,
-          start: slot.from,
-          end: slot.to,
-          color: `rgba(${PRIMARY_RGB.join(",")}, ${(1 - (1 - OPACITY) ** slot.weight).toFixed(3)})`,
-          display: "background",
-          extendedProps: {
-            members: slot.guestNames,
-            countMembers: slot.weight,
-          },
-        });
-      });
-    }
+    });
   }, [myGuestId, setEditingSlots, project, editMode]);
 
   // カレンダー外までドラッグした際に選択を解除するためのイベントハンドラを登録
