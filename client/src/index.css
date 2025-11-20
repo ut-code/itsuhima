@@ -52,14 +52,14 @@
   border: 3px dashed red !important;
 }
 
-/* 自分の日程 */
-.ih-my-event {
+/* 編集中のイベント */
+.ih-editing-event {
   border: 3px solid var(--color-primary) !important;
   background-color: var(--ih-color-primary-transparent) !important;
 }
 
-/* 他者の日程 */
-.ih-others-event {
+/* 閲覧中のイベント */
+.ih-viewing-event {
   border: 3px solid var(--color-gray-200) !important;
   /* background-color は重ね合わせ個数分 JS で計算*/
 }

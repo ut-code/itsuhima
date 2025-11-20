@@ -5,7 +5,7 @@ type ParticipationOption = {
   projectId: string;
 };
 
-type Slot = {
+export type Slot = {
   id: string;
   projectId: string;
   guestId: string;

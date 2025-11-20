@@ -1,5 +1,5 @@
 import { hc } from "hono/client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   HiOutlineCheckCircle,
   HiOutlineCog,
@@ -12,10 +12,12 @@ import type { AppType } from "../../../../server/src/main";
 import { Calendar } from "../../components/Calendar";
 import Header from "../../components/Header";
 import { projectReviver } from "../../revivers";
-import type { Project } from "../../types";
+import type { Project, Slot } from "../../types";
 import { API_ENDPOINT } from "../../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
+
+export type EditingSlot = Pick<Slot, "from" | "to">;
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
@@ -65,7 +67,7 @@ export default function SubmissionPage() {
 
   const [guestName, setGuestName] = useState(meAsGuest?.name ?? "");
 
-  const mySlotsRef = useRef<{ from: Date; to: Date }[]>([]);
+  const [editingSlots, setEditingSlots] = useState<EditingSlot[]>([]);
 
   const [toast, setToast] = useState<{
     message: string;
@@ -143,6 +145,45 @@ export default function SubmissionPage() {
     }
   }, [meAsGuest]);
 
+  // init editing slots
+  useEffect(() => {
+    if (project?.meAsGuest?.slots && editMode) {
+      setEditingSlots(
+        project.meAsGuest.slots.map((slot) => ({
+          from: slot.from,
+          to: slot.to,
+        })),
+      );
+    }
+  }, [project, editMode]);
+
+  // init viewing slots
+  const viewingSlots = useMemo(() => {
+    if (!project) return [];
+
+    if (editMode) {
+      // 編集モードの場合、自分のスロットは editingSlots に入るので、こちらには自分以外のスロットのみ含める
+      return project.guests
+        .filter((g) => g.id !== myGuestId)
+        .flatMap((g) =>
+          g.slots.map((s) => ({
+            from: s.from,
+            to: s.to,
+            guestName: g.name,
+          })),
+        );
+    }
+
+    // 閲覧モードの場合は自分も含めて全て
+    return project.guests.flatMap((g) =>
+      g.slots.map((s) => ({
+        from: s.from,
+        to: s.to,
+        guestName: g.name,
+      })),
+    );
+  }, [project, myGuestId, editMode]);
+
   return (
     <>
       <div className="flex h-[100dvh] flex-col">
@@ -172,7 +213,15 @@ export default function SubmissionPage() {
             {project.description && (
               <p className="mb-4 whitespace-pre-wrap text-gray-600 text-sm">{project.description}</p>
             )}
-            <Calendar project={project} myGuestId={myGuestId ?? ""} mySlotsRef={mySlotsRef} editMode={editMode} />
+            <Calendar
+              startDate={project.startDate}
+              endDate={project.endDate}
+              allowedRanges={project.allowedRanges}
+              editingSlots={editMode ? editingSlots : []}
+              viewingSlots={viewingSlots}
+              editMode={editMode}
+              onChangeEditingSlots={setEditingSlots}
+            />
             <div className="flex w-full items-center justify-between gap-2 p-2">
               {editMode ? (
                 <>
@@ -191,7 +240,7 @@ export default function SubmissionPage() {
                         disabled={loading}
                         onClick={async () => {
                           if (confirm("更新をキャンセルします。よろしいですか？")) {
-                            mySlotsRef.current = [];
+                            setEditingSlots([]);
                             setEditMode(false);
                           }
                         }}
@@ -206,7 +255,7 @@ export default function SubmissionPage() {
                       onClick={() => {
                         if (!guestName) return;
                         postSubmissions(
-                          mySlotsRef.current.map((slot) => {
+                          editingSlots.map((slot) => {
                             return { start: slot.from, end: slot.to };
                           }),
                           myGuestId ?? "",
