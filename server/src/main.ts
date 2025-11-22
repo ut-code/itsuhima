@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import dotenv from "dotenv";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { browserIdMiddleware } from "./middleware/browserId.js";
 import projectsRoutes from "./routes/projects.js";
 
 dotenv.config();
@@ -11,7 +12,11 @@ export const prisma = new PrismaClient();
 const port = process.env.PORT || 3000;
 const allowedOrigins = process.env.CORS_ALLOW_ORIGINS?.split(",") || [];
 
-const app = new Hono()
+type AppVariables = {
+  browserId: string;
+};
+
+const app = new Hono<{ Variables: AppVariables }>()
   .use(
     "*",
     cors({
@@ -19,6 +24,7 @@ const app = new Hono()
       credentials: true,
     }),
   )
+  .use("*", browserIdMiddleware)
   .get("/", (c) => {
     return c.json({ message: "Hello! イツヒマ？" });
   })
