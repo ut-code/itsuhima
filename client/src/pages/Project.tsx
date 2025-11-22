@@ -557,9 +557,15 @@ export default function ProjectPage() {
                 </fieldset>
               )}
               <div className="fixed bottom-0 left-0 flex max-h-18 w-full justify-between bg-white p-4 shadow-[0_-2px_8px_rgba(0,0,0,0.1)]">
-                <NavLink to={"/home"} className="btn btn-outline btn-primary">
-                  ホームに戻る
-                </NavLink>
+                {eventId ? (
+                  <NavLink to={`/${eventId}`} className="btn btn-outline btn-primary">
+                    日程調整に戻る
+                  </NavLink>
+                ) : (
+                  <NavLink to={"/home"} className="btn btn-outline btn-primary">
+                    ホームに戻る
+                  </NavLink>
+                )}
                 <button type="submit" className="btn btn-primary" disabled={!isValid || !isDirty}>
                   イベントを{project ? "更新" : "作成"}する
                 </button>
