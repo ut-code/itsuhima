@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
 import { hc } from "hono/client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import {
   HiClipboardCheck,
@@ -80,11 +80,6 @@ export default function ProjectPage() {
   const [copied, setCopied] = useState(false);
   const [isInfoExpanded, setIsInfoExpanded] = useState(!eventId); // 新規作成時は展開、編集時は折りたたみ
 
-  const [participationOptions, setParticipationOptions] = useState<{ id: string; label: string; color: string }[]>([]);
-  const [initialParticipationOptions, setInitialParticipationOptions] = useState<
-    { id: string; label: string; color: string }[]
-  >([]);
-
   const {
     register,
     handleSubmit,
@@ -108,11 +103,19 @@ export default function ProjectPage() {
     trigger("name");
   };
 
-  const { fields, replace } = useFieldArray({
+  const { fields: allowedRangeFields, replace } = useFieldArray({
     control,
     name: "allowedRanges",
   });
 
+  const {
+    fields: participationFields,
+    append: appendParticipation,
+    remove: removeParticipation,
+  } = useFieldArray({
+    control,
+    name: "participationOptions",
+  });
   useEffect(() => {
     if (!eventId) return;
     if (!project) return;
@@ -127,15 +130,12 @@ export default function ProjectPage() {
           endTime: dayjs(project.allowedRanges[0].endTime).format("HH:mm"),
         },
       ],
+      participationOptions: project.participationOptions.map((opt) => ({
+        id: opt.id,
+        label: opt.label,
+        color: opt.color,
+      })),
     });
-    // 参加形態の初期化
-    const initialOptions = project.participationOptions.map((opt) => ({
-      id: opt.id,
-      label: opt.label,
-      color: opt.color,
-    }));
-    setParticipationOptions(initialOptions);
-    setInitialParticipationOptions(initialOptions);
   }, [eventId, project, reset]);
 
   // 送信処理
@@ -158,13 +158,11 @@ export default function ProjectPage() {
       startDate: startDateTime,
       endDate: endDateTime,
       allowedRanges: rangeWithDateTime ?? [],
-      participationOptions: participationOptions
-        .filter((opt) => opt.label.trim()) // 空のラベルは除外
-        .map((opt) => ({
-          id: opt.id,
-          label: opt.label.trim(),
-          color: opt.color,
-        })),
+      participationOptions: (data.participationOptions ?? []).map((opt) => ({
+        id: opt.id,
+        label: opt.label.trim(),
+        color: opt.color,
+      })),
     } satisfies z.infer<typeof projectReqSchema>;
 
     if (!project) {
@@ -227,33 +225,6 @@ export default function ProjectPage() {
       }
     }
   }, [loading, project, isHost, eventId, navigate]);
-
-  // 参加形態の変更を検知 TODO: 実装の改善、rhf での管理
-  const hasParticipationOptionsChanged = useMemo(() => {
-    if (!eventId) return false; // 新規作成の場合は参加形態の変更を検知しない
-
-    // 数が違う場合
-    if (participationOptions.length !== initialParticipationOptions.length) return true;
-
-    // 各要素を比較
-    for (let i = 0; i < participationOptions.length; i++) {
-      const current = participationOptions[i];
-      const initial = initialParticipationOptions.find((opt) => opt.id === current.id);
-
-      // IDが見つからない（新規追加された）
-      if (!initial) return true;
-
-      // label または color が変更された
-      if (current.label !== initial.label || current.color !== initial.color) return true;
-    }
-
-    // 削除された要素がないかチェック
-    for (const initial of initialParticipationOptions) {
-      if (!participationOptions.find((opt) => opt.id === initial.id)) return true;
-    }
-
-    return false;
-  }, [participationOptions, initialParticipationOptions, eventId]);
 
   return (
     <>
@@ -367,12 +338,12 @@ export default function ProjectPage() {
                       <div className="flex flex-1 gap-1">
                         <select
                           className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
-                          value={fields[0].startTime.split(":")[0]}
+                          value={allowedRangeFields[0].startTime.split(":")[0]}
                           onChange={(e) => {
                             replace([
                               {
-                                startTime: `${e.target.value}:${fields[0].startTime.split(":")[1]}`,
-                                endTime: fields[0].endTime,
+                                startTime: `${e.target.value}:${allowedRangeFields[0].startTime.split(":")[1]}`,
+                                endTime: allowedRangeFields[0].endTime,
                               },
                             ]);
                           }}
@@ -389,12 +360,12 @@ export default function ProjectPage() {
                         </select>
                         <select
                           className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
-                          value={fields[0].startTime.split(":")[1]}
+                          value={allowedRangeFields[0].startTime.split(":")[1]}
                           onChange={(e) => {
                             replace([
                               {
-                                startTime: `${fields[0].startTime.split(":")[0]}:${e.target.value}`,
-                                endTime: fields[0].endTime,
+                                startTime: `${allowedRangeFields[0].startTime.split(":")[0]}:${e.target.value}`,
+                                endTime: allowedRangeFields[0].endTime,
                               },
                             ]);
                           }}
@@ -414,12 +385,12 @@ export default function ProjectPage() {
                       <div className="flex flex-1 gap-1">
                         <select
                           className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
-                          value={fields[0].endTime.split(":")[0]}
+                          value={allowedRangeFields[0].endTime.split(":")[0]}
                           onChange={(e) => {
                             replace([
                               {
-                                startTime: fields[0].startTime,
-                                endTime: `${e.target.value}:${fields[0].endTime.split(":")[1]}`,
+                                startTime: allowedRangeFields[0].startTime,
+                                endTime: `${e.target.value}:${allowedRangeFields[0].endTime.split(":")[1]}`,
                               },
                             ]);
                           }}
@@ -436,12 +407,12 @@ export default function ProjectPage() {
                         </select>
                         <select
                           className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
-                          value={fields[0].endTime.split(":")[1]}
+                          value={allowedRangeFields[0].endTime.split(":")[1]}
                           onChange={(e) => {
                             replace([
                               {
-                                startTime: fields[0].startTime,
-                                endTime: `${fields[0].endTime.split(":")[0]}:${e.target.value}`,
+                                startTime: allowedRangeFields[0].startTime,
+                                endTime: `${allowedRangeFields[0].endTime.split(":")[0]}:${e.target.value}`,
                               },
                             ]);
                           }}
@@ -472,34 +443,25 @@ export default function ProjectPage() {
                   参加形態を設定すると、参加者は「対面」「オンライン」などの形態を選んで日程を登録できます。
                 </p>
 
-                {participationOptions.map((option, index) => (
-                  <div key={option.id} className="mb-2 flex items-center gap-2">
+                {participationFields.map((field, index) => (
+                  <div key={field.id} className="mb-2 flex items-center gap-2">
+                    <input type="hidden" {...register(`participationOptions.${index}.id`)} value={field.id} />
                     <input
                       type="color"
-                      value={option.color}
-                      onChange={(e) => {
-                        const newOptions = [...participationOptions];
-                        newOptions[index].color = e.target.value;
-                        setParticipationOptions(newOptions);
-                      }}
+                      {...register(`participationOptions.${index}.color`)}
+                      defaultValue={field.color}
                       className="h-10 w-10 cursor-pointer rounded border-0"
                     />
                     <input
                       type="text"
-                      value={option.label}
-                      onChange={(e) => {
-                        const newOptions = [...participationOptions];
-                        newOptions[index].label = e.target.value;
-                        setParticipationOptions(newOptions);
-                      }}
+                      {...register(`participationOptions.${index}.label`)}
+                      defaultValue={field.label}
                       placeholder="参加形態名（例：対面、オンライン）"
                       className="input input-bordered flex-1 text-base"
                     />
                     <button
                       type="button"
-                      onClick={() => {
-                        setParticipationOptions(participationOptions.filter((_, i) => i !== index));
-                      }}
+                      onClick={() => removeParticipation(index)}
                       className="btn btn-ghost btn-sm text-error"
                     >
                       削除
@@ -510,15 +472,12 @@ export default function ProjectPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    const existingColors = participationOptions.map((o) => o.color);
-                    setParticipationOptions([
-                      ...participationOptions,
-                      {
-                        id: crypto.randomUUID(),
-                        label: "",
-                        color: generateDistinctColor(existingColors),
-                      },
-                    ]);
+                    const existingColors = participationFields.map((o) => o.color);
+                    appendParticipation({
+                      id: crypto.randomUUID(),
+                      label: "",
+                      color: generateDistinctColor(existingColors),
+                    });
                   }}
                   className="btn btn-outline btn-sm"
                 >
@@ -573,11 +532,7 @@ export default function ProjectPage() {
                 <NavLink to={"/home"} className="btn btn-outline btn-primary">
                   ホームに戻る
                 </NavLink>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={!isValid || (!isDirty && !hasParticipationOptionsChanged)}
-                >
+                <button type="submit" className="btn btn-primary" disabled={!isValid || !isDirty}>
                   イベントを{project ? "更新" : "作成"}する
                 </button>
               </div>
