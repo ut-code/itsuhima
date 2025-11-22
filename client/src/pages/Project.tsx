@@ -206,11 +206,22 @@ export default function ProjectPage() {
         });
         setTimeout(() => setToast(null), 3000);
       } else {
+        let errorMessage = "更新に失敗しました。";
+        try {
+          const data = await res.json();
+          if (data && typeof data.message === "string" && data.message.trim()) {
+            errorMessage = data.message.trim();
+          } else if (res.status === 403) {
+            errorMessage = "権限がありません。";
+          }
+        } catch (_) {
+          if (res.status === 403) errorMessage = "権限がありません。";
+        }
         setToast({
-          message: res.status === 403 ? "権限がありません。" : "更新に失敗しました。",
+          message: errorMessage,
           variant: "error",
         });
-        setTimeout(() => setToast(null), 3000);
+        setTimeout(() => setToast(null), 4000);
       }
     }
   };
