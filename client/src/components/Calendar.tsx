@@ -405,20 +405,29 @@ export const Calendar = ({
       }[] = info.event.extendedProps.optionBreakdown || [];
 
       return (
-        <div className="flex h-full w-full items-center justify-center gap-1">
-          {optionBreakdown.map((breakdown) => {
+        <div className="relative h-full w-full">
+          {optionBreakdown.map((breakdown, index) => {
             const tooltipContent = `${breakdown.optionLabel}: ${breakdown.members.join(", ")}`;
+            const position = ((index + 0.5) / optionBreakdown.length) * 100;
 
             return (
               <div
                 key={breakdown.optionId}
-                className="badge badge-sm border-0 bg-gray-200 font-bold"
-                style={{ color: breakdown.color }}
-                data-tooltip-id="member-info"
-                data-tooltip-content={tooltipContent}
-                data-tooltip-place="top"
+                className="absolute top-1/2"
+                style={{
+                  left: `${position}%`,
+                  transform: "translate(-50%, -50%)",
+                }}
               >
-                {breakdown.count}
+                <div
+                  className="badge border-0 bg-gray-200 font-bold text-[10px] px-1 py-0 h-4 min-h-0 sm:badge-sm sm:text-sm sm:px-2 sm:h-5"
+                  style={{ color: breakdown.color }}
+                  data-tooltip-id="member-info"
+                  data-tooltip-content={tooltipContent}
+                  data-tooltip-place="top"
+                >
+                  {breakdown.count}
+                </div>
               </div>
             );
           })}
