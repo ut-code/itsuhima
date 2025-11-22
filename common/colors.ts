@@ -1,12 +1,9 @@
 export const PREDEFINED_COLORS = [
-  "#4ECDC4", // 青緑
-  "#45B7D1", // 水色
-  "#96CEB4", // 緑
-  "#FFEAA7", // 黄
-  "#DDA0DD", // 紫
-  "#87CEEB", // スカイブルー
-  "#9B59B6", // 濃い紫
-  "#3498DB", // 青
+  "#FF9500", // オレンジ
+  "#10B981", // 緑
+  "#3B82F6", // 青
+  "#A855F7", // 紫
+  "#EC4899", // ピンク
 ];
 
 export const DEFAULT_PARTICIPATION_OPTION = {
