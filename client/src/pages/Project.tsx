@@ -115,6 +115,7 @@ export default function ProjectPage() {
     remove: removeParticipation,
   } = useFieldArray({
     control,
+    keyName: "fieldId", // RHF 内部のキーの名称。デフォルトの id だと participationOptions の id と衝突するため変更
     name: "participationOptions",
   });
   useEffect(() => {
@@ -455,47 +456,58 @@ export default function ProjectPage() {
                   参加形態を設定すると、参加者は「対面」「オンライン」などの形態を選んで日程を登録できます。
                 </p>
 
-                {participationFields.map((field, index) => (
-                  <div key={field.id} className="mb-2 w-full">
-                    <div className="flex items-center gap-2">
-                      <input type="hidden" {...register(`participationOptions.${index}.id`)} value={field.id} />
-                      <input
-                        type="color"
-                        {...register(`participationOptions.${index}.color`)}
-                        defaultValue={field.color}
-                        className="h-10 w-10 cursor-pointer rounded border-0"
-                      />
-                      <input
-                        type="text"
-                        {...register(`participationOptions.${index}.label`)}
-                        defaultValue={field.label}
-                        placeholder="参加形態名（例：対面、オンライン）"
-                        className={`input input-bordered flex-1 text-base ${errors.participationOptions?.[index]?.label ? "input-error border-red-500" : ""}`}
-                        onBlur={() => {
-                          // 値を変更していない場合でも空ならエラー表示させるため手動で検証
-                          trigger(`participationOptions.${index}.label` as const);
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeParticipation(index)}
-                        className="btn btn-ghost btn-sm text-error"
-                      >
-                        削除
-                      </button>
+                {participationFields.map((field, index) => {
+                  const hasSlots = project?.guests.some((guest) =>
+                    guest.slots.some((slot) => slot.participationOptionId === field.id),
+                  );
+                  return (
+                    <div key={field.id} className="mb-2 w-full">
+                      <div className="flex items-center gap-2">
+                        <input type="hidden" {...register(`participationOptions.${index}.id`)} value={field.id} />
+                        <input
+                          type="color"
+                          {...register(`participationOptions.${index}.color`)}
+                          defaultValue={field.color}
+                          className="h-10 w-10 cursor-pointer rounded border-0"
+                        />
+                        <input
+                          type="text"
+                          {...register(`participationOptions.${index}.label`)}
+                          defaultValue={field.label}
+                          placeholder="参加形態名（例：対面、オンライン）"
+                          className={`input input-bordered flex-1 text-base ${errors.participationOptions?.[index]?.label ? "input-error border-red-500" : ""}`}
+                          onBlur={() => {
+                            // 値を変更していない場合でも空ならエラー表示させるため手動で検証
+                            trigger(`participationOptions.${index}.label` as const);
+                          }}
+                        />
+                        <div
+                          className={hasSlots ? "tooltip tooltip-left" : ""}
+                          data-tip={hasSlots ? "すでにこの参加形態の日程が登録されているため、削除できません" : ""}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => removeParticipation(index)}
+                            className={`btn btn-ghost btn-sm text-error ${hasSlots ? "cursor-not-allowed opacity-40" : ""}`}
+                            disabled={hasSlots}
+                          >
+                            削除
+                          </button>
+                        </div>
+                      </div>
+                      {errors.participationOptions?.[index]?.label && (
+                        <p className="mt-1 text-red-500 text-xs">
+                          {errors.participationOptions[index]?.label?.message as string}
+                        </p>
+                      )}
+                      {errors.participationOptions?.[index]?.color && (
+                        <p className="mt-1 text-red-500 text-xs">
+                          {errors.participationOptions[index]?.color?.message as string}
+                        </p>
+                      )}
                     </div>
-                    {errors.participationOptions?.[index]?.label && (
-                      <p className="mt-1 text-red-500 text-xs">
-                        {errors.participationOptions[index]?.label?.message as string}
-                      </p>
-                    )}
-                    {errors.participationOptions?.[index]?.color && (
-                      <p className="mt-1 text-red-500 text-xs">
-                        {errors.participationOptions[index]?.color?.message as string}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
 
                 <button
                   type="button"
