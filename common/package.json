@@ -10,10 +10,10 @@
   "author": "",
   "license": "ISC",
   "description": "",
-  "devDependencies": {
-    "typescript": "^5.8.2"
-  },
   "dependencies": {
     "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
   }
 }

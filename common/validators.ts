@@ -1,42 +1,21 @@
 import { z } from "zod";
 
-// TODO: Is this the best way?
 const isoStrToDate = z
   .string()
   .datetime()
   .transform((str) => new Date(str));
 
-const host = z.object({
+export const participationOptionSchema = z.object({
   id: z.string().uuid(),
-  projectId: z.string().length(21),
+  label: z.string().min(1).max(50),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
 });
 
-const guest = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  projectId: z.string().length(21),
-});
-
-const project = z.object({
-  id: z.string().length(21),
-  name: z.string(),
-  startDate: isoStrToDate,
-  endDate: isoStrToDate,
-});
-
-const allowedRange = z.object({
-  id: z.string().uuid(),
-  projectId: z.string().length(21),
-  startTime: isoStrToDate,
-  endTime: isoStrToDate,
-});
-
-const slot = z.object({
-  id: z.string().uuid(),
-  projectId: z.string().length(21),
-  guestId: z.string().uuid(),
-  from: isoStrToDate,
-  to: isoStrToDate,
+// 作成時（id はフロントエンドで UUID を生成）
+export const participationOptionCreateSchema = z.object({
+  id: z.string().uuid(), // フロントエンドで生成
+  label: z.string().min(1, "ラベルを入力してください").max(50, "ラベルは50文字以内で入力してください"),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "無効なカラーコードです"),
 });
 
 export const submitReqSchema = z.object({
@@ -46,11 +25,10 @@ export const submitReqSchema = z.object({
     z.object({
       start: isoStrToDate,
       end: isoStrToDate,
+      participationOptionId: z.string().uuid(),
     }),
   ),
 });
-
-export type SubmitReq = z.infer<typeof submitReqSchema>;
 
 const isQuarterHour = (time: string): boolean => {
   const [, minute] = time.split(":").map(Number);
@@ -59,6 +37,7 @@ const isQuarterHour = (time: string): boolean => {
 
 const baseProjectReqSchema = z.object({
   name: z.string().min(1, "イベント名を入力してください"),
+  description: z.string(),
   startDate: z.string().min(1, "開始日を入力してください"),
   // TODO: 新規作成時のみ、過去日付を制限する必要
   // .refine(
@@ -86,6 +65,7 @@ const baseProjectReqSchema = z.object({
     .refine((ranges) => ranges.every(({ startTime, endTime }) => isQuarterHour(startTime) && isQuarterHour(endTime)), {
       message: "開始時刻と終了時刻は15分単位で入力してください",
     }),
+  participationOptions: z.array(participationOptionCreateSchema).min(1, "参加形態は最低1つ必要です"),
 });
 
 export const projectReqSchema = baseProjectReqSchema.refine(
@@ -113,61 +93,3 @@ export const editReqSchema = baseProjectReqSchema.partial().refine(
     path: ["endDate"],
   },
 );
-export const projectResSchema = project.extend({
-  allowedRanges: z.array(allowedRange),
-  hosts: z.array(host),
-  guests: z.array(
-    guest.extend({
-      slots: z.array(slot),
-    }),
-  ),
-  isHost: z.boolean(),
-  meAsGuest: guest.nullable(),
-});
-
-export type ProjectRes = z.infer<typeof projectResSchema>;
-
-export const involvedProjectsResSchema = z.array(
-  project.extend({
-    isHost: z.boolean(),
-  }),
-);
-
-export type InvolvedProjects = z.infer<typeof involvedProjectsResSchema>;
-
-// export const GuestSchema = z.object({
-//   id: z.string.optional(),
-//   name: z.string(),
-//   browserId: idSchema.optional(),
-//   eventId: idSchema,
-//   slots: z.array(SlotSchema).optional(),
-// });
-
-// ---------- Range ----------
-// export const RangeSchema = z.object({
-//   id: idSchema.optional(),
-//   startTime: z.string().datetime(),
-//   endTime: z.string().datetime(),
-//   eventId: idSchema.optional(),
-// });
-
-// ---------- Slot ----------
-// export const SlotSchema = z.object({
-//   id: idSchema.optional(),
-//   start: z.string().datetime(),
-//   end: z.string().datetime(),
-//   eventId: idSchema.optional(),
-//   guestId: idSchema.optional(),
-// });
-
-// // ---------- Event ----------
-// export const EventSchema = z.object({
-//   id: idSchema.optional(),
-//   name: z.string(),
-//   startDate: z.string().datetime(),
-//   endDate: z.string().datetime(),
-//   range: z.array(RangeSchema),
-//   slots: z.array(SlotSchema).optional(),
-//   hosts: z.array(HostRes).optional(),
-//   guests: z.array(GuestSchema).optional(),
-// });

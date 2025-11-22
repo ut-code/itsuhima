@@ -3,8 +3,8 @@ import { NavLink } from "react-router";
 
 export default function Header() {
   return (
-    <div className="navbar bg-primary shadow-sm sticky top-0 left-0 z-50">
-      <div className="text-2xl text-white px-2 font-mplus">
+    <div className="navbar sticky top-0 left-0 z-50 bg-primary shadow-sm">
+      <div className="px-2 font-mplus text-2xl text-white">
         <NavLink className="flex items-center gap-1" to="/">
           <img src="/logo-white.svg" alt="logo" width={24} />
           <span className="px-2">イツヒマ</span>
