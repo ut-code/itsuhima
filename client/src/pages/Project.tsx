@@ -275,7 +275,7 @@ export default function ProjectPage() {
             <h1 className="mb-2 font-bold text-2xl text-gray-800">
               {project ? `${project.name} の編集` : "イベントの作成"}
             </h1>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-18">
               <div>
                 <label className="text-gray-400 text-sm" htmlFor="input-name">
                   イベント名
@@ -470,7 +470,6 @@ export default function ProjectPage() {
                 <legend className="text-gray-400 text-sm">参加形態（任意）</legend>
                 <p className="mb-2 text-gray-500 text-xs">
                   参加形態を設定すると、参加者は「対面」「オンライン」などの形態を選んで日程を登録できます。
-                  設定しない場合は、デフォルトの参加形態が自動的に作成されます。
                 </p>
 
                 {participationOptions.map((option, index) => (
@@ -570,7 +569,7 @@ export default function ProjectPage() {
                   </div>
                 </fieldset>
               )}
-              <div className="fixed bottom-0 left-0 flex w-full justify-between p-4">
+              <div className="fixed bottom-0 left-0 flex max-h-18 w-full justify-between bg-white p-4 shadow-[0_-2px_8px_rgba(0,0,0,0.1)]">
                 <NavLink to={"/home"} className="btn btn-outline btn-primary">
                   ホームに戻る
                 </NavLink>
