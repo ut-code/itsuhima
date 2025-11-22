@@ -1,6 +1,6 @@
 import { hc } from "hono/client";
 import { useEffect, useState } from "react";
-import { HiOutlineCalendar, HiOutlineCog, HiOutlinePlus, HiOutlineUser, HiOutlineUsers } from "react-icons/hi";
+import { HiOutlineCalendar, HiOutlinePlus, HiOutlineUser, HiOutlineUsers } from "react-icons/hi";
 import { NavLink } from "react-router";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
@@ -108,38 +108,25 @@ function ProjectCard({ project }: { project: BriefProject }) {
   return (
     <NavLink
       to={`/${project.id}`}
-      className={`group hover:-translate-y-1 relative block transform overflow-hidden rounded-xl border-l-4 bg-white shadow-lg transition-all duration-300 hover:shadow-xl ${project.isHost ? "border-primary" : "border-secondary"}focus:outline-none focus:ring-4 focus:ring-primary/20`}
+      className={`group hover:-translate-y-1 relative block transform overflow-hidden rounded-xl border-l-4 bg-white shadow-lg transition-all duration-300 hover:shadow-xl ${project.isHost ? "border-primary" : "border-secondary"} focus:outline-none focus:ring-4 focus:ring-primary/20`}
       aria-label={`「${project.name}」の詳細を見る`}
     >
       <div className="p-6">
-        <div className="mb-4 flex items-start justify-between">
-          <div className="mr-2 flex-1">
-            <h3 className="mb-2 break-words font-semibold text-gray-800 text-xl">{project.name}</h3>
-            <span className={`badge badge-sm ${project.isHost ? "badge-primary" : "badge-secondary"}`}>
-              {project.isHost ? (
-                <>
-                  <HiOutlineUser size={12} />
-                  <span>主催者</span>
-                </>
-              ) : (
-                <>
-                  <HiOutlineUsers size={12} />
-                  <span>参加者</span>
-                </>
-              )}
-            </span>
-          </div>
-
-          {project.isHost && (
-            <NavLink
-              to={`/${project.id}/edit`}
-              onClick={(e) => e.stopPropagation()}
-              className="btn btn-ghost btn-sm px-3 py-1 text-gray-500 transition-all hover:bg-gray-100 hover:text-gray-700"
-            >
-              <HiOutlineCog size={14} />
-              <span className="text-xs">管理</span>
-            </NavLink>
-          )}
+        <div className="mb-4">
+          <h3 className="mb-2 break-words font-semibold text-gray-800 text-xl">{project.name}</h3>
+          <span className={`badge badge-sm ${project.isHost ? "badge-primary" : "badge-secondary"}`}>
+            {project.isHost ? (
+              <>
+                <HiOutlineUser size={12} />
+                <span>主催者</span>
+              </>
+            ) : (
+              <>
+                <HiOutlineUsers size={12} />
+                <span>参加者</span>
+              </>
+            )}
+          </span>
         </div>
 
         <div className="mb-4 flex items-center text-gray-600">

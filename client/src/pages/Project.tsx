@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
 import { hc } from "hono/client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import {
   HiClipboardCheck,
@@ -9,10 +9,11 @@ import {
   HiInformationCircle,
   HiOutlineCheckCircle,
   HiOutlineExclamationCircle,
+  HiOutlineTrash,
 } from "react-icons/hi";
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
-import { generateDistinctColor } from "../../../common/colors";
+import { DEFAULT_PARTICIPATION_OPTION, generateDistinctColor } from "../../../common/colors";
 import { editReqSchema, projectReqSchema } from "../../../common/validators";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
@@ -79,11 +80,7 @@ export default function ProjectPage() {
 
   const [copied, setCopied] = useState(false);
   const [isInfoExpanded, setIsInfoExpanded] = useState(!eventId); // 新規作成時は展開、編集時は折りたたみ
-
-  const [participationOptions, setParticipationOptions] = useState<{ id: string; label: string; color: string }[]>([]);
-  const [initialParticipationOptions, setInitialParticipationOptions] = useState<
-    { id: string; label: string; color: string }[]
-  >([]);
+  const [isParticipationExpanded, setIsParticipationExpanded] = useState(!!eventId); // 新規作成時は折りたたみ、編集時は展開
 
   const {
     register,
@@ -100,7 +97,16 @@ export default function ProjectPage() {
       description: "",
       startDate: eventId ? "" : dayjs().format("YYYY-MM-DD"),
       endDate: eventId ? "" : dayjs().add(6, "day").format("YYYY-MM-DD"),
-      allowedRanges: [{ startTime: "00:00", endTime: "23:45" }],
+      allowedRanges: [{ startTime: "08:00", endTime: "23:00" }],
+      participationOptions: eventId
+        ? []
+        : [
+            {
+              id: crypto.randomUUID(),
+              label: DEFAULT_PARTICIPATION_OPTION.label,
+              color: DEFAULT_PARTICIPATION_OPTION.color,
+            },
+          ],
     },
   });
 
@@ -108,11 +114,20 @@ export default function ProjectPage() {
     trigger("name");
   };
 
-  const { fields, replace } = useFieldArray({
+  const { fields: allowedRangeFields, replace } = useFieldArray({
     control,
     name: "allowedRanges",
   });
 
+  const {
+    fields: participationFields,
+    append: appendParticipation,
+    remove: removeParticipation,
+  } = useFieldArray({
+    control,
+    keyName: "fieldId", // RHF 内部のキーの名称。デフォルトの id だと participationOptions の id と衝突するため変更
+    name: "participationOptions",
+  });
   useEffect(() => {
     if (!eventId) return;
     if (!project) return;
@@ -127,15 +142,12 @@ export default function ProjectPage() {
           endTime: dayjs(project.allowedRanges[0].endTime).format("HH:mm"),
         },
       ],
+      participationOptions: project.participationOptions.map((opt) => ({
+        id: opt.id,
+        label: opt.label,
+        color: opt.color,
+      })),
     });
-    // 参加形態の初期化
-    const initialOptions = project.participationOptions.map((opt) => ({
-      id: opt.id,
-      label: opt.label,
-      color: opt.color,
-    }));
-    setParticipationOptions(initialOptions);
-    setInitialParticipationOptions(initialOptions);
   }, [eventId, project, reset]);
 
   // 送信処理
@@ -158,13 +170,11 @@ export default function ProjectPage() {
       startDate: startDateTime,
       endDate: endDateTime,
       allowedRanges: rangeWithDateTime ?? [],
-      participationOptions: participationOptions
-        .filter((opt) => opt.label.trim()) // 空のラベルは除外
-        .map((opt) => ({
-          id: opt.id,
-          label: opt.label.trim(),
-          color: opt.color,
-        })),
+      participationOptions: (data.participationOptions ?? []).map((opt) => ({
+        id: opt.id,
+        label: opt.label.trim(),
+        color: opt.color,
+      })),
     } satisfies z.infer<typeof projectReqSchema>;
 
     if (!project) {
@@ -207,11 +217,22 @@ export default function ProjectPage() {
         });
         setTimeout(() => setToast(null), 3000);
       } else {
+        let errorMessage = "更新に失敗しました。";
+        try {
+          const data = await res.json();
+          if (data && typeof data.message === "string" && data.message.trim()) {
+            errorMessage = data.message.trim();
+          } else if (res.status === 403) {
+            errorMessage = "権限がありません。";
+          }
+        } catch (_) {
+          if (res.status === 403) errorMessage = "権限がありません。";
+        }
         setToast({
-          message: res.status === 403 ? "権限がありません。" : "更新に失敗しました。",
+          message: errorMessage,
           variant: "error",
         });
-        setTimeout(() => setToast(null), 3000);
+        setTimeout(() => setToast(null), 4000);
       }
     }
   };
@@ -227,33 +248,6 @@ export default function ProjectPage() {
       }
     }
   }, [loading, project, isHost, eventId, navigate]);
-
-  // 参加形態の変更を検知 TODO: 実装の改善、rhf での管理
-  const hasParticipationOptionsChanged = useMemo(() => {
-    if (!eventId) return false; // 新規作成の場合は参加形態の変更を検知しない
-
-    // 数が違う場合
-    if (participationOptions.length !== initialParticipationOptions.length) return true;
-
-    // 各要素を比較
-    for (let i = 0; i < participationOptions.length; i++) {
-      const current = participationOptions[i];
-      const initial = initialParticipationOptions.find((opt) => opt.id === current.id);
-
-      // IDが見つからない（新規追加された）
-      if (!initial) return true;
-
-      // label または color が変更された
-      if (current.label !== initial.label || current.color !== initial.color) return true;
-    }
-
-    // 削除された要素がないかチェック
-    for (const initial of initialParticipationOptions) {
-      if (!participationOptions.find((opt) => opt.id === initial.id)) return true;
-    }
-
-    return false;
-  }, [participationOptions, initialParticipationOptions, eventId]);
 
   return (
     <>
@@ -275,7 +269,7 @@ export default function ProjectPage() {
             <h1 className="mb-2 font-bold text-2xl text-gray-800">
               {project ? `${project.name} の編集` : "イベントの作成"}
             </h1>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-18">
               <div>
                 <label className="text-gray-400 text-sm" htmlFor="input-name">
                   イベント名
@@ -302,230 +296,276 @@ export default function ProjectPage() {
                 />
                 {errors.description && <p className="mt-1 text-red-500 text-sm">{errors.description.message}</p>}
               </div>
-              {!project || (project && project.guests.length === 0) ? (
-                <>
-                  <div className="collapse-arrow collapse mb-4 border border-blue-200 bg-blue-50">
-                    <input
-                      type="checkbox"
-                      checked={isInfoExpanded}
-                      onChange={(e) => setIsInfoExpanded(e.target.checked)}
-                    />
-                    <div className="collapse-title flex items-center gap-2 font-medium text-primary text-sm">
-                      <HiInformationCircle className="h-5 w-5" />
-                      開始日・終了日／時間帯について
-                    </div>
-                    <div className="collapse-content text-primary text-sm">
-                      <p>
-                        イツヒマでは、<strong>主催者側で候補日程を設定せずに</strong>日程調整します。
-                        <br />
-                        ここでは、参加者の日程を知りたい日付の範囲と時間帯の範囲を設定してください。
-                        <br />
-                        詳しくは、
-                        <a
-                          href="https://utcode.notion.site/1e4ca5f557bc80f2b697ca7b9342dc89?pvs=4"
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="link"
-                        >
-                          使い方ページ
-                        </a>
-                        をご覧ください。
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <label htmlFor="input-start" className="text-gray-400 text-sm">
-                        開始日
-                      </label>
-                      <input
-                        type="date"
-                        {...register("startDate")}
-                        id="input-start"
-                        className={`input w-full text-base ${errors.startDate ? "input-error border-red-500" : ""}`}
-                        onFocus={handleFieldFocus}
-                      />
-                      {errors.startDate && <p className="mt-1 text-red-500 text-sm">{errors.startDate.message}</p>}
-                    </div>
-                    <div className="flex-1">
-                      <label htmlFor="input-end" className="text-gray-400 text-sm">
-                        終了日
-                      </label>
-                      <input
-                        type="date"
-                        {...register("endDate")}
-                        id="input-end"
-                        className={`input w-full text-base ${errors.endDate ? "input-error border-red-500" : ""}`}
-                        onFocus={handleFieldFocus}
-                      />
-                      {errors.endDate && <p className="mt-1 text-red-500 text-sm">{errors.endDate.message}</p>}
-                    </div>
-                  </div>
-                  <fieldset>
-                    <legend className="text-gray-400 text-sm">時間帯</legend>
-                    <div className="flex items-center gap-2">
-                      <div className="flex flex-1 gap-1">
-                        <select
-                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
-                          value={fields[0].startTime.split(":")[0]}
-                          onChange={(e) => {
-                            replace([
-                              {
-                                startTime: `${e.target.value}:${fields[0].startTime.split(":")[1]}`,
-                                endTime: fields[0].endTime,
-                              },
-                            ]);
-                          }}
-                          onFocus={handleFieldFocus}
-                        >
-                          <option value="" disabled>
-                            時
-                          </option>
-                          {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
-                            <option key={h} value={h}>
-                              {h}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
-                          value={fields[0].startTime.split(":")[1]}
-                          onChange={(e) => {
-                            replace([
-                              {
-                                startTime: `${fields[0].startTime.split(":")[0]}:${e.target.value}`,
-                                endTime: fields[0].endTime,
-                              },
-                            ]);
-                          }}
-                          onFocus={handleFieldFocus}
-                        >
-                          <option value="" disabled>
-                            分
-                          </option>
-                          {["00", "15", "30", "45"].map((h) => (
-                            <option key={h} value={h}>
-                              {h}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <span>〜</span>
-                      <div className="flex flex-1 gap-1">
-                        <select
-                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
-                          value={fields[0].endTime.split(":")[0]}
-                          onChange={(e) => {
-                            replace([
-                              {
-                                startTime: fields[0].startTime,
-                                endTime: `${e.target.value}:${fields[0].endTime.split(":")[1]}`,
-                              },
-                            ]);
-                          }}
-                          onFocus={handleFieldFocus}
-                        >
-                          <option value="" disabled>
-                            時
-                          </option>
-                          {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
-                            <option key={h} value={h}>
-                              {h}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
-                          value={fields[0].endTime.split(":")[1]}
-                          onChange={(e) => {
-                            replace([
-                              {
-                                startTime: fields[0].startTime,
-                                endTime: `${fields[0].endTime.split(":")[0]}:${e.target.value}`,
-                              },
-                            ]);
-                          }}
-                          onFocus={handleFieldFocus}
-                        >
-                          <option value="" disabled>
-                            分
-                          </option>
-                          {["00", "15", "30", "45"].map((h) => (
-                            <option key={h} value={h}>
-                              {h}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
-                      <p className="mt-1 text-red-500 text-sm">{errors.allowedRanges.message}</p>
-                    )}
-                  </fieldset>
-                </>
-              ) : (
-                <p>すでにデータを登録したユーザーがいるため、日時の編集はできません。</p>
-              )}
+              <div className="collapse-arrow collapse mb-4 border border-blue-200 bg-blue-50">
+                <input type="checkbox" checked={isInfoExpanded} onChange={(e) => setIsInfoExpanded(e.target.checked)} />
+                <div className="collapse-title flex items-center gap-2 font-medium text-primary text-sm">
+                  <HiInformationCircle className="h-5 w-5" />
+                  開始日・終了日／時間帯について
+                </div>
+                <div className="collapse-content text-primary text-sm">
+                  <p>
+                    イツヒマでは、<strong>主催者側で候補日程を設定せずに</strong>日程調整します。
+                    <br />
+                    ここでは、参加者の日程を知りたい日付の範囲と時間帯の範囲を設定してください。
+                    <br />
+                    詳しくは、
+                    <a
+                      href="https://utcode.notion.site/1e4ca5f557bc80f2b697ca7b9342dc89?pvs=4"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="link"
+                    >
+                      使い方ページ
+                    </a>
+                    をご覧ください。
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <div
+                  className={project && project.guests.length > 0 ? "tooltip tooltip-top flex-1" : "flex-1"}
+                  data-tip={
+                    project && project.guests.length > 0
+                      ? "すでに日程を登録したユーザーがいるため、開始日の編集はできません"
+                      : ""
+                  }
+                >
+                  <label htmlFor="input-start" className="text-gray-400 text-sm">
+                    開始日
+                  </label>
+                  <input
+                    type="date"
+                    {...register("startDate")}
+                    id="input-start"
+                    className={`input w-full text-base ${errors.startDate ? "input-error border-red-500" : ""} ${project && project.guests.length > 0 ? "cursor-not-allowed opacity-60" : ""}`}
+                    onFocus={handleFieldFocus}
+                    disabled={!!(project && project.guests.length > 0)}
+                  />
+                  {errors.startDate && <p className="mt-1 text-red-500 text-sm">{errors.startDate.message}</p>}
+                </div>
+                <div
+                  className={project && project.guests.length > 0 ? "tooltip tooltip-top flex-1" : "flex-1"}
+                  data-tip={
+                    project && project.guests.length > 0
+                      ? "すでに日程を登録したユーザーがいるため、終了日の編集はできません"
+                      : ""
+                  }
+                >
+                  <label htmlFor="input-end" className="text-gray-400 text-sm">
+                    終了日
+                  </label>
+                  <input
+                    type="date"
+                    {...register("endDate")}
+                    id="input-end"
+                    className={`input w-full text-base ${errors.endDate ? "input-error border-red-500" : ""} ${project && project.guests.length > 0 ? "cursor-not-allowed opacity-60" : ""}`}
+                    onFocus={handleFieldFocus}
+                    disabled={!!(project && project.guests.length > 0)}
+                  />
+                  {errors.endDate && <p className="mt-1 text-red-500 text-sm">{errors.endDate.message}</p>}
+                </div>
+              </div>
               <fieldset>
-                <legend className="text-gray-400 text-sm">参加形態（任意）</legend>
-                <p className="mb-2 text-gray-500 text-xs">
-                  参加形態を設定すると、参加者は「対面」「オンライン」などの形態を選んで日程を登録できます。
-                  設定しない場合は、デフォルトの参加形態が自動的に作成されます。
-                </p>
+                <legend className="text-gray-400 text-sm">時間帯</legend>
+                <div
+                  className={project && project.guests.length > 0 ? "tooltip tooltip-top w-full" : "w-full"}
+                  data-tip={
+                    project && project.guests.length > 0
+                      ? "すでに日程を登録したユーザーがいるため、時間帯の編集はできません"
+                      : ""
+                  }
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-1 gap-1">
+                      <select
+                        className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""} ${project && project.guests.length > 0 ? "cursor-not-allowed opacity-60" : ""}`}
+                        value={allowedRangeFields[0].startTime.split(":")[0]}
+                        onChange={(e) => {
+                          replace([
+                            {
+                              startTime: `${e.target.value}:${allowedRangeFields[0].startTime.split(":")[1]}`,
+                              endTime: allowedRangeFields[0].endTime,
+                            },
+                          ]);
+                        }}
+                        onFocus={handleFieldFocus}
+                        disabled={!!(project && project.guests.length > 0)}
+                      >
+                        <option value="" disabled>
+                          時
+                        </option>
+                        {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""} ${project && project.guests.length > 0 ? "cursor-not-allowed opacity-60" : ""}`}
+                        value={allowedRangeFields[0].startTime.split(":")[1]}
+                        onChange={(e) => {
+                          replace([
+                            {
+                              startTime: `${allowedRangeFields[0].startTime.split(":")[0]}:${e.target.value}`,
+                              endTime: allowedRangeFields[0].endTime,
+                            },
+                          ]);
+                        }}
+                        onFocus={handleFieldFocus}
+                        disabled={!!(project && project.guests.length > 0)}
+                      >
+                        <option value="" disabled>
+                          分
+                        </option>
+                        {["00", "15", "30", "45"].map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <span>〜</span>
+                    <div className="flex flex-1 gap-1">
+                      <select
+                        className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""} ${project && project.guests.length > 0 ? "cursor-not-allowed opacity-60" : ""}`}
+                        value={allowedRangeFields[0].endTime.split(":")[0]}
+                        onChange={(e) => {
+                          replace([
+                            {
+                              startTime: allowedRangeFields[0].startTime,
+                              endTime: `${e.target.value}:${allowedRangeFields[0].endTime.split(":")[1]}`,
+                            },
+                          ]);
+                        }}
+                        onFocus={handleFieldFocus}
+                        disabled={!!(project && project.guests.length > 0)}
+                      >
+                        <option value="" disabled>
+                          時
+                        </option>
+                        {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""} ${project && project.guests.length > 0 ? "cursor-not-allowed opacity-60" : ""}`}
+                        value={allowedRangeFields[0].endTime.split(":")[1]}
+                        onChange={(e) => {
+                          replace([
+                            {
+                              startTime: allowedRangeFields[0].startTime,
+                              endTime: `${allowedRangeFields[0].endTime.split(":")[0]}:${e.target.value}`,
+                            },
+                          ]);
+                        }}
+                        onFocus={handleFieldFocus}
+                        disabled={!!(project && project.guests.length > 0)}
+                      >
+                        <option value="" disabled>
+                          分
+                        </option>
+                        {["00", "15", "30", "45"].map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
+                  <p className="mt-1 text-red-500 text-sm">{errors.allowedRanges.message}</p>
+                )}
+              </fieldset>
+              <div className="collapse-arrow collapse mb-4 border border-base-300 bg-base-200">
+                <input
+                  type="checkbox"
+                  checked={isParticipationExpanded}
+                  onChange={(e) => setIsParticipationExpanded(e.target.checked)}
+                />
+                <div className="collapse-title font-medium text-sm">参加形態の設定 (任意)</div>
+                <div className="collapse-content">
+                  <fieldset>
+                    <p className="mb-2 text-gray-500 text-xs">
+                      参加形態を設定すると、参加者は「対面」「オンライン」などの形態を選んで日程を登録できます。
+                    </p>
 
-                {participationOptions.map((option, index) => (
-                  <div key={option.id} className="mb-2 flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={option.color}
-                      onChange={(e) => {
-                        const newOptions = [...participationOptions];
-                        newOptions[index].color = e.target.value;
-                        setParticipationOptions(newOptions);
-                      }}
-                      className="h-10 w-10 cursor-pointer rounded border-0"
-                    />
-                    <input
-                      type="text"
-                      value={option.label}
-                      onChange={(e) => {
-                        const newOptions = [...participationOptions];
-                        newOptions[index].label = e.target.value;
-                        setParticipationOptions(newOptions);
-                      }}
-                      placeholder="参加形態名（例：対面、オンライン）"
-                      className="input input-bordered flex-1 text-base"
-                    />
+                    {participationFields.map((field, index) => {
+                      const hasSlots = project?.guests.some((guest) =>
+                        guest.slots.some((slot) => slot.participationOptionId === field.id),
+                      );
+                      const isLastOption = participationFields.length === 1;
+                      const cannotDelete = hasSlots || isLastOption;
+                      const tooltipMessage = hasSlots
+                        ? "すでにこの参加形態の日程が登録されているため、削除できません"
+                        : isLastOption
+                          ? "最低1つの参加形態が必要です"
+                          : "";
+                      return (
+                        <div key={field.id} className="mb-2 w-full">
+                          <div className="flex items-center gap-2">
+                            <input type="hidden" {...register(`participationOptions.${index}.id`)} value={field.id} />
+                            <input
+                              type="color"
+                              {...register(`participationOptions.${index}.color`)}
+                              defaultValue={field.color}
+                              className="h-10 w-10 cursor-pointer rounded border-0"
+                            />
+                            <input
+                              type="text"
+                              {...register(`participationOptions.${index}.label`)}
+                              defaultValue={field.label}
+                              placeholder="参加形態名（例：対面、オンライン）"
+                              className={`input input-bordered flex-1 text-base ${errors.participationOptions?.[index]?.label ? "input-error border-red-500" : ""}`}
+                              onBlur={() => {
+                                // 値を変更していない場合でも空ならエラー表示させるため手動で検証
+                                trigger(`participationOptions.${index}.label` as const);
+                              }}
+                            />
+                            <div className={cannotDelete ? "tooltip tooltip-left" : ""} data-tip={tooltipMessage}>
+                              <button
+                                type="button"
+                                onClick={() => removeParticipation(index)}
+                                className={`btn btn-ghost btn-sm text-error ${cannotDelete ? "cursor-not-allowed opacity-40" : ""}`}
+                                disabled={cannotDelete}
+                              >
+                                <HiOutlineTrash size={20} />
+                              </button>
+                            </div>
+                          </div>
+                          {errors.participationOptions?.[index]?.label && (
+                            <p className="mt-1 text-red-500 text-xs">
+                              {errors.participationOptions[index]?.label?.message as string}
+                            </p>
+                          )}
+                          {errors.participationOptions?.[index]?.color && (
+                            <p className="mt-1 text-red-500 text-xs">
+                              {errors.participationOptions[index]?.color?.message as string}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+
                     <button
                       type="button"
                       onClick={() => {
-                        setParticipationOptions(participationOptions.filter((_, i) => i !== index));
+                        const existingColors = participationFields.map((o) => o.color);
+                        appendParticipation({
+                          id: crypto.randomUUID(),
+                          label: "",
+                          color: generateDistinctColor(existingColors),
+                        });
                       }}
-                      className="btn btn-ghost btn-sm text-error"
+                      className="btn btn-outline btn-sm"
                     >
-                      削除
+                      + 参加形態を追加
                     </button>
-                  </div>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const existingColors = participationOptions.map((o) => o.color);
-                    setParticipationOptions([
-                      ...participationOptions,
-                      {
-                        id: crypto.randomUUID(),
-                        label: "",
-                        color: generateDistinctColor(existingColors),
-                      },
-                    ]);
-                  }}
-                  className="btn btn-outline btn-sm"
-                >
-                  + 参加形態を追加
-                </button>
-              </fieldset>
+                  </fieldset>
+                </div>
+              </div>
               {project && (
                 <fieldset>
                   <legend className="text-gray-400 text-sm">イベントの削除</legend>
@@ -533,7 +573,7 @@ export default function ProjectPage() {
                     <button
                       type="button"
                       id="delete-button"
-                      className="btn bg-red-700 text-white"
+                      className="btn btn-ghost text-error"
                       onClick={async () => {
                         if (confirm("本当にこのイベントを削除しますか？")) {
                           try {
@@ -565,20 +605,23 @@ export default function ProjectPage() {
                         }
                       }}
                     >
+                      <HiOutlineTrash size={20} />
                       イベントを削除する
                     </button>
                   </div>
                 </fieldset>
               )}
-              <div className="fixed bottom-0 left-0 flex w-full justify-between p-4">
-                <NavLink to={"/home"} className="btn btn-outline btn-primary">
-                  ホームに戻る
-                </NavLink>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={!isValid || (!isDirty && !hasParticipationOptionsChanged)}
-                >
+              <div className="fixed bottom-0 left-0 flex max-h-18 w-full justify-between bg-white p-4 shadow-[0_-2px_8px_rgba(0,0,0,0.1)]">
+                {eventId ? (
+                  <NavLink to={`/${eventId}`} className="btn btn-outline btn-primary">
+                    日程調整に戻る
+                  </NavLink>
+                ) : (
+                  <NavLink to={"/home"} className="btn btn-outline btn-primary">
+                    ホームに戻る
+                  </NavLink>
+                )}
+                <button type="submit" className="btn btn-primary" disabled={!isValid || !isDirty}>
                   イベントを{project ? "更新" : "作成"}する
                 </button>
               </div>

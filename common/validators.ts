@@ -65,7 +65,7 @@ const baseProjectReqSchema = z.object({
     .refine((ranges) => ranges.every(({ startTime, endTime }) => isQuarterHour(startTime) && isQuarterHour(endTime)), {
       message: "開始時刻と終了時刻は15分単位で入力してください",
     }),
-  participationOptions: z.array(participationOptionCreateSchema).optional(),
+  participationOptions: z.array(participationOptionCreateSchema).min(1, "参加形態は最低1つ必要です"),
 });
 
 export const projectReqSchema = baseProjectReqSchema.refine(

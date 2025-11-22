@@ -1,11 +1,9 @@
-import { randomUUID } from "node:crypto";
 import { zValidator } from "@hono/zod-validator";
 import dotenv from "dotenv";
 import { Hono } from "hono";
 import { getSignedCookie, setSignedCookie } from "hono/cookie";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { DEFAULT_PARTICIPATION_OPTION } from "../../../common/colors.js";
 import { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/validators.js";
 import { cookieOptions, prisma } from "../main.js";
 
@@ -24,22 +22,6 @@ const router = new Hono()
     const browserId = (await getSignedCookie(c, cookieSecret, "browserId")) || undefined;
     try {
       const data = c.req.valid("json");
-
-      // 参加形態の処理（指定がない場合はデフォルトを作成）
-      const participationOptionsData =
-        data.participationOptions && data.participationOptions.length > 0
-          ? data.participationOptions.map((opt) => ({
-              id: opt.id, // フロントエンドで生成された UUID をそのまま使用
-              label: opt.label,
-              color: opt.color,
-            }))
-          : [
-              {
-                id: randomUUID(), // デフォルト作成時のみサーバーで生成
-                label: DEFAULT_PARTICIPATION_OPTION.label,
-                color: DEFAULT_PARTICIPATION_OPTION.color,
-              },
-            ];
 
       const event = await prisma.project.create({
         data: {
@@ -60,7 +42,11 @@ const router = new Hono()
             },
           },
           participationOptions: {
-            create: participationOptionsData,
+            create: data.participationOptions.map((opt) => ({
+              id: opt.id,
+              label: opt.label,
+              color: opt.color,
+            })),
           },
         },
         include: { hosts: true, participationOptions: true },
