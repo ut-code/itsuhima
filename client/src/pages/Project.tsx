@@ -95,7 +95,7 @@ export default function ProjectPage() {
       description: "",
       startDate: eventId ? "" : dayjs().format("YYYY-MM-DD"),
       endDate: eventId ? "" : dayjs().add(6, "day").format("YYYY-MM-DD"),
-      allowedRanges: [{ startTime: "00:00", endTime: "23:45" }],
+      allowedRanges: [{ startTime: "08:00", endTime: "23:00" }],
       participationOptions: [],
     },
   });
