@@ -574,7 +574,11 @@ export default function ProjectPage() {
                 <NavLink to={"/home"} className="btn btn-outline btn-primary">
                   ホームに戻る
                 </NavLink>
-                <button type="submit" className="btn btn-primary" disabled={!isValid || (!isDirty && !hasParticipationOptionsChanged)}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={!isValid || (!isDirty && !hasParticipationOptionsChanged)}
+                >
                   イベントを{project ? "更新" : "作成"}する
                 </button>
               </div>

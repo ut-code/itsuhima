@@ -74,21 +74,18 @@ export class EditingMatrix extends CalendarMatrixBase<string> {
   }
 
   private convertRunsToSlots(runs: { start: number; end: number; value: string }[], day: number): EditingMatrixSlot[] {
-    return (
-      runs
-        .map((run) => {
-          const from = this.initialDate
-            .add(day, "day")
-            .add(run.start * 15, "minute")
-            .toDate();
-          const to = this.initialDate
-            .add(day, "day")
-            .add(run.end * 15, "minute")
-            .toDate();
-          const optionId = run.value;
-          return { from, to, optionId };
-        })
-    );
+    return runs.map((run) => {
+      const from = this.initialDate
+        .add(day, "day")
+        .add(run.start * 15, "minute")
+        .toDate();
+      const to = this.initialDate
+        .add(day, "day")
+        .add(run.end * 15, "minute")
+        .toDate();
+      const optionId = run.value;
+      return { from, to, optionId };
+    });
   }
 }
 
