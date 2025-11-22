@@ -286,170 +286,189 @@ export default function ProjectPage() {
                 />
                 {errors.description && <p className="mt-1 text-red-500 text-sm">{errors.description.message}</p>}
               </div>
-              {!project || (project && project.guests.length === 0) ? (
-                <>
-                  <div className="collapse-arrow collapse mb-4 border border-blue-200 bg-blue-50">
-                    <input
-                      type="checkbox"
-                      checked={isInfoExpanded}
-                      onChange={(e) => setIsInfoExpanded(e.target.checked)}
-                    />
-                    <div className="collapse-title flex items-center gap-2 font-medium text-primary text-sm">
-                      <HiInformationCircle className="h-5 w-5" />
-                      開始日・終了日／時間帯について
+              <div className="collapse-arrow collapse mb-4 border border-blue-200 bg-blue-50">
+                <input type="checkbox" checked={isInfoExpanded} onChange={(e) => setIsInfoExpanded(e.target.checked)} />
+                <div className="collapse-title flex items-center gap-2 font-medium text-primary text-sm">
+                  <HiInformationCircle className="h-5 w-5" />
+                  開始日・終了日／時間帯について
+                </div>
+                <div className="collapse-content text-primary text-sm">
+                  <p>
+                    イツヒマでは、<strong>主催者側で候補日程を設定せずに</strong>日程調整します。
+                    <br />
+                    ここでは、参加者の日程を知りたい日付の範囲と時間帯の範囲を設定してください。
+                    <br />
+                    詳しくは、
+                    <a
+                      href="https://utcode.notion.site/1e4ca5f557bc80f2b697ca7b9342dc89?pvs=4"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="link"
+                    >
+                      使い方ページ
+                    </a>
+                    をご覧ください。
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <div
+                  className={project && project.guests.length > 0 ? "tooltip tooltip-top flex-1" : "flex-1"}
+                  data-tip={
+                    project && project.guests.length > 0
+                      ? "すでに日程を登録したユーザーがいるため、開始日の編集はできません"
+                      : ""
+                  }
+                >
+                  <label htmlFor="input-start" className="text-gray-400 text-sm">
+                    開始日
+                  </label>
+                  <input
+                    type="date"
+                    {...register("startDate")}
+                    id="input-start"
+                    className={`input w-full text-base ${errors.startDate ? "input-error border-red-500" : ""} ${project && project.guests.length > 0 ? "cursor-not-allowed opacity-60" : ""}`}
+                    onFocus={handleFieldFocus}
+                    disabled={!!(project && project.guests.length > 0)}
+                  />
+                  {errors.startDate && <p className="mt-1 text-red-500 text-sm">{errors.startDate.message}</p>}
+                </div>
+                <div
+                  className={project && project.guests.length > 0 ? "tooltip tooltip-top flex-1" : "flex-1"}
+                  data-tip={
+                    project && project.guests.length > 0
+                      ? "すでに日程を登録したユーザーがいるため、終了日の編集はできません"
+                      : ""
+                  }
+                >
+                  <label htmlFor="input-end" className="text-gray-400 text-sm">
+                    終了日
+                  </label>
+                  <input
+                    type="date"
+                    {...register("endDate")}
+                    id="input-end"
+                    className={`input w-full text-base ${errors.endDate ? "input-error border-red-500" : ""} ${project && project.guests.length > 0 ? "cursor-not-allowed opacity-60" : ""}`}
+                    onFocus={handleFieldFocus}
+                    disabled={!!(project && project.guests.length > 0)}
+                  />
+                  {errors.endDate && <p className="mt-1 text-red-500 text-sm">{errors.endDate.message}</p>}
+                </div>
+              </div>
+              <fieldset>
+                <legend className="text-gray-400 text-sm">時間帯</legend>
+                <div
+                  className={project && project.guests.length > 0 ? "tooltip tooltip-top w-full" : "w-full"}
+                  data-tip={
+                    project && project.guests.length > 0
+                      ? "すでに日程を登録したユーザーがいるため、時間帯の編集はできません"
+                      : ""
+                  }
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-1 gap-1">
+                      <select
+                        className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""} ${project && project.guests.length > 0 ? "cursor-not-allowed opacity-60" : ""}`}
+                        value={allowedRangeFields[0].startTime.split(":")[0]}
+                        onChange={(e) => {
+                          replace([
+                            {
+                              startTime: `${e.target.value}:${allowedRangeFields[0].startTime.split(":")[1]}`,
+                              endTime: allowedRangeFields[0].endTime,
+                            },
+                          ]);
+                        }}
+                        onFocus={handleFieldFocus}
+                        disabled={!!(project && project.guests.length > 0)}
+                      >
+                        <option value="" disabled>
+                          時
+                        </option>
+                        {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""} ${project && project.guests.length > 0 ? "cursor-not-allowed opacity-60" : ""}`}
+                        value={allowedRangeFields[0].startTime.split(":")[1]}
+                        onChange={(e) => {
+                          replace([
+                            {
+                              startTime: `${allowedRangeFields[0].startTime.split(":")[0]}:${e.target.value}`,
+                              endTime: allowedRangeFields[0].endTime,
+                            },
+                          ]);
+                        }}
+                        onFocus={handleFieldFocus}
+                        disabled={!!(project && project.guests.length > 0)}
+                      >
+                        <option value="" disabled>
+                          分
+                        </option>
+                        {["00", "15", "30", "45"].map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                    <div className="collapse-content text-primary text-sm">
-                      <p>
-                        イツヒマでは、<strong>主催者側で候補日程を設定せずに</strong>日程調整します。
-                        <br />
-                        ここでは、参加者の日程を知りたい日付の範囲と時間帯の範囲を設定してください。
-                        <br />
-                        詳しくは、
-                        <a
-                          href="https://utcode.notion.site/1e4ca5f557bc80f2b697ca7b9342dc89?pvs=4"
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="link"
-                        >
-                          使い方ページ
-                        </a>
-                        をご覧ください。
-                      </p>
+                    <span>〜</span>
+                    <div className="flex flex-1 gap-1">
+                      <select
+                        className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""} ${project && project.guests.length > 0 ? "cursor-not-allowed opacity-60" : ""}`}
+                        value={allowedRangeFields[0].endTime.split(":")[0]}
+                        onChange={(e) => {
+                          replace([
+                            {
+                              startTime: allowedRangeFields[0].startTime,
+                              endTime: `${e.target.value}:${allowedRangeFields[0].endTime.split(":")[1]}`,
+                            },
+                          ]);
+                        }}
+                        onFocus={handleFieldFocus}
+                        disabled={!!(project && project.guests.length > 0)}
+                      >
+                        <option value="" disabled>
+                          時
+                        </option>
+                        {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""} ${project && project.guests.length > 0 ? "cursor-not-allowed opacity-60" : ""}`}
+                        value={allowedRangeFields[0].endTime.split(":")[1]}
+                        onChange={(e) => {
+                          replace([
+                            {
+                              startTime: allowedRangeFields[0].startTime,
+                              endTime: `${allowedRangeFields[0].endTime.split(":")[0]}:${e.target.value}`,
+                            },
+                          ]);
+                        }}
+                        onFocus={handleFieldFocus}
+                        disabled={!!(project && project.guests.length > 0)}
+                      >
+                        <option value="" disabled>
+                          分
+                        </option>
+                        {["00", "15", "30", "45"].map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <label htmlFor="input-start" className="text-gray-400 text-sm">
-                        開始日
-                      </label>
-                      <input
-                        type="date"
-                        {...register("startDate")}
-                        id="input-start"
-                        className={`input w-full text-base ${errors.startDate ? "input-error border-red-500" : ""}`}
-                        onFocus={handleFieldFocus}
-                      />
-                      {errors.startDate && <p className="mt-1 text-red-500 text-sm">{errors.startDate.message}</p>}
-                    </div>
-                    <div className="flex-1">
-                      <label htmlFor="input-end" className="text-gray-400 text-sm">
-                        終了日
-                      </label>
-                      <input
-                        type="date"
-                        {...register("endDate")}
-                        id="input-end"
-                        className={`input w-full text-base ${errors.endDate ? "input-error border-red-500" : ""}`}
-                        onFocus={handleFieldFocus}
-                      />
-                      {errors.endDate && <p className="mt-1 text-red-500 text-sm">{errors.endDate.message}</p>}
-                    </div>
-                  </div>
-                  <fieldset>
-                    <legend className="text-gray-400 text-sm">時間帯</legend>
-                    <div className="flex items-center gap-2">
-                      <div className="flex flex-1 gap-1">
-                        <select
-                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
-                          value={allowedRangeFields[0].startTime.split(":")[0]}
-                          onChange={(e) => {
-                            replace([
-                              {
-                                startTime: `${e.target.value}:${allowedRangeFields[0].startTime.split(":")[1]}`,
-                                endTime: allowedRangeFields[0].endTime,
-                              },
-                            ]);
-                          }}
-                          onFocus={handleFieldFocus}
-                        >
-                          <option value="" disabled>
-                            時
-                          </option>
-                          {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
-                            <option key={h} value={h}>
-                              {h}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
-                          value={allowedRangeFields[0].startTime.split(":")[1]}
-                          onChange={(e) => {
-                            replace([
-                              {
-                                startTime: `${allowedRangeFields[0].startTime.split(":")[0]}:${e.target.value}`,
-                                endTime: allowedRangeFields[0].endTime,
-                              },
-                            ]);
-                          }}
-                          onFocus={handleFieldFocus}
-                        >
-                          <option value="" disabled>
-                            分
-                          </option>
-                          {["00", "15", "30", "45"].map((h) => (
-                            <option key={h} value={h}>
-                              {h}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <span>〜</span>
-                      <div className="flex flex-1 gap-1">
-                        <select
-                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
-                          value={allowedRangeFields[0].endTime.split(":")[0]}
-                          onChange={(e) => {
-                            replace([
-                              {
-                                startTime: allowedRangeFields[0].startTime,
-                                endTime: `${e.target.value}:${allowedRangeFields[0].endTime.split(":")[1]}`,
-                              },
-                            ]);
-                          }}
-                          onFocus={handleFieldFocus}
-                        >
-                          <option value="" disabled>
-                            時
-                          </option>
-                          {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
-                            <option key={h} value={h}>
-                              {h}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          className={`input flex-1 text-base ${errors.allowedRanges ? "input-error border-red-500" : ""}`}
-                          value={allowedRangeFields[0].endTime.split(":")[1]}
-                          onChange={(e) => {
-                            replace([
-                              {
-                                startTime: allowedRangeFields[0].startTime,
-                                endTime: `${allowedRangeFields[0].endTime.split(":")[0]}:${e.target.value}`,
-                              },
-                            ]);
-                          }}
-                          onFocus={handleFieldFocus}
-                        >
-                          <option value="" disabled>
-                            分
-                          </option>
-                          {["00", "15", "30", "45"].map((h) => (
-                            <option key={h} value={h}>
-                              {h}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
-                      <p className="mt-1 text-red-500 text-sm">{errors.allowedRanges.message}</p>
-                    )}
-                  </fieldset>
-                </>
-              ) : (
-                <p>すでにデータを登録したユーザーがいるため、日時の編集はできません。</p>
-              )}
+                </div>
+                {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
+                  <p className="mt-1 text-red-500 text-sm">{errors.allowedRanges.message}</p>
+                )}
+              </fieldset>
               <fieldset>
                 <legend className="text-gray-400 text-sm">参加形態（任意）</legend>
                 <p className="mb-2 text-gray-500 text-xs">
