@@ -19,6 +19,17 @@ const client = hc<AppType>(API_ENDPOINT);
 
 export type EditingSlot = Pick<Slot, "from" | "to" | "participationOptionId">;
 
+const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: Number.parseInt(result[1], 16),
+        g: Number.parseInt(result[2], 16),
+        b: Number.parseInt(result[3], 16),
+      }
+    : null;
+};
+
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
   const [project, setProject] = useState<Project | null>(null);
@@ -227,18 +238,35 @@ export default function SubmissionPage() {
 
             {editMode && project.participationOptions.length > 1 && selectedParticipationOptionId !== null && (
               <div className="mb-4">
-                <span className="label-text text-gray-400">参加形態を選択</span>
-                <select
-                  value={selectedParticipationOptionId}
-                  onChange={(e) => setSelectedParticipationOptionId(e.target.value)}
-                  className="select select-bordered w-full"
-                >
-                  {project.participationOptions.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                <span className="label-text mb-2 block text-gray-400">参加形態を選択</span>
+                <div className="flex flex-wrap gap-2">
+                  {project.participationOptions.map((opt) => {
+                    const rgb = hexToRgb(opt.color);
+                    const lightBg = rgb
+                      ? `rgba(${rgb.r * 0.2 + 255 * 0.8}, ${rgb.g * 0.2 + 255 * 0.8}, ${rgb.b * 0.2 + 255 * 0.8}, 1)`
+                      : undefined;
+
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        className="btn btn-sm md:btn-md gap-1 px-2 sm:gap-2 sm:px-4"
+                        onClick={() => setSelectedParticipationOptionId(opt.id)}
+                        style={
+                          selectedParticipationOptionId === opt.id
+                            ? { backgroundColor: lightBg, borderColor: opt.color }
+                            : undefined
+                        }
+                      >
+                        <span
+                          className="inline-block h-3 w-3 shrink-0 rounded-full sm:h-4 sm:w-4"
+                          style={{ backgroundColor: opt.color }}
+                        />
+                        <span className="text-xs sm:text-sm">{opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
             <Calendar
