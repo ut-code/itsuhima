@@ -407,7 +407,14 @@ export const Calendar = ({
       return (
         <div className="relative h-full w-full">
           {optionBreakdown.map((breakdown, index) => {
-            const tooltipContent = `${breakdown.optionLabel}: ${breakdown.members.join(", ")}`;
+            const tooltipContent = `
+              <div>
+                <div style="font-weight: bold; margin-bottom: 4px; color: ${breakdown.color}">${breakdown.optionLabel}</div>
+                <ul style="margin: 0; padding-left: 1.2rem; list-style-type: disc;">
+                  ${breakdown.members.map((name) => `<li>${name}</li>`).join("")}
+                </ul>
+              </div>
+            `;
             const position = ((index + 0.5) / optionBreakdown.length) * 100;
 
             return (
@@ -423,7 +430,7 @@ export const Calendar = ({
                   className="badge border-0 bg-gray-200 font-bold text-[10px] px-1 py-0 h-4 min-h-0 sm:badge-sm sm:text-sm sm:px-2 sm:h-5"
                   style={{ color: breakdown.color }}
                   data-tooltip-id="member-info"
-                  data-tooltip-content={tooltipContent}
+                  data-tooltip-html={tooltipContent}
                   data-tooltip-place="top"
                 >
                   {breakdown.count}
@@ -463,7 +470,14 @@ export const Calendar = ({
         eventDidMount={handleEventDidMount}
         eventContent={handleEventContent}
       />
-      <Tooltip id="member-info" />
+      <Tooltip
+        id="member-info"
+        style={{
+          backgroundColor: "#fff",
+          color: "#666",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+        }}
+      />
     </div>
   );
 };
