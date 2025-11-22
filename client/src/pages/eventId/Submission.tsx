@@ -17,7 +17,7 @@ import { API_ENDPOINT } from "../../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
 
-export type EditingSlot = Pick<Slot, "from" | "to">;
+export type EditingSlot = Pick<Slot, "from" | "to" | "participationOptionId">;
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
@@ -69,13 +69,15 @@ export default function SubmissionPage() {
 
   const [editingSlots, setEditingSlots] = useState<EditingSlot[]>([]);
 
+  const [selectedParticipationOptionId, setSelectedParticipationOptionId] = useState<string | null>(null);
+
   const [toast, setToast] = useState<{
     message: string;
     variant: "success" | "error";
   } | null>(null);
 
   const postSubmissions = useCallback(
-    async (slots: { start: Date; end: Date }[], myGuestId: string) => {
+    async (slots: { start: Date; end: Date; participationOptionId: string }[], myGuestId: string) => {
       setPostLoading(true);
       const payload = {
         name: guestName,
@@ -83,6 +85,7 @@ export default function SubmissionPage() {
         slots: slots.map((slot) => ({
           start: slot.start.toISOString(),
           end: slot.end.toISOString(),
+          participationOptionId: slot.participationOptionId,
         })),
       };
       if (!myGuestId) {
@@ -148,14 +151,14 @@ export default function SubmissionPage() {
   // init editing slots
   useEffect(() => {
     if (project?.meAsGuest?.slots && editMode) {
-      setEditingSlots(
-        project.meAsGuest.slots.map((slot) => ({
-          from: slot.from,
-          to: slot.to,
-        })),
-      );
+      setEditingSlots(project.meAsGuest.slots);
     }
   }, [project, editMode]);
+
+  const guestIdToName = useMemo(() => {
+    if (!project) return {};
+    return Object.fromEntries(project.guests.map((g) => [g.id, g.name]));
+  }, [project]);
 
   // init viewing slots
   const viewingSlots = useMemo(() => {
@@ -169,7 +172,8 @@ export default function SubmissionPage() {
           g.slots.map((s) => ({
             from: s.from,
             to: s.to,
-            guestName: g.name,
+            guestId: g.id,
+            optionId: s.participationOptionId,
           })),
         );
     }
@@ -179,16 +183,23 @@ export default function SubmissionPage() {
       g.slots.map((s) => ({
         from: s.from,
         to: s.to,
-        guestName: g.name,
+        guestId: g.id,
+        optionId: s.participationOptionId,
       })),
     );
   }, [project, myGuestId, editMode]);
+  // project が読み込まれたらデフォルトの参加形態を設定
+  useEffect(() => {
+    if (project && project.participationOptions.length > 0 && !selectedParticipationOptionId) {
+      setSelectedParticipationOptionId(project.participationOptions[0].id);
+    }
+  }, [project, selectedParticipationOptionId]);
 
   return (
     <>
       <div className="flex h-[100dvh] flex-col">
         <Header />
-        {loading ? (
+        {loading || !selectedParticipationOptionId ? (
           <div className="flex w-full flex-1 items-center justify-center">
             <span className="loading loading-dots loading-md text-gray-400" />
           </div>
@@ -213,12 +224,32 @@ export default function SubmissionPage() {
             {project.description && (
               <p className="mb-4 whitespace-pre-wrap text-gray-600 text-sm">{project.description}</p>
             )}
+
+            {editMode && project.participationOptions.length > 1 && selectedParticipationOptionId !== null && (
+              <div className="mb-4">
+                <span className="label-text text-gray-400">参加形態を選択</span>
+                <select
+                  value={selectedParticipationOptionId}
+                  onChange={(e) => setSelectedParticipationOptionId(e.target.value)}
+                  className="select select-bordered w-full"
+                >
+                  {project.participationOptions.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <Calendar
               startDate={project.startDate}
               endDate={project.endDate}
               allowedRanges={project.allowedRanges}
               editingSlots={editMode ? editingSlots : []}
               viewingSlots={viewingSlots}
+              guestIdToName={guestIdToName}
+              participationOptions={project.participationOptions}
+              currentParticipationOptionId={selectedParticipationOptionId}
               editMode={editMode}
               onChangeEditingSlots={setEditingSlots}
             />
@@ -255,9 +286,11 @@ export default function SubmissionPage() {
                       onClick={() => {
                         if (!guestName) return;
                         postSubmissions(
-                          editingSlots.map((slot) => {
-                            return { start: slot.from, end: slot.to };
-                          }),
+                          editingSlots.map((slot) => ({
+                            start: slot.from,
+                            end: slot.to,
+                            participationOptionId: slot.participationOptionId,
+                          })),
                           myGuestId ?? "",
                         );
                       }}

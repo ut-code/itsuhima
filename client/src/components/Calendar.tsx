@@ -8,6 +8,7 @@ import type {
   DateSpanApi,
   DayHeaderContentArg,
   EventContentArg,
+  EventInput,
   EventMountArg,
   SlotLabelContentArg,
 } from "@fullcalendar/core/index.js";
@@ -27,7 +28,29 @@ type AllowedRange = {
 type ViewingSlot = {
   from: Date;
   to: Date;
-  guestName: string;
+  guestId: string;
+  optionId: string;
+};
+
+type ParticipationOption = {
+  id: string;
+  label: string;
+  color: string;
+};
+
+type CalendarEventExtendedProps = {
+  optionBreakdown?: {
+    optionId: string;
+    optionLabel: string;
+    color: string;
+    members: string[];
+    count: number;
+  }[];
+  backgroundStyle?: string;
+};
+
+type CalendarEvent = Pick<EventInput, "id" | "className" | "start" | "end" | "textColor" | "color" | "display"> & {
+  extendedProps?: CalendarEventExtendedProps;
 };
 
 type Props = {
@@ -36,6 +59,9 @@ type Props = {
   allowedRanges: AllowedRange[];
   editingSlots: EditingSlot[];
   viewingSlots: ViewingSlot[];
+  guestIdToName: Record<string, string>;
+  participationOptions: ParticipationOption[];
+  currentParticipationOptionId: string;
   editMode: boolean;
   onChangeEditingSlots: (slots: EditingSlot[]) => void;
 };
@@ -49,12 +75,23 @@ const SELECT_EVENT = "ih-select-event";
 const CREATE_SELECT_EVENT = "ih-create-select-event";
 const DELETE_SELECT_EVENT = "ih-delete-select-event";
 
+// TODO: colors.ts のものと共通化
+function hexToRgb(hex: string): [number, number, number] {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? [Number.parseInt(result[1], 16), Number.parseInt(result[2], 16), Number.parseInt(result[3], 16)]
+    : (PRIMARY_RGB as [number, number, number]);
+}
+
 export const Calendar = ({
   startDate,
   endDate,
   allowedRanges,
   editingSlots,
   viewingSlots,
+  guestIdToName,
+  participationOptions,
+  currentParticipationOptionId,
   editMode,
   onChangeEditingSlots,
 }: Props) => {
@@ -72,19 +109,8 @@ export const Calendar = ({
   const calendarRef = useRef<FullCalendar | null>(null);
   const isSelectionDeleting = useRef<boolean | null>(null);
 
-  // matrix → FullCalendar 用イベント（宣言的に管理）
-  const [events, setEvents] = useState<
-    Array<{
-      id: string;
-      className: string;
-      start: Date;
-      end: Date;
-      textColor?: string;
-      color?: string;
-      display?: "background";
-      extendedProps?: { members?: string[]; countMembers?: number };
-    }>
-  >([]);
+  // FullCalendar の state
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
 
   // editingSlots/viewingSlots → matrix → events
   useEffect(() => {
@@ -92,40 +118,143 @@ export const Calendar = ({
     editingMatrixRef.current.clear();
     editingSlots.forEach((slot) => {
       const { from, to } = getVertexes(slot.from, slot.to);
-      editingMatrixRef.current.setRange(from, to, 1);
+      editingMatrixRef.current.setRange(from, to, slot.participationOptionId);
     });
 
-    // viewingSlots → viewingMatrix
     viewingMatrixRef.current.clear();
+
     viewingSlots.forEach((slot) => {
       const { from, to } = getVertexes(slot.from, slot.to);
-      viewingMatrixRef.current.incrementRange(from, to, slot.guestName);
+      viewingMatrixRef.current.setGuestRange(from, to, slot.guestId, slot.optionId);
     });
 
     // matrix → events
-    const editingEvents = editingMatrixRef.current.getSlots().map((slot, index) => ({
-      id: `${EDITING_EVENT}-${index}`,
-      className: EDITING_EVENT,
-      start: slot.from,
-      end: slot.to,
-      textColor: "black",
-    }));
+    const editingEvents = editingMatrixRef.current.getSlots().map((slot, index) => {
+      const option = participationOptions.find((o) => o.id === slot.optionId);
+      const baseColor = option ? option.color : `rgb(${PRIMARY_RGB.join(",")})`;
+      const rgbColor = hexToRgb(baseColor);
+      const backgroundColor = `rgba(${rgbColor.join(",")}, ${OPACITY})`;
 
-    const viewingEvents = viewingMatrixRef.current.getSlots().map((slot, index) => ({
-      id: `${VIEWING_EVENT}-${index}`,
-      className: VIEWING_EVENT,
-      start: slot.from,
-      end: slot.to,
-      color: `rgba(${PRIMARY_RGB.join(",")}, ${(1 - (1 - OPACITY) ** slot.weight).toFixed(3)})`,
-      display: "background" as const,
-      extendedProps: {
-        members: slot.guestNames,
-        countMembers: slot.weight,
-      },
-    }));
+      return {
+        id: `${EDITING_EVENT}-${index}`,
+        className: EDITING_EVENT,
+        start: slot.from,
+        end: slot.to,
+        textColor: "white",
+        backgroundColor,
+        borderColor: baseColor,
+      };
+    });
+
+    const viewingEvents: CalendarEvent[] = [];
+    const slots = viewingMatrixRef.current.getSlots();
+
+    slots.forEach((slot, index) => {
+      // optionId ごとにグループ化
+      const optionGroups = new Map<string, string[]>();
+
+      for (const [guestId, optionId] of Object.entries(slot.guestIdToOptionId)) {
+        if (!optionGroups.has(optionId)) {
+          optionGroups.set(optionId, []);
+        }
+        optionGroups.get(optionId)?.push(guestId);
+      }
+
+      // 参加形態ごとの内訳を作成。順番を participationOptions に合わせる
+      const optionBreakdown = participationOptions
+        .filter((option) => optionGroups.has(option.id))
+        .map((option) => {
+          const guestIds = optionGroups.get(option.id) || [];
+          const guestNames = guestIds.map((guestId) => guestIdToName[guestId] || guestId);
+          const optionOpacity = 1 - (1 - OPACITY) ** guestIds.length;
+
+          return {
+            optionId: option.id,
+            optionLabel: option.label,
+            color: option.color,
+            members: guestNames,
+            count: guestIds.length,
+            opacity: optionOpacity,
+          };
+        });
+
+      // 複数の参加形態がある場合は複合、　そうでなければ単色
+      let backgroundStyle: string;
+      if (optionBreakdown.length === 1) {
+        const rgbColor = hexToRgb(optionBreakdown[0].color);
+        backgroundStyle = `rgba(${rgbColor.join(",")}, ${optionBreakdown[0].opacity.toFixed(3)})`;
+      } else {
+        // 複数色の入ったセルを CSS gradient で生成（各optionの濃さを個別に適用）
+        const stripeWidth = 100 / optionBreakdown.length;
+        const gradientStops = optionBreakdown
+          .map((breakdown, i) => {
+            const rgbColor = hexToRgb(breakdown.color);
+            const start = i * stripeWidth;
+            const end = (i + 1) * stripeWidth;
+            return `rgba(${rgbColor.join(",")}, ${breakdown.opacity.toFixed(3)}) ${start}%, rgba(${rgbColor.join(",")}, ${breakdown.opacity.toFixed(3)}) ${end}%`;
+          })
+          .join(", ");
+        backgroundStyle = `linear-gradient(90deg, ${gradientStops})`;
+      }
+
+      // デフォルトの色（最初の参加形態の色）
+      const defaultColor =
+        optionBreakdown.length > 0
+          ? (() => {
+              const rgbColor = hexToRgb(optionBreakdown[0].color);
+              return `rgba(${rgbColor.join(",")}, ${optionBreakdown[0].opacity.toFixed(3)})`;
+            })()
+          : `rgba(${PRIMARY_RGB.join(",")}, ${(1 - (1 - OPACITY) ** 1).toFixed(3)})`;
+
+      viewingEvents.push({
+        id: `${VIEWING_EVENT}-${index}`,
+        className: `${VIEWING_EVENT} ${VIEWING_EVENT}-${index}`,
+        start: slot.from,
+        end: slot.to,
+        color: defaultColor,
+        display: "background" as const,
+        extendedProps: {
+          optionBreakdown,
+          backgroundStyle,
+        },
+      });
+    });
 
     setEvents([...editingEvents, ...viewingEvents]);
-  }, [editingSlots, viewingSlots]);
+  }, [editingSlots, viewingSlots, guestIdToName, participationOptions]);
+
+  // viewing events の背景スタイルを動的に注入
+  useEffect(() => {
+    const styleId = "ih-viewing-events-styles";
+    let styleElement = document.getElementById(styleId) as HTMLStyleElement | null;
+
+    if (!styleElement) {
+      styleElement = document.createElement("style");
+      styleElement.id = styleId;
+      document.head.appendChild(styleElement);
+    }
+
+    // viewing events の背景スタイルを生成
+    const cssRules = events
+      .filter((event) => event.className?.includes(VIEWING_EVENT))
+      .map((event) => {
+        if (!event.id) return "";
+        const backgroundStyle = event.extendedProps?.backgroundStyle;
+        const eventIndex = event.id.replace(`${VIEWING_EVENT}-`, "");
+        if (backgroundStyle) {
+          return `.${VIEWING_EVENT}-${eventIndex} { background: ${backgroundStyle} !important; }`;
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+
+    styleElement.textContent = cssRules;
+
+    return () => {
+      // クリーンアップは不要（次回の更新で上書きされるため）
+    };
+  }, [events]);
 
   // カレンダー外までドラッグした際に選択を解除するためのイベントハンドラを登録
   useEffect(() => {
@@ -199,9 +328,16 @@ export const Calendar = ({
     // 選択中に選択範囲を表示する
     (info: DateSpanApi) => {
       if (!editMode) return false;
-      return displaySelection(info, isSelectionDeleting, calendarRef, editingMatrixRef);
+      return displaySelection(
+        info,
+        isSelectionDeleting,
+        calendarRef,
+        editingMatrixRef,
+        participationOptions,
+        currentParticipationOptionId,
+      );
     },
-    [editMode],
+    [editMode, participationOptions, currentParticipationOptionId],
   );
 
   const handleSelect = useCallback(
@@ -215,12 +351,13 @@ export const Calendar = ({
       const isDeletion = isSelectionDeleting.current;
 
       // matrix を更新
-      editingMatrixRef.current.setRange(from, to, isDeletion ? 0 : 1);
+      editingMatrixRef.current.setRange(from, to, isDeletion ? null : currentParticipationOptionId);
 
       // matrix → editingSlots
       const newSlots = editingMatrixRef.current.getSlots().map((slot) => ({
         from: slot.from,
         to: slot.to,
+        participationOptionId: slot.optionId,
       }));
       onChangeEditingSlots(newSlots);
 
@@ -232,28 +369,77 @@ export const Calendar = ({
       }
       isSelectionDeleting.current = null;
     },
-    [editMode, onChangeEditingSlots],
+    [editMode, onChangeEditingSlots, currentParticipationOptionId],
   );
 
   const handleEventDidMount = useCallback((info: EventMountArg) => {
     if (info.event.classNames.includes(EDITING_EVENT)) {
       // 既存の event 上で選択できるようにするため。
       info.el.style.pointerEvents = "none";
+
+      const borderColor = info.event.borderColor;
+      if (borderColor) {
+        info.el.style.borderColor = borderColor;
+      }
+    }
+    if (info.event.classNames.includes(VIEWING_EVENT)) {
+      const backgroundStyle = info.event.extendedProps.backgroundStyle;
+      if (backgroundStyle) {
+        info.el.style.background = backgroundStyle;
+      }
+    }
+    if (info.event.classNames.includes(CREATE_SELECT_EVENT)) {
+      const borderColor = info.event.borderColor;
+      if (borderColor) {
+        info.el.style.borderColor = borderColor;
+      }
     }
   }, []);
 
   const handleEventContent = useCallback((info: EventContentArg) => {
     if (info.event.classNames.includes(VIEWING_EVENT)) {
+      const optionBreakdown: {
+        optionId: string;
+        optionLabel: string;
+        color: string;
+        members: string[];
+        count: number;
+      }[] = info.event.extendedProps.optionBreakdown || [];
+
       return (
-        <div className="flex h-full w-full items-center justify-center">
-          <div
-            className="badge badge-sm border-0 bg-gray-200 font-bold text-primary"
-            data-tooltip-id="member-info"
-            data-tooltip-content={info.event.extendedProps.members?.join(", ")}
-            data-tooltip-place="top"
-          >
-            {info.event.extendedProps.countMembers}
-          </div>
+        <div className="relative h-full w-full">
+          {optionBreakdown.map((breakdown, index) => {
+            const tooltipContent = `
+              <div>
+                <div style="font-weight: bold; margin-bottom: 4px; color: ${breakdown.color}">${breakdown.optionLabel}</div>
+                <ul style="margin: 0; padding-left: 1.2rem; list-style-type: disc;">
+                  ${breakdown.members.map((name) => `<li>${name}</li>`).join("")}
+                </ul>
+              </div>
+            `;
+            const position = ((index + 0.5) / optionBreakdown.length) * 100;
+
+            return (
+              <div
+                key={breakdown.optionId}
+                className="absolute top-1/2"
+                style={{
+                  left: `${position}%`,
+                  transform: "translate(-50%, -50%)",
+                }}
+              >
+                <div
+                  className="badge sm:badge-sm h-4 min-h-0 border-0 bg-gray-200 px-1 py-0 font-bold text-[10px] sm:h-5 sm:px-2 sm:text-sm"
+                  style={{ color: breakdown.color }}
+                  data-tooltip-id="member-info"
+                  data-tooltip-html={tooltipContent}
+                  data-tooltip-place="top"
+                >
+                  {breakdown.count}
+                </div>
+              </div>
+            );
+          })}
         </div>
       );
     }
@@ -286,7 +472,14 @@ export const Calendar = ({
         eventDidMount={handleEventDidMount}
         eventContent={handleEventContent}
       />
-      <Tooltip id="member-info" />
+      <Tooltip
+        id="member-info"
+        style={{
+          backgroundColor: "#fff",
+          color: "#666",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+        }}
+      />
     </div>
   );
 };
@@ -296,6 +489,8 @@ function displaySelection(
   isSelectionDeleting: React.RefObject<boolean | null>,
   calendarRef: React.RefObject<FullCalendar | null>,
   myMatrixRef: React.RefObject<EditingMatrix>,
+  participationOptions: ParticipationOption[],
+  currentParticipationOptionId: string,
 ) {
   // 選択範囲の表示
   // 通常の selection では矩形選択ができないため、イベントを作成することで選択範囲を表現している。
@@ -333,6 +528,16 @@ function displaySelection(
     [startTime, endTime] = [endTime, startTime];
   }
 
+  // 現在選択されている参加形態の色を取得
+  const currentOption = participationOptions.find((o) => o.id === currentParticipationOptionId);
+  const baseColor = currentOption ? currentOption.color : `rgb(${PRIMARY_RGB.join(",")})`;
+
+  // 削除モードの場合は赤色、追加モードの場合は参加形態の色
+  const isDeletion = isSelectionDeleting.current;
+  const rgbColor = isDeletion ? [255, 0, 0] : hexToRgb(baseColor);
+  const backgroundColor = `rgba(${rgbColor.join(",")}, ${isDeletion ? 0.5 : OPACITY})`;
+  const borderColor = isDeletion ? "red" : baseColor;
+
   calendarApi.addEvent({
     id: SELECT_EVENT,
     className: isSelectionDeleting.current ? DELETE_SELECT_EVENT : CREATE_SELECT_EVENT,
@@ -341,6 +546,8 @@ function displaySelection(
     startRecur: info.start,
     endRecur: info.end,
     display: "background",
+    backgroundColor: backgroundColor,
+    borderColor: borderColor,
   });
   return true;
 }

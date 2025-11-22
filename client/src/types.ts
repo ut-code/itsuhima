@@ -1,9 +1,17 @@
+type ParticipationOption = {
+  id: string;
+  label: string;
+  color: string;
+  projectId: string;
+};
+
 export type Slot = {
   id: string;
   projectId: string;
   guestId: string;
   from: Date;
   to: Date;
+  participationOptionId: string;
 };
 
 type AllowedRange = {
@@ -32,6 +40,7 @@ export type Project = {
   startDate: Date;
   endDate: Date;
   allowedRanges: AllowedRange[];
+  participationOptions: ParticipationOption[];
   hosts: Host[];
   guests: Guest[];
   isHost: boolean;
@@ -51,6 +60,12 @@ export type ISOStringProject = {
     startTime: string;
     endTime: string;
   }[];
+  participationOptions: {
+    id: string;
+    label: string;
+    color: string;
+    projectId: string;
+  }[];
   hosts: Host[];
   guests: {
     id: string;
@@ -62,6 +77,7 @@ export type ISOStringProject = {
       guestId: string;
       from: string;
       to: string;
+      participationOptionId: string;
     }[];
   }[];
   isHost: boolean;
@@ -75,6 +91,7 @@ export type ISOStringProject = {
       guestId: string;
       from: string;
       to: string;
+      participationOptionId: string;
     }[];
   } | null;
 };

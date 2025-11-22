@@ -6,21 +6,20 @@ dayjs.locale("ja");
 export type EditingMatrixSlot = {
   from: Date;
   to: Date;
-  weight: number;
+  optionId: string;
 };
 
 export type ViewingMatrixSlot = {
   from: Date;
   to: Date;
-  weight: number;
-  guestNames: string[];
+  guestIdToOptionId: Record<string, string>;
 };
 
 /**
  * イベントのマージ計算用に、カレンダーを2次元行列で管理
  */
-abstract class CalendarMatrixBase {
-  protected matrix: number[][];
+abstract class CalendarMatrixBase<T> {
+  protected matrix: (T | null)[][];
   /**
    * 15 分を 1 セルとしたセルの数 (96 = 24 * 4)
    */
@@ -28,7 +27,7 @@ abstract class CalendarMatrixBase {
   protected initialDate: Dayjs;
 
   constructor(dayCount: number, initialDate: Date) {
-    this.matrix = Array.from({ length: dayCount }, () => Array.from({ length: this.quarterCount }, () => 0));
+    this.matrix = Array.from({ length: dayCount }, () => Array.from({ length: this.quarterCount }, () => null));
     this.initialDate = dayjs(initialDate).startOf("day");
   }
 
@@ -40,18 +39,10 @@ abstract class CalendarMatrixBase {
 
   getIsSlotExist(date: Date): boolean {
     const [row, col] = this.getIndex(date);
-    return this.matrix[row][col] !== 0;
+    return this.matrix[row][col] !== null;
   }
 
-  abstract getSlots(): EditingMatrixSlot[] | ViewingMatrixSlot[];
-  abstract clear(): void;
-}
-
-/**
- * 編集中イベントの {@link CalendarMatrixBase}
- */
-export class EditingMatrix extends CalendarMatrixBase {
-  setRange(from: Date, to: Date, newValue: number): void {
+  setRange(from: Date, to: Date, newValue: T | null): void {
     const [startRow, startCol] = this.getIndex(from);
     const [endRow, endCol] = this.getIndex(dayjs(to).subtract(1, "minute").toDate());
     for (let r = startRow; r <= endRow; r++) {
@@ -61,6 +52,18 @@ export class EditingMatrix extends CalendarMatrixBase {
     }
   }
 
+  clear(): void {
+    this.matrix = Array.from({ length: this.matrix.length }, () =>
+      Array.from({ length: this.quarterCount }, () => null),
+    );
+  }
+  abstract getSlots(): EditingMatrixSlot[] | ViewingMatrixSlot[];
+}
+
+/**
+ * 編集中イベントの {@link CalendarMatrixBase}
+ */
+export class EditingMatrix extends CalendarMatrixBase<string> {
   getSlots(): EditingMatrixSlot[] {
     const slots: EditingMatrixSlot[] = [];
     for (let day = 0; day < this.matrix.length; day++) {
@@ -70,49 +73,35 @@ export class EditingMatrix extends CalendarMatrixBase {
     return slots;
   }
 
-  private convertRunsToSlots(runs: { start: number; end: number; value: number }[], day: number): EditingMatrixSlot[] {
-    return (
-      runs
-        // TODO: 値は null か非 null かで管理するようにしたい
-        .filter((run) => run.value !== 0)
-        .map((run) => {
-          const from = this.initialDate
-            .add(day, "day")
-            .add(run.start * 15, "minute")
-            .toDate();
-          const to = this.initialDate
-            .add(day, "day")
-            .add(run.end * 15, "minute")
-            .toDate();
-          const weight = run.value;
-          return { from, to, weight };
-        })
-    );
-  }
-
-  clear(): void {
-    this.matrix = Array.from({ length: this.matrix.length }, () => Array.from({ length: this.quarterCount }, () => 0));
+  private convertRunsToSlots(runs: { start: number; end: number; value: string }[], day: number): EditingMatrixSlot[] {
+    return runs.map((run) => {
+      const from = this.initialDate
+        .add(day, "day")
+        .add(run.start * 15, "minute")
+        .toDate();
+      const to = this.initialDate
+        .add(day, "day")
+        .add(run.end * 15, "minute")
+        .toDate();
+      const optionId = run.value;
+      return { from, to, optionId };
+    });
   }
 }
 
 /**
  * 閲覧中イベントの {@link CalendarMatrixBase}
  */
-export class ViewingMatrix extends CalendarMatrixBase {
-  private guestNames: string[][][];
-
-  constructor(dayCount: number, initialDate: Date) {
-    super(dayCount, initialDate);
-    this.guestNames = Array.from({ length: dayCount }, () => Array.from({ length: this.quarterCount }, () => []));
-  }
-
-  incrementRange(from: Date, to: Date, guestName: string): void {
+export class ViewingMatrix extends CalendarMatrixBase<Record<string, string>> {
+  setGuestRange(from: Date, to: Date, guestId: string, optionId: string): void {
     const [startRow, startCol] = this.getIndex(from);
     const [endRow, endCol] = this.getIndex(dayjs(to).subtract(1, "minute").toDate());
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
-        this.matrix[r][c] += 1;
-        this.guestNames[r][c].push(guestName);
+        if (this.matrix[r][c] === null) {
+          this.matrix[r][c] = {};
+        }
+        (this.matrix[r][c] as Record<string, string>)[guestId] = optionId;
       }
     }
   }
@@ -120,39 +109,39 @@ export class ViewingMatrix extends CalendarMatrixBase {
   getSlots(): ViewingMatrixSlot[] {
     const slots: ViewingMatrixSlot[] = [];
     for (let day = 0; day < this.matrix.length; day++) {
-      const runs = findRuns(this.matrix[day], (a, b) => a === b);
+      const runs = findRuns(this.matrix[day], (a, b) => isSameRecordShallow(a, b));
       slots.push(...this.convertRunsToSlots(runs, day));
     }
     return slots;
   }
 
-  private convertRunsToSlots(runs: { start: number; end: number; value: number }[], day: number): ViewingMatrixSlot[] {
-    return (
-      runs
-        // TODO: 値は null か非 null かで管理するようにしたい
-        .filter((run) => run.value !== 0)
-        .map((run) => {
-          const from = this.initialDate
-            .add(day, "day")
-            .add(run.start * 15, "minute")
-            .toDate();
-          const to = this.initialDate
-            .add(day, "day")
-            .add(run.end * 15, "minute")
-            .toDate();
-          const weight = run.value;
-          const guestNames = this.guestNames[day][run.start];
-          return { from, to, weight, guestNames };
-        })
-    );
+  private convertRunsToSlots(
+    runs: { start: number; end: number; value: Record<string, string> }[],
+    day: number,
+  ): ViewingMatrixSlot[] {
+    return runs.map((run) => {
+      const from = this.initialDate
+        .add(day, "day")
+        .add(run.start * 15, "minute")
+        .toDate();
+      const to = this.initialDate
+        .add(day, "day")
+        .add(run.end * 15, "minute")
+        .toDate();
+      const guestIdToOptionId = run.value;
+      return { from, to, guestIdToOptionId };
+    });
   }
+}
 
-  clear(): void {
-    this.matrix = Array.from({ length: this.matrix.length }, () => Array.from({ length: this.quarterCount }, () => 0));
-    this.guestNames = Array.from({ length: this.matrix.length }, () =>
-      Array.from({ length: this.quarterCount }, () => []),
-    );
+function isSameRecordShallow(a: Record<string, string>, b: Record<string, string>): boolean {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if (a[key] !== b[key]) return false;
   }
+  return true;
 }
 
 /**

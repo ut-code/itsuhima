@@ -16,6 +16,7 @@ export function projectReviver(project: ISOStringProject): Project {
       startTime: new Date(range.startTime),
       endTime: new Date(range.endTime),
     })),
+    participationOptions: project.participationOptions.map((opt) => ({ ...opt })),
     hosts: project.hosts.map((host) => ({ ...host })),
     guests: project.guests.map((guest) => ({
       ...guest,

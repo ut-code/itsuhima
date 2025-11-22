@@ -1,9 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { zValidator } from "@hono/zod-validator";
 import dotenv from "dotenv";
 import { Hono } from "hono";
 import { getSignedCookie, setSignedCookie } from "hono/cookie";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import { DEFAULT_PARTICIPATION_OPTION } from "../../../common/colors.js";
 import { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/validators.js";
 import { cookieOptions, prisma } from "../main.js";
 
@@ -22,6 +24,23 @@ const router = new Hono()
     const browserId = (await getSignedCookie(c, cookieSecret, "browserId")) || undefined;
     try {
       const data = c.req.valid("json");
+
+      // 参加形態の処理（指定がない場合はデフォルトを作成）
+      const participationOptionsData =
+        data.participationOptions && data.participationOptions.length > 0
+          ? data.participationOptions.map((opt) => ({
+              id: opt.id, // フロントエンドで生成された UUID をそのまま使用
+              label: opt.label,
+              color: opt.color,
+            }))
+          : [
+              {
+                id: randomUUID(), // デフォルト作成時のみサーバーで生成
+                label: DEFAULT_PARTICIPATION_OPTION.label,
+                color: DEFAULT_PARTICIPATION_OPTION.color,
+              },
+            ];
+
       const event = await prisma.project.create({
         data: {
           id: nanoid(),
@@ -40,8 +59,11 @@ const router = new Hono()
               browserId,
             },
           },
+          participationOptions: {
+            create: participationOptionsData,
+          },
         },
-        include: { hosts: true },
+        include: { hosts: true, participationOptions: true },
       });
       const host = event.hosts[0];
 
@@ -124,6 +146,7 @@ const router = new Hono()
         where: { id: projectId },
         include: {
           allowedRanges: true,
+          participationOptions: true,
           guests: {
             include: {
               slots: true, // slots 全部欲しいなら select より include
@@ -187,6 +210,55 @@ const router = new Hono()
       if (!host) {
         return c.json({ message: "アクセス権限がありません。" }, 403);
       }
+
+      // 参加形態の更新
+      if (data.participationOptions) {
+        // 最低1つの参加形態が必要
+        if (data.participationOptions.length === 0) {
+          return c.json({ message: "参加形態は最低1つ必要です。" }, 400);
+        }
+
+        // 削除対象の参加形態に Slot が紐づいているかチェック
+        const existingOptions = await prisma.participationOption.findMany({
+          where: { projectId },
+          include: { slots: { select: { id: true } } },
+        });
+
+        const newOptionIds = data.participationOptions.map((o) => o.id);
+        const optionsToDelete = existingOptions.filter((o) => !newOptionIds.includes(o.id));
+        const undeletableOptions = optionsToDelete.filter((o) => o.slots.length > 0);
+
+        if (undeletableOptions.length > 0) {
+          const labels = undeletableOptions.map((o) => o.label).join(", ");
+          return c.json(
+            {
+              message: `以下の参加形態は日程が登録されているため削除できません: ${labels}`,
+            },
+            400,
+          );
+        }
+
+        await prisma.$transaction([
+          // 既存の参加形態で、新しいリストにないものを削除
+          prisma.participationOption.deleteMany({
+            where: {
+              projectId,
+              id: {
+                notIn: newOptionIds,
+              },
+            },
+          }),
+          // 既存の参加形態を更新または新規作成
+          ...data.participationOptions.map((opt) =>
+            prisma.participationOption.upsert({
+              where: { id: opt.id },
+              update: { label: opt.label, color: opt.color },
+              create: { id: opt.id, label: opt.label, color: opt.color, projectId },
+            }),
+          ),
+        ]);
+      }
+
       // 更新処理
       const updatedEvent = await prisma.project.update({
         where: { id: projectId },
@@ -208,7 +280,7 @@ const router = new Hono()
                 })),
               },
             },
-        include: { allowedRanges: true },
+        include: { allowedRanges: true, participationOptions: true },
       });
 
       return c.json({ event: updatedEvent }, 200);
@@ -285,6 +357,7 @@ const router = new Hono()
                 from: slot.start,
                 to: slot.end,
                 projectId,
+                participationOptionId: slot.participationOptionId,
               })),
             },
           },
@@ -331,6 +404,7 @@ const router = new Hono()
           from: slot.start,
           to: slot.end,
           projectId,
+          participationOptionId: slot.participationOptionId,
         }));
 
         await prisma.slot.deleteMany({ where: { guestId: existingGuest.id } });
