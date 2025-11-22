@@ -160,21 +160,23 @@ export const Calendar = ({
         optionGroups.get(optionId)?.push(guestId);
       }
 
-      // 参加形態ごとの内訳を作成
-      const optionBreakdown = Array.from(optionGroups.entries()).map(([optionId, guestIds]) => {
-        const option = participationOptions.find((o) => o.id === optionId);
-        const guestNames = guestIds.map((guestId) => guestIdToName[guestId] || guestId);
-        const optionOpacity = 1 - (1 - OPACITY) ** guestIds.length;
+      // 参加形態ごとの内訳を作成。順番を participationOptions に合わせる
+      const optionBreakdown = participationOptions
+        .filter((option) => optionGroups.has(option.id))
+        .map((option) => {
+          const guestIds = optionGroups.get(option.id) || [];
+          const guestNames = guestIds.map((guestId) => guestIdToName[guestId] || guestId);
+          const optionOpacity = 1 - (1 - OPACITY) ** guestIds.length;
 
-        return {
-          optionId,
-          optionLabel: option?.label || "不明",
-          color: option?.color || `rgb(${PRIMARY_RGB.join(",")})`,
-          members: guestNames,
-          count: guestIds.length,
-          opacity: optionOpacity,
-        };
-      });
+          return {
+            optionId: option.id,
+            optionLabel: option.label,
+            color: option.color,
+            members: guestNames,
+            count: guestIds.length,
+            opacity: optionOpacity,
+          };
+        });
 
       // 複数の参加形態がある場合は複合、　そうでなければ単色
       let backgroundStyle: string;
@@ -427,7 +429,7 @@ export const Calendar = ({
                 }}
               >
                 <div
-                  className="badge border-0 bg-gray-200 font-bold text-[10px] px-1 py-0 h-4 min-h-0 sm:badge-sm sm:text-sm sm:px-2 sm:h-5"
+                  className="badge sm:badge-sm h-4 min-h-0 border-0 bg-gray-200 px-1 py-0 font-bold text-[10px] sm:h-5 sm:px-2 sm:text-sm"
                   style={{ color: breakdown.color }}
                   data-tooltip-id="member-info"
                   data-tooltip-html={tooltipContent}
