@@ -13,7 +13,7 @@ import {
 } from "react-icons/hi";
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
-import { generateDistinctColor } from "../../../common/colors";
+import { DEFAULT_PARTICIPATION_OPTION, generateDistinctColor } from "../../../common/colors";
 import { editReqSchema, projectReqSchema } from "../../../common/validators";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
@@ -80,6 +80,7 @@ export default function ProjectPage() {
 
   const [copied, setCopied] = useState(false);
   const [isInfoExpanded, setIsInfoExpanded] = useState(!eventId); // 新規作成時は展開、編集時は折りたたみ
+  const [isParticipationExpanded, setIsParticipationExpanded] = useState(!!eventId); // 新規作成時は折りたたみ、編集時は展開
 
   const {
     register,
@@ -97,7 +98,15 @@ export default function ProjectPage() {
       startDate: eventId ? "" : dayjs().format("YYYY-MM-DD"),
       endDate: eventId ? "" : dayjs().add(6, "day").format("YYYY-MM-DD"),
       allowedRanges: [{ startTime: "08:00", endTime: "23:00" }],
-      participationOptions: [],
+      participationOptions: eventId
+        ? []
+        : [
+            {
+              id: crypto.randomUUID(),
+              label: DEFAULT_PARTICIPATION_OPTION.label,
+              color: DEFAULT_PARTICIPATION_OPTION.color,
+            },
+          ],
     },
   });
 
@@ -470,80 +479,93 @@ export default function ProjectPage() {
                   <p className="mt-1 text-red-500 text-sm">{errors.allowedRanges.message}</p>
                 )}
               </fieldset>
-              <fieldset>
-                <legend className="text-gray-400 text-sm">参加形態（任意）</legend>
-                <p className="mb-2 text-gray-500 text-xs">
-                  参加形態を設定すると、参加者は「対面」「オンライン」などの形態を選んで日程を登録できます。
-                </p>
+              <div className="collapse-arrow collapse mb-4 border border-base-300 bg-base-200">
+                <input
+                  type="checkbox"
+                  checked={isParticipationExpanded}
+                  onChange={(e) => setIsParticipationExpanded(e.target.checked)}
+                />
+                <div className="collapse-title font-medium text-sm">参加形態の設定 (任意)</div>
+                <div className="collapse-content">
+                  <fieldset>
+                    <p className="mb-2 text-gray-500 text-xs">
+                      参加形態を設定すると、参加者は「対面」「オンライン」などの形態を選んで日程を登録できます。
+                    </p>
 
-                {participationFields.map((field, index) => {
-                  const hasSlots = project?.guests.some((guest) =>
-                    guest.slots.some((slot) => slot.participationOptionId === field.id),
-                  );
-                  return (
-                    <div key={field.id} className="mb-2 w-full">
-                      <div className="flex items-center gap-2">
-                        <input type="hidden" {...register(`participationOptions.${index}.id`)} value={field.id} />
-                        <input
-                          type="color"
-                          {...register(`participationOptions.${index}.color`)}
-                          defaultValue={field.color}
-                          className="h-10 w-10 cursor-pointer rounded border-0"
-                        />
-                        <input
-                          type="text"
-                          {...register(`participationOptions.${index}.label`)}
-                          defaultValue={field.label}
-                          placeholder="参加形態名（例：対面、オンライン）"
-                          className={`input input-bordered flex-1 text-base ${errors.participationOptions?.[index]?.label ? "input-error border-red-500" : ""}`}
-                          onBlur={() => {
-                            // 値を変更していない場合でも空ならエラー表示させるため手動で検証
-                            trigger(`participationOptions.${index}.label` as const);
-                          }}
-                        />
-                        <div
-                          className={hasSlots ? "tooltip tooltip-left" : ""}
-                          data-tip={hasSlots ? "すでにこの参加形態の日程が登録されているため、削除できません" : ""}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => removeParticipation(index)}
-                            className={`btn btn-ghost btn-sm text-error ${hasSlots ? "cursor-not-allowed opacity-40" : ""}`}
-                            disabled={hasSlots}
-                          >
-                            <HiOutlineTrash size={20} />
-                          </button>
+                    {participationFields.map((field, index) => {
+                      const hasSlots = project?.guests.some((guest) =>
+                        guest.slots.some((slot) => slot.participationOptionId === field.id),
+                      );
+                      const isLastOption = participationFields.length === 1;
+                      const cannotDelete = hasSlots || isLastOption;
+                      const tooltipMessage = hasSlots
+                        ? "すでにこの参加形態の日程が登録されているため、削除できません"
+                        : isLastOption
+                          ? "最低1つの参加形態が必要です"
+                          : "";
+                      return (
+                        <div key={field.id} className="mb-2 w-full">
+                          <div className="flex items-center gap-2">
+                            <input type="hidden" {...register(`participationOptions.${index}.id`)} value={field.id} />
+                            <input
+                              type="color"
+                              {...register(`participationOptions.${index}.color`)}
+                              defaultValue={field.color}
+                              className="h-10 w-10 cursor-pointer rounded border-0"
+                            />
+                            <input
+                              type="text"
+                              {...register(`participationOptions.${index}.label`)}
+                              defaultValue={field.label}
+                              placeholder="参加形態名（例：対面、オンライン）"
+                              className={`input input-bordered flex-1 text-base ${errors.participationOptions?.[index]?.label ? "input-error border-red-500" : ""}`}
+                              onBlur={() => {
+                                // 値を変更していない場合でも空ならエラー表示させるため手動で検証
+                                trigger(`participationOptions.${index}.label` as const);
+                              }}
+                            />
+                            <div className={cannotDelete ? "tooltip tooltip-left" : ""} data-tip={tooltipMessage}>
+                              <button
+                                type="button"
+                                onClick={() => removeParticipation(index)}
+                                className={`btn btn-ghost btn-sm text-error ${cannotDelete ? "cursor-not-allowed opacity-40" : ""}`}
+                                disabled={cannotDelete}
+                              >
+                                <HiOutlineTrash size={20} />
+                              </button>
+                            </div>
+                          </div>
+                          {errors.participationOptions?.[index]?.label && (
+                            <p className="mt-1 text-red-500 text-xs">
+                              {errors.participationOptions[index]?.label?.message as string}
+                            </p>
+                          )}
+                          {errors.participationOptions?.[index]?.color && (
+                            <p className="mt-1 text-red-500 text-xs">
+                              {errors.participationOptions[index]?.color?.message as string}
+                            </p>
+                          )}
                         </div>
-                      </div>
-                      {errors.participationOptions?.[index]?.label && (
-                        <p className="mt-1 text-red-500 text-xs">
-                          {errors.participationOptions[index]?.label?.message as string}
-                        </p>
-                      )}
-                      {errors.participationOptions?.[index]?.color && (
-                        <p className="mt-1 text-red-500 text-xs">
-                          {errors.participationOptions[index]?.color?.message as string}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
+                      );
+                    })}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const existingColors = participationFields.map((o) => o.color);
-                    appendParticipation({
-                      id: crypto.randomUUID(),
-                      label: "",
-                      color: generateDistinctColor(existingColors),
-                    });
-                  }}
-                  className="btn btn-outline btn-sm"
-                >
-                  + 参加形態を追加
-                </button>
-              </fieldset>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const existingColors = participationFields.map((o) => o.color);
+                        appendParticipation({
+                          id: crypto.randomUUID(),
+                          label: "",
+                          color: generateDistinctColor(existingColors),
+                        });
+                      }}
+                      className="btn btn-outline btn-sm"
+                    >
+                      + 参加形態を追加
+                    </button>
+                  </fieldset>
+                </div>
+              </div>
               {project && (
                 <fieldset>
                   <legend className="text-gray-400 text-sm">イベントの削除</legend>
