@@ -15,6 +15,7 @@ import type {
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Tooltip } from "react-tooltip";
+import useCalendarScrollBlock from "../hooks/useCalendarScrollBlock";
 import { EditingMatrix, ViewingMatrix } from "../lib/CalendarMatrix";
 import type { EditingSlot } from "../pages/eventId/Submission";
 
@@ -68,6 +69,13 @@ type Props = {
 
 const OPACITY = 0.2;
 const PRIMARY_RGB = [15, 130, 177];
+
+/**
+ * 長押しでドラッグ開始とみなすまでの遅延時間 （ms）
+ * - FullCalendar で選択イベントが点灯し始めるまでの時間。
+ * - また、これ以上の時間で押し続けるとドラッグ操作として扱われ、スクロールを無効化する
+ */
+const LONG_PRESS_DELAY = 150;
 
 const EDITING_EVENT = "ih-editing-event";
 const VIEWING_EVENT = "ih-viewing-event";
@@ -284,6 +292,8 @@ export const Calendar = ({
     };
   }, []);
 
+  useCalendarScrollBlock(LONG_PRESS_DELAY);
+
   const pageCount = Math.ceil(countDays / 7);
 
   const headerToolbar = useMemo(
@@ -456,7 +466,7 @@ export const Calendar = ({
         ref={calendarRef}
         plugins={[timeGridPlugin, interactionPlugin]}
         height={"100%"}
-        longPressDelay={200}
+        longPressDelay={LONG_PRESS_DELAY}
         slotDuration={"00:15:00"}
         allDaySlot={false}
         initialDate={startDate}
