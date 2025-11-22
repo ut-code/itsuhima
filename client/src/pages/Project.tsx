@@ -9,6 +9,7 @@ import {
   HiInformationCircle,
   HiOutlineCheckCircle,
   HiOutlineExclamationCircle,
+  HiOutlineTrash,
 } from "react-icons/hi";
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
@@ -510,7 +511,7 @@ export default function ProjectPage() {
                             className={`btn btn-ghost btn-sm text-error ${hasSlots ? "cursor-not-allowed opacity-40" : ""}`}
                             disabled={hasSlots}
                           >
-                            削除
+                            <HiOutlineTrash size={20} />
                           </button>
                         </div>
                       </div>
@@ -550,7 +551,7 @@ export default function ProjectPage() {
                     <button
                       type="button"
                       id="delete-button"
-                      className="btn bg-red-700 text-white"
+                      className="btn btn-ghost text-error"
                       onClick={async () => {
                         if (confirm("本当にこのイベントを削除しますか？")) {
                           try {
@@ -582,6 +583,7 @@ export default function ProjectPage() {
                         }
                       }}
                     >
+                      <HiOutlineTrash size={20} />
                       イベントを削除する
                     </button>
                   </div>
