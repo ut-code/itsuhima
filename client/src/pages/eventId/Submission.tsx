@@ -17,7 +17,7 @@ import { API_ENDPOINT } from "../../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
 
-export type EditingSlot = Pick<Slot, "from" | "to">;
+export type EditingSlot = Pick<Slot, "from" | "to" | "participationOptionId">;
 
 export default function SubmissionPage() {
   const { eventId: projectId } = useParams<{ eventId: string }>();
@@ -151,14 +151,14 @@ export default function SubmissionPage() {
   // init editing slots
   useEffect(() => {
     if (project?.meAsGuest?.slots && editMode) {
-      setEditingSlots(
-        project.meAsGuest.slots.map((slot) => ({
-          from: slot.from,
-          to: slot.to,
-        })),
-      );
+      setEditingSlots(project.meAsGuest.slots);
     }
   }, [project, editMode]);
+
+  const guestIdToName = useMemo(() => {
+    if (!project) return {};
+    return Object.fromEntries(project.guests.map((g) => [g.id, g.name]));
+  }, [project]);
 
   // init viewing slots
   const viewingSlots = useMemo(() => {
@@ -172,7 +172,8 @@ export default function SubmissionPage() {
           g.slots.map((s) => ({
             from: s.from,
             to: s.to,
-            guestName: g.name,
+            guestId: g.id,
+            optionId: s.participationOptionId,
           })),
         );
     }
@@ -182,7 +183,8 @@ export default function SubmissionPage() {
       g.slots.map((s) => ({
         from: s.from,
         to: s.to,
-        guestName: g.name,
+        guestId: g.id,
+        optionId: s.participationOptionId,
       })),
     );
   }, [project, myGuestId, editMode]);
@@ -245,6 +247,9 @@ export default function SubmissionPage() {
               allowedRanges={project.allowedRanges}
               editingSlots={editMode ? editingSlots : []}
               viewingSlots={viewingSlots}
+              guestIdToName={guestIdToName}
+              participationOptions={project.participationOptions}
+              currentParticipationOptionId={selectedParticipationOptionId}
               editMode={editMode}
               onChangeEditingSlots={setEditingSlots}
             />
@@ -280,14 +285,6 @@ export default function SubmissionPage() {
                       disabled={loading || !guestName}
                       onClick={() => {
                         if (!guestName) return;
-                        // postSubmissions(
-                        //   editingSlotsRef.current.map((slot) => ({
-                        //     start: slot.from,
-                        //     end: slot.to,
-                        //     participationOptionId: slot.participationOptionId,
-                        //   })),
-                        //   myGuestId ?? "",
-                        // );
                         postSubmissions(
                           editingSlots.map((slot) => ({
                             start: slot.from,

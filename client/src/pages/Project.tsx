@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
 import { hc } from "hono/client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import {
   HiClipboardCheck,
@@ -31,36 +31,38 @@ export default function ProjectPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [projectLoading, setProjectLoading] = useState(true);
-  useEffect(() => {
-    const fetchProject = async () => {
-      if (!eventId) {
-        setProject(null);
-        setProjectLoading(false);
-        return;
+
+  const fetchProject = useCallback(async () => {
+    if (!eventId) {
+      setProject(null);
+      setProjectLoading(false);
+      return;
+    }
+    setProjectLoading(true);
+    try {
+      const res = await client.projects[":projectId"].$get(
+        {
+          param: { projectId: eventId },
+        },
+        {
+          init: { credentials: "include" },
+        },
+      );
+      if (res.status === 200) {
+        const data = await res.json();
+        const parsedData = projectReviver(data);
+        setProject(parsedData);
       }
-      setProjectLoading(true);
-      try {
-        const res = await client.projects[":projectId"].$get(
-          {
-            param: { projectId: eventId },
-          },
-          {
-            init: { credentials: "include" },
-          },
-        );
-        if (res.status === 200) {
-          const data = await res.json();
-          const parsedData = projectReviver(data);
-          setProject(parsedData);
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setProjectLoading(false);
-      }
-    };
-    fetchProject();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setProjectLoading(false);
+    }
   }, [eventId]);
+
+  useEffect(() => {
+    fetchProject();
+  }, [fetchProject]);
 
   const [submitLoading, setSubmitLoading] = useState<boolean>(false);
   const loading = projectLoading || submitLoading;
@@ -79,6 +81,9 @@ export default function ProjectPage() {
   const [isInfoExpanded, setIsInfoExpanded] = useState(!eventId); // 新規作成時は展開、編集時は折りたたみ
 
   const [participationOptions, setParticipationOptions] = useState<{ id: string; label: string; color: string }[]>([]);
+  const [initialParticipationOptions, setInitialParticipationOptions] = useState<
+    { id: string; label: string; color: string }[]
+  >([]);
 
   const {
     register,
@@ -124,13 +129,13 @@ export default function ProjectPage() {
       ],
     });
     // 参加形態の初期化
-    setParticipationOptions(
-      project.participationOptions.map((opt) => ({
-        id: opt.id,
-        label: opt.label,
-        color: opt.color,
-      })),
-    );
+    const initialOptions = project.participationOptions.map((opt) => ({
+      id: opt.id,
+      label: opt.label,
+      color: opt.color,
+    }));
+    setParticipationOptions(initialOptions);
+    setInitialParticipationOptions(initialOptions);
   }, [eventId, project, reset]);
 
   // 送信処理
@@ -194,7 +199,8 @@ export default function ProjectPage() {
       );
       setSubmitLoading(false);
       if (res.ok) {
-        // TODO: 更新したデータで再レンダリング
+        // TODO: PUT のレスポンスでデータを返すことを検討
+        await fetchProject();
         setToast({
           message: "更新しました。",
           variant: "success",
@@ -221,6 +227,33 @@ export default function ProjectPage() {
       }
     }
   }, [loading, project, isHost, eventId, navigate]);
+
+  // 参加形態の変更を検知 TODO: 実装の改善、rhf での管理
+  const hasParticipationOptionsChanged = useMemo(() => {
+    if (!eventId) return false; // 新規作成の場合は参加形態の変更を検知しない
+
+    // 数が違う場合
+    if (participationOptions.length !== initialParticipationOptions.length) return true;
+
+    // 各要素を比較
+    for (let i = 0; i < participationOptions.length; i++) {
+      const current = participationOptions[i];
+      const initial = initialParticipationOptions.find((opt) => opt.id === current.id);
+
+      // IDが見つからない（新規追加された）
+      if (!initial) return true;
+
+      // label または color が変更された
+      if (current.label !== initial.label || current.color !== initial.color) return true;
+    }
+
+    // 削除された要素がないかチェック
+    for (const initial of initialParticipationOptions) {
+      if (!participationOptions.find((opt) => opt.id === initial.id)) return true;
+    }
+
+    return false;
+  }, [participationOptions, initialParticipationOptions, eventId]);
 
   return (
     <>
@@ -541,7 +574,7 @@ export default function ProjectPage() {
                 <NavLink to={"/home"} className="btn btn-outline btn-primary">
                   ホームに戻る
                 </NavLink>
-                <button type="submit" className="btn btn-primary" disabled={!isValid || !isDirty}>
+                <button type="submit" className="btn btn-primary" disabled={!isValid || (!isDirty && !hasParticipationOptionsChanged)}>
                   イベントを{project ? "更新" : "作成"}する
                 </button>
               </div>
