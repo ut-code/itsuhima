@@ -96,6 +96,7 @@ export default function ProjectPage() {
       startDate: eventId ? "" : dayjs().format("YYYY-MM-DD"),
       endDate: eventId ? "" : dayjs().add(6, "day").format("YYYY-MM-DD"),
       allowedRanges: [{ startTime: "00:00", endTime: "23:45" }],
+      participationOptions: [],
     },
   });
 
@@ -444,28 +445,44 @@ export default function ProjectPage() {
                 </p>
 
                 {participationFields.map((field, index) => (
-                  <div key={field.id} className="mb-2 flex items-center gap-2">
-                    <input type="hidden" {...register(`participationOptions.${index}.id`)} value={field.id} />
-                    <input
-                      type="color"
-                      {...register(`participationOptions.${index}.color`)}
-                      defaultValue={field.color}
-                      className="h-10 w-10 cursor-pointer rounded border-0"
-                    />
-                    <input
-                      type="text"
-                      {...register(`participationOptions.${index}.label`)}
-                      defaultValue={field.label}
-                      placeholder="参加形態名（例：対面、オンライン）"
-                      className="input input-bordered flex-1 text-base"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeParticipation(index)}
-                      className="btn btn-ghost btn-sm text-error"
-                    >
-                      削除
-                    </button>
+                  <div key={field.id} className="mb-2 w-full">
+                    <div className="flex items-center gap-2">
+                      <input type="hidden" {...register(`participationOptions.${index}.id`)} value={field.id} />
+                      <input
+                        type="color"
+                        {...register(`participationOptions.${index}.color`)}
+                        defaultValue={field.color}
+                        className="h-10 w-10 cursor-pointer rounded border-0"
+                      />
+                      <input
+                        type="text"
+                        {...register(`participationOptions.${index}.label`)}
+                        defaultValue={field.label}
+                        placeholder="参加形態名（例：対面、オンライン）"
+                        className={`input input-bordered flex-1 text-base ${errors.participationOptions?.[index]?.label ? "input-error border-red-500" : ""}`}
+                        onBlur={() => {
+                          // 値を変更していない場合でも空ならエラー表示させるため手動で検証
+                          trigger(`participationOptions.${index}.label` as const);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeParticipation(index)}
+                        className="btn btn-ghost btn-sm text-error"
+                      >
+                        削除
+                      </button>
+                    </div>
+                    {errors.participationOptions?.[index]?.label && (
+                      <p className="mt-1 text-red-500 text-xs">
+                        {errors.participationOptions[index]?.label?.message as string}
+                      </p>
+                    )}
+                    {errors.participationOptions?.[index]?.color && (
+                      <p className="mt-1 text-red-500 text-xs">
+                        {errors.participationOptions[index]?.color?.message as string}
+                      </p>
+                    )}
                   </div>
                 ))}
 
