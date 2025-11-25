@@ -242,7 +242,7 @@ export default function ProjectPage() {
   useEffect(() => {
     if (!loading && project && !isHost) {
       if (eventId) {
-        navigate(`/${eventId}`);
+        navigate(`/e/${eventId}`);
       } else {
         navigate("/");
       }
@@ -613,7 +613,7 @@ export default function ProjectPage() {
               )}
               <div className="fixed bottom-0 left-0 flex max-h-18 w-full justify-between bg-white p-4 shadow-[0_-2px_8px_rgba(0,0,0,0.1)]">
                 {eventId ? (
-                  <NavLink to={`/${eventId}`} className="btn btn-outline btn-primary">
+                  <NavLink to={`/e/${eventId}`} className="btn btn-outline btn-primary">
                     日程調整に戻る
                   </NavLink>
                 ) : (
@@ -639,12 +639,12 @@ export default function ProjectPage() {
                 type="text"
                 disabled
                 className="input input-info w-full"
-                value={`${FRONTEND_ORIGIN}/${dialogStatus.projectId}`}
+                value={`${FRONTEND_ORIGIN}/e/${dialogStatus.projectId}`}
               />
               <button
                 type="button"
                 onClick={async () => {
-                  await navigator.clipboard.writeText(`${FRONTEND_ORIGIN}/${dialogStatus.projectId}`);
+                  await navigator.clipboard.writeText(`${FRONTEND_ORIGIN}/e/${dialogStatus.projectId}`);
                   setCopied(true);
                   setTimeout(() => {
                     setCopied(false);
@@ -657,7 +657,7 @@ export default function ProjectPage() {
               </button>
             </div>
             <div className="modal-action">
-              <NavLink className="btn btn-primary" to={`/${dialogStatus.projectId}`}>
+              <NavLink className="btn btn-primary" to={`/e/${dialogStatus.projectId}`}>
                 イベントへ
               </NavLink>
             </div>
