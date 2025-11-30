@@ -1,25 +1,28 @@
 import { zValidator } from "@hono/zod-validator";
 import dotenv from "dotenv";
 import { Hono } from "hono";
-import { getSignedCookie, setSignedCookie } from "hono/cookie";
-import { nanoid } from "nanoid";
+import { customAlphabet } from "nanoid";
 import { z } from "zod";
 import { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/validators.js";
-import { cookieOptions, prisma } from "../main.js";
+import { prisma } from "../main.js";
 
 dotenv.config();
 
+/**
+ * ハイフン・アンダースコアを含まない Nano ID 形式。
+ */
+const nanoid = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 21);
+
 const projectIdParamsSchema = z.object({ projectId: z.string().length(21) });
 
-const router = new Hono()
+type AppVariables = {
+  browserId: string;
+};
+
+const router = new Hono<{ Variables: AppVariables }>()
   // プロジェクト作成
   .post("/", zValidator("json", projectReqSchema), async (c) => {
-    const cookieSecret = process.env.COOKIE_SECRET;
-    if (!cookieSecret) {
-      console.error("COOKIE_SECRET is not set");
-      return c.json({ message: "サーバー設定エラー" }, 500);
-    }
-    const browserId = (await getSignedCookie(c, cookieSecret, "browserId")) || undefined;
+    const browserId = c.get("browserId");
     try {
       const data = c.req.valid("json");
 
@@ -51,9 +54,7 @@ const router = new Hono()
         },
         include: { hosts: true, participationOptions: true },
       });
-      const host = event.hosts[0];
 
-      await setSignedCookie(c, "browserId", host.browserId, cookieSecret, cookieOptions);
       return c.json({ id: event.id, name: event.name }, 201);
     } catch (_err) {
       return c.json({ message: "イベント作成時にエラーが発生しました" }, 500);
@@ -62,16 +63,7 @@ const router = new Hono()
 
   // 自分が関連するプロジェクト取得
   .get("/mine", async (c) => {
-    const cookieSecret = process.env.COOKIE_SECRET;
-    if (!cookieSecret) {
-      console.error("COOKIE_SECRET is not set");
-      return c.json({ message: "サーバー側でエラーが発生しています。" }, 500);
-    }
-
-    const browserId = await getSignedCookie(c, cookieSecret, "browserId");
-    if (!browserId) {
-      return c.json({ message: "認証されていません。" }, 401);
-    }
+    const browserId = c.get("browserId");
 
     try {
       const involvedProjects = await prisma.project.findMany({
@@ -118,13 +110,7 @@ const router = new Hono()
 
   // プロジェクト取得
   .get("/:projectId", zValidator("param", projectIdParamsSchema), async (c) => {
-    const cookieSecret = process.env.COOKIE_SECRET;
-    if (!cookieSecret) {
-      console.error("COOKIE_SECRET is not set");
-      return c.json({ message: "サーバー側でエラーが発生しています。" }, 500);
-    }
-
-    const browserId = await getSignedCookie(c, cookieSecret, "browserId");
+    const browserId = c.get("browserId");
 
     try {
       const { projectId } = c.req.valid("param");
@@ -157,8 +143,8 @@ const router = new Hono()
           const { browserId: _, ...rest } = g;
           return rest;
         }),
-        isHost: browserId ? projectRow.hosts.some((h) => h.browserId === browserId) : false,
-        meAsGuest: browserId ? (projectRow.guests.find((g) => g.browserId === browserId) ?? null) : null,
+        isHost: projectRow.hosts.some((h) => h.browserId === browserId),
+        meAsGuest: projectRow.guests.find((g) => g.browserId === browserId) ?? null,
       };
       return c.json(data, 200);
     } catch (error) {
@@ -169,12 +155,7 @@ const router = new Hono()
 
   // プロジェクト編集
   .put("/:projectId", zValidator("param", projectIdParamsSchema), zValidator("json", editReqSchema), async (c) => {
-    const cookieSecret = process.env.COOKIE_SECRET;
-    if (!cookieSecret) {
-      console.error("COOKIE_SECRET is not set");
-      return c.json({ message: "サーバー設定エラー" }, 500);
-    }
-    const browserId = (await getSignedCookie(c, cookieSecret, "browserId")) || undefined;
+    const browserId = c.get("browserId");
     try {
       const { projectId } = c.req.valid("param");
       const data = c.req.valid("json");
@@ -278,15 +259,7 @@ const router = new Hono()
 
   // プロジェクト削除
   .delete("/:projectId", zValidator("param", projectIdParamsSchema), async (c) => {
-    const cookieSecret = process.env.COOKIE_SECRET;
-    if (!cookieSecret) {
-      console.error("COOKIE_SECRET is not set");
-      return c.json({ message: "サーバー設定エラー" }, 500);
-    }
-    const browserId = await getSignedCookie(c, cookieSecret, "browserId");
-    if (!browserId) {
-      return c.json({ message: "認証されていません。" }, 401);
-    }
+    const browserId = c.get("browserId");
     try {
       const { projectId } = c.req.valid("param");
       // Host 認証
@@ -314,26 +287,20 @@ const router = new Hono()
     zValidator("param", projectIdParamsSchema),
     zValidator("json", submitReqSchema),
     async (c) => {
-      const cookieSecret = process.env.COOKIE_SECRET;
-      if (!cookieSecret) {
-        console.error("COOKIE_SECRET is not set");
-        return c.json({ message: "サーバー設定エラー" }, 500);
-      }
       const { projectId } = c.req.valid("param");
-      const browserId = (await getSignedCookie(c, cookieSecret, "browserId")) || undefined;
+      const browserId = c.get("browserId");
 
-      if (browserId) {
-        const existingGuest = await prisma.guest.findFirst({
-          where: { projectId, browserId },
-        });
-        if (existingGuest) {
-          return c.json({ message: "すでに登録済みです" }, 403);
-        }
+      const existingGuest = await prisma.guest.findFirst({
+        where: { projectId, browserId },
+      });
+      if (existingGuest) {
+        return c.json({ message: "すでに登録済みです" }, 403);
       }
+
       const { name, slots } = c.req.valid("json");
 
       try {
-        const guest = await prisma.guest.create({
+        await prisma.guest.create({
           data: {
             name,
             browserId,
@@ -349,7 +316,6 @@ const router = new Hono()
           },
           include: { slots: true },
         });
-        await setSignedCookie(c, "browserId", guest.browserId, cookieSecret, cookieOptions);
         return c.json("日時が登録されました！", 201);
       } catch (error) {
         console.error("登録エラー:", error);
@@ -364,17 +330,9 @@ const router = new Hono()
     zValidator("param", projectIdParamsSchema),
     zValidator("json", submitReqSchema),
     async (c) => {
-      const cookieSecret = process.env.COOKIE_SECRET;
-      if (!cookieSecret) {
-        console.error("COOKIE_SECRET is not set");
-        return c.json({ message: "サーバー設定エラー" }, 500);
-      }
       const { projectId } = c.req.valid("param");
-      const browserId = (await getSignedCookie(c, cookieSecret, "browserId")) || undefined;
+      const browserId = c.get("browserId");
 
-      if (!browserId) {
-        return c.json({ message: "認証されていません。" }, 401);
-      }
       const { name, slots } = c.req.valid("json");
 
       try {

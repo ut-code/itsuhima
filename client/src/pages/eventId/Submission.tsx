@@ -210,7 +210,7 @@ export default function SubmissionPage() {
     <>
       <div className="flex h-[100dvh] flex-col">
         <Header />
-        {loading || !selectedParticipationOptionId ? (
+        {loading ? (
           <div className="flex w-full flex-1 items-center justify-center">
             <span className="loading loading-dots loading-md text-gray-400" />
           </div>
@@ -221,12 +221,16 @@ export default function SubmissionPage() {
               ホームに戻る
             </NavLink>
           </div>
+        ) : !selectedParticipationOptionId ? (
+          <div className="flex w-full flex-1 items-center justify-center">
+            <span className="loading loading-dots loading-md text-gray-400" />
+          </div>
         ) : (
           <div className="flex h-full flex-1 flex-col overflow-y-auto p-4">
             <div className="flex items-center justify-between">
               <h1 className="mb-2 font-bold text-2xl text-gray-800">{project.name} の日程調整</h1>
               {isHost && (
-                <NavLink to={`/${projectId}/edit`} className="btn btn-sm font-normal text-gray-600">
+                <NavLink to={`/e/${projectId}/edit`} className="btn btn-sm font-normal text-gray-600">
                   <HiOutlineCog />
                   イベント設定
                 </NavLink>
