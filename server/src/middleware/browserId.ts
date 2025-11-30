@@ -38,35 +38,36 @@ export const browserIdMiddleware: MiddlewareHandler = async (c: Context, next) =
     return c.json({ message: "サーバー設定エラー" }, 500);
   }
 
-  let browserId: string | undefined;
-  let needsReissue = false;
-
   // 新形式 （Hono） を試す
-  browserId = (await getSignedCookie(c, cookieSecret, COOKIE_NAME)) || undefined;
-
-  if (!browserId) {
-    const rawCookie = getCookie(c, COOKIE_NAME);
-
-    if (rawCookie?.startsWith("s:")) {
-      const legacy = unsignExpressCookie(rawCookie, cookieSecret);
-      if (legacy) {
-        browserId = legacy;
-        needsReissue = true;
-      }
-    }
+  const browserIdHono = (await getSignedCookie(c, cookieSecret, COOKIE_NAME)) || undefined;
+  if (browserIdHono) {
+    c.set("browserId", browserIdHono);
+    return next();
   }
 
-  if (browserId && needsReissue) {
+  // "browserId" という Cookie が存在しない場合は新規発行
+  const rawCookie = getCookie(c, COOKIE_NAME);
+  if (!rawCookie) {
+    const browserId = crypto.randomUUID();
     await setSignedCookie(c, COOKIE_NAME, browserId, cookieSecret, cookieOptions);
+    c.set("browserId", browserId);
+    return next();
   }
 
-  if (!browserId) {
-    browserId = crypto.randomUUID();
-    await setSignedCookie(c, COOKIE_NAME, browserId, cookieSecret, cookieOptions);
+  // 旧形式（Express）を試す
+  const browserIdExpress = unsignExpressCookie(rawCookie, cookieSecret);
+  if (browserIdExpress) {
+    // 旧形式が有効な場合は新形式で再発行
+    await setSignedCookie(c, COOKIE_NAME, browserIdExpress, cookieSecret, cookieOptions);
+    c.set("browserId", browserIdExpress);
+    return next();
   }
 
-  // コンテキストに保存（後続のハンドラで c.get('browserId') で取得可能）
-  c.set("browserId", browserId);
-
-  await next();
+  // ここまで来たら Cookie が不正
+  return c.json(
+    {
+      message: "ブラウザのCookie設定に問題があります。",
+    },
+    400,
+  );
 };

@@ -13,6 +13,10 @@ const client = hc<AppType>(API_ENDPOINT);
 export default function HomePage() {
   const [involvedProjects, setInvolvedProjects] = useState<BriefProject[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{
+    message: string;
+    variant: "success" | "error";
+  } | null>(null);
 
   useEffect(() => {
     const fetchInvolvedProjects = async () => {
@@ -24,10 +28,29 @@ export default function HomePage() {
           const parsedData = data.map((p) => briefProjectReviver(p));
           setInvolvedProjects(parsedData);
         } else {
+          let errorMessage = "イベントの取得に失敗しました。";
+          try {
+            const data = await res.json();
+            if (data && typeof data.message === "string" && data.message.trim()) {
+              errorMessage = data.message.trim();
+            }
+          } catch (_) {
+            // レスポンスがJSONでない場合は無視
+          }
+          setToast({
+            message: errorMessage,
+            variant: "error",
+          });
+          setTimeout(() => setToast(null), 5000);
           setInvolvedProjects(null);
         }
       } catch (error) {
         console.error("Error fetching involved projects:", error);
+        setToast({
+          message: "ネットワークエラーが発生しました。",
+          variant: "error",
+        });
+        setTimeout(() => setToast(null), 5000);
         setInvolvedProjects(null);
       } finally {
         setLoading(false);
@@ -50,6 +73,13 @@ export default function HomePage() {
       ) : (
         <div className="flex min-h-[calc(100dvh_-_64px)] items-center justify-center bg-blue-50">
           <EmptyState />
+        </div>
+      )}
+      {toast && (
+        <div className="toast toast-top toast-center z-50">
+          <div className={`alert ${toast.variant === "success" ? "alert-success" : "alert-error"}`}>
+            <span>{toast.message}</span>
+          </div>
         </div>
       )}
     </>
