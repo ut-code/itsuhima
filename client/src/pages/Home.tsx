@@ -107,7 +107,7 @@ function ProjectDashboard({ involvedProjects }: { involvedProjects: BriefProject
 function ProjectCard({ project }: { project: BriefProject }) {
   return (
     <NavLink
-      to={`/${project.id}`}
+      to={`/e/${project.id}`}
       className={`group hover:-translate-y-1 relative block transform overflow-hidden rounded-xl border-l-4 bg-white shadow-lg transition-all duration-300 hover:shadow-xl ${project.isHost ? "border-primary" : "border-secondary"} focus:outline-none focus:ring-4 focus:ring-primary/20`}
       aria-label={`「${project.name}」の詳細を見る`}
     >
