@@ -44,6 +44,7 @@ serve(
 const isProduction = process.env.NODE_ENV === "prod";
 
 export const cookieOptions = {
+  path: "/",
   domain: process.env.DOMAIN,
   httpOnly: true,
   secure: isProduction,
