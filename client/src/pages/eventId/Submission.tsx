@@ -59,9 +59,29 @@ export default function SubmissionPage() {
         const data = await res.json();
         const parsedData = projectReviver(data);
         setProject(parsedData);
+      } else {
+        let errorMessage = "プロジェクトの取得に失敗しました。";
+        try {
+          const data = await res.json();
+          if (data && typeof data.message === "string" && data.message.trim()) {
+            errorMessage = data.message.trim();
+          }
+        } catch (_) {
+          // レスポンスがJSONでない場合は無視
+        }
+        setToast({
+          message: errorMessage,
+          variant: "error",
+        });
+        setTimeout(() => setToast(null), 5000);
       }
     } catch (error) {
       console.error("Error fetching project:", error);
+      setToast({
+        message: "ネットワークエラーが発生しました。",
+        variant: "error",
+      });
+      setTimeout(() => setToast(null), 5000);
     } finally {
       setProjectLoading(false);
     }
