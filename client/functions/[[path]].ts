@@ -76,14 +76,15 @@ async function fetchProjectData(eventId: string, apiEndpoint: string): Promise<P
 
 // eventId が有効かチェック（21文字のnanoid）
 function isValidEventId(path: string): boolean {
-  // パスが /eventId の形式で、eventId が21文字の英数字・ハイフン・アンダースコア
-  const match = path.match(/^\/([A-Za-z0-9_-]{21})$/);
+  // 新パス /e/eventId または 旧パス /eventId の形式で、eventId が21文字の英数字・ハイフン・アンダースコア
+  const match = path.match(/^\/(?:e\/)?([A-Za-z0-9_-]{21})$/);
   return !!match;
 }
 
 // パスから eventId を抽出
 function extractEventId(path: string): string | null {
-  const match = path.match(/^\/([A-Za-z0-9_-]{21})$/);
+  // 新パス /e/eventId または 旧パス /eventId から eventId を抽出
+  const match = path.match(/^\/(?:e\/)?([A-Za-z0-9_-]{21})$/);
   return match ? match[1] : null;
 }
 
