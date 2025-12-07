@@ -1,23 +1,13 @@
 import { zValidator } from "@hono/zod-validator";
 import dotenv from "dotenv";
 import { Hono } from "hono";
-import { customAlphabet } from "nanoid";
 import { z } from "zod";
 import { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/validators.js";
-import { prisma } from "../main.js";
+import { type AppVariables, nanoid, prisma } from "../main.js";
 
 dotenv.config();
 
-/**
- * ハイフン・アンダースコアを含まない Nano ID 形式。
- */
-const nanoid = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 21);
-
 const projectIdParamsSchema = z.object({ projectId: z.string().length(21) });
-
-type AppVariables = {
-  browserId: string;
-};
 
 const router = new Hono<{ Variables: AppVariables }>()
   // プロジェクト作成
