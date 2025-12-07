@@ -45,10 +45,9 @@ const isProduction = process.env.NODE_ENV === "prod";
 
 export const cookieOptions = {
   path: "/",
-  domain: process.env.DOMAIN,
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? "none" : "lax",
+  sameSite: "lax",
   maxAge: 60 * 60 * 24 * 365, // Express だとミリ秒だったが、Hono では秒らしい
 } as const;
 
