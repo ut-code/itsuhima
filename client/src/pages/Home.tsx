@@ -31,8 +31,9 @@ export default function HomePage() {
           let errorMessage = "イベントの取得に失敗しました。";
           try {
             const data = await res.json();
-            if (data && typeof data.message === "string" && data.message.trim()) {
-              errorMessage = data.message.trim();
+            const err = data as unknown as { message: string }; // Middleware のレスポンスは Hono RPC の型に乗らない
+            if (typeof err.message === "string" && err.message.trim()) {
+              errorMessage = err.message.trim();
             }
           } catch (_) {
             // レスポンスがJSONでない場合は無視
