@@ -35,7 +35,11 @@ const app = new Hono<{ Variables: AppVariables }>()
   .get("/", (c) => {
     return c.json({ message: "Hello! イツヒマ？" });
   })
-  .route("/projects", projectsRoutes);
+  .route("/projects", projectsRoutes)
+  .onError((err, c) => {
+    console.error(err);
+    return c.json({ message: "Internal Server Error" }, 500);
+  });
 
 serve(
   {
