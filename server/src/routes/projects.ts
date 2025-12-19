@@ -13,17 +13,17 @@ const router = new Hono<{ Variables: AppVariables }>()
   // プロジェクト作成
   .post("/", zValidator("json", projectReqSchema), async (c) => {
     const browserId = c.get("browserId");
-    const data = c.req.valid("json");
+    const input = c.req.valid("json");
 
-    const event = await prisma.project.create({
+    const project = await prisma.project.create({
       data: {
         id: nanoid(),
-        name: data.name,
-        description: data.description.trim() || null,
-        startDate: new Date(data.startDate),
-        endDate: new Date(data.endDate),
+        name: input.name,
+        description: input.description.trim() || null,
+        startDate: new Date(input.startDate),
+        endDate: new Date(input.endDate),
         allowedRanges: {
-          create: data.allowedRanges.map((range) => ({
+          create: input.allowedRanges.map((range) => ({
             startTime: new Date(range.startTime),
             endTime: new Date(range.endTime),
           })),
@@ -34,24 +34,27 @@ const router = new Hono<{ Variables: AppVariables }>()
           },
         },
         participationOptions: {
-          create: data.participationOptions.map((opt) => ({
+          create: input.participationOptions.map((opt) => ({
             id: opt.id,
             label: opt.label,
             color: opt.color,
           })),
         },
       },
-      include: { hosts: true, participationOptions: true },
+      select: {
+        id: true,
+        name: true,
+      },
     });
 
-    return c.json({ id: event.id, name: event.name }, 201);
+    return c.json({ id: project.id, name: project.name }, 201);
   })
 
   // 自分が関連するプロジェクト取得
   .get("/mine", async (c) => {
     const browserId = c.get("browserId");
 
-    const involvedProjects = await prisma.project.findMany({
+    const projects = await prisma.project.findMany({
       where: {
         OR: [
           { hosts: { some: { browserId } } },
@@ -62,22 +65,15 @@ const router = new Hono<{ Variables: AppVariables }>()
           },
         ],
       },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        startDate: true,
-        endDate: true,
+      include: {
         hosts: {
-          select: {
-            browserId: true,
-          },
+          select: { browserId: true },
         },
       },
     });
 
     return c.json(
-      involvedProjects.map((p) => ({
+      projects.map((p) => ({
         id: p.id,
         name: p.name,
         description: p.description ?? "",
@@ -92,50 +88,53 @@ const router = new Hono<{ Variables: AppVariables }>()
   // プロジェクト取得
   .get("/:projectId", zValidator("param", projectIdParamsSchema), async (c) => {
     const browserId = c.get("browserId");
-
     const { projectId } = c.req.valid("param");
-    const projectRow = await prisma.project.findUnique({
+
+    const project = await prisma.project.findUnique({
       where: { id: projectId },
       include: {
         allowedRanges: true,
         participationOptions: true,
         guests: {
           include: {
-            slots: true, // slots 全部欲しいなら select より include
+            slots: true,
           },
         },
-        hosts: true, // 全部欲しいなら select 省略
+        hosts: true,
       },
     });
 
-    if (!projectRow) {
+    if (!project) {
       return c.json({ message: "イベントが見つかりません。" }, 404);
     }
 
-    const data = {
-      ...projectRow,
-      description: projectRow.description ?? "",
-      hosts: projectRow.hosts.map((h) => {
-        const { browserId: _, ...rest } = h;
-        return rest;
-      }),
-      guests: projectRow.guests.map((g) => {
-        const { browserId: _, ...rest } = g;
-        return rest;
-      }),
-      isHost: projectRow.hosts.some((h) => h.browserId === browserId),
-      meAsGuest: projectRow.guests.find((g) => g.browserId === browserId) ?? null,
-    };
-    return c.json(data, 200);
+    const guest = project.guests.find((g) => g.browserId === browserId);
+    const meAsGuest = guest ? (({ browserId, ...rest }) => rest)(guest) : null;
+
+    return c.json(
+      {
+        id: project.id,
+        name: project.name,
+        description: project.description ?? "",
+        startDate: project.startDate,
+        endDate: project.endDate,
+        allowedRanges: project.allowedRanges,
+        participationOptions: project.participationOptions,
+        hosts: project.hosts.map(({ browserId, ...rest }) => rest),
+        guests: project.guests.map(({ browserId, ...rest }) => rest),
+        isHost: project.hosts.some((h) => h.browserId === browserId),
+        meAsGuest,
+      },
+      200,
+    );
   })
 
   // プロジェクト編集
   .put("/:projectId", zValidator("param", projectIdParamsSchema), zValidator("json", editReqSchema), async (c) => {
     const browserId = c.get("browserId");
     const { projectId } = c.req.valid("param");
-    const data = c.req.valid("json");
+    const input = c.req.valid("json");
 
-    // ホスト認証とゲスト存在確認を一括取得
     const [host, existingGuest] = await Promise.all([
       prisma.host.findFirst({
         where: {
@@ -148,15 +147,13 @@ const router = new Hono<{ Variables: AppVariables }>()
       }),
     ]);
 
-    // ホストが存在しなければ403
     if (!host) {
       return c.json({ message: "アクセス権限がありません。" }, 403);
     }
 
     // 参加形態の更新
-    if (data.participationOptions) {
-      // 最低1つの参加形態が必要
-      if (data.participationOptions.length === 0) {
+    if (input.participationOptions) {
+      if (input.participationOptions.length === 0) {
         return c.json({ message: "参加形態は最低1つ必要です。" }, 400);
       }
 
@@ -165,11 +162,9 @@ const router = new Hono<{ Variables: AppVariables }>()
         where: { projectId },
         include: { slots: { select: { id: true } } },
       });
-
-      const newOptionIds = data.participationOptions.map((o) => o.id);
+      const newOptionIds = input.participationOptions.map((o) => o.id);
       const optionsToDelete = existingOptions.filter((o) => !newOptionIds.includes(o.id));
       const undeletableOptions = optionsToDelete.filter((o) => o.slots.length > 0);
-
       if (undeletableOptions.length > 0) {
         const labels = undeletableOptions.map((o) => o.label).join(", ");
         return c.json(
@@ -191,7 +186,7 @@ const router = new Hono<{ Variables: AppVariables }>()
           },
         }),
         // 既存の参加形態を更新または新規作成
-        ...data.participationOptions.map((opt) =>
+        ...input.participationOptions.map((opt) =>
           prisma.participationOption.upsert({
             where: { id: opt.id },
             update: { label: opt.label, color: opt.color },
@@ -201,22 +196,21 @@ const router = new Hono<{ Variables: AppVariables }>()
       ]);
     }
 
-    // 更新処理
-    const updatedEvent = await prisma.project.update({
+    const updatedProject = await prisma.project.update({
       where: { id: projectId },
       data: existingGuest
         ? {
-            name: data.name,
-            description: data.description?.trim() || null,
-          } // ゲストがいれば名前と説明だけ
+            name: input.name,
+            description: input.description?.trim() || null,
+          }
         : {
-            name: data.name,
-            description: data.description?.trim() || null,
-            startDate: data.startDate ? new Date(data.startDate) : undefined,
-            endDate: data.endDate ? new Date(data.endDate) : undefined,
+            name: input.name,
+            description: input.description?.trim() || null,
+            startDate: input.startDate ? new Date(input.startDate) : undefined,
+            endDate: input.endDate ? new Date(input.endDate) : undefined,
             allowedRanges: {
               deleteMany: {}, // 既存削除
-              create: data.allowedRanges?.map((r) => ({
+              create: input.allowedRanges?.map((r) => ({
                 startTime: new Date(r.startTime),
                 endTime: new Date(r.endTime),
               })),
@@ -225,26 +219,31 @@ const router = new Hono<{ Variables: AppVariables }>()
       include: { allowedRanges: true, participationOptions: true },
     });
 
-    return c.json({ event: updatedEvent }, 200);
+    return c.json({ event: updatedProject }, 200);
   })
 
   // プロジェクト削除
   .delete("/:projectId", zValidator("param", projectIdParamsSchema), async (c) => {
     const browserId = c.get("browserId");
     const { projectId } = c.req.valid("param");
-    // Host 認証
-    const host = await prisma.host.findFirst({
-      where: { projectId, browserId },
+
+    const host = await prisma.host.findUnique({
+      where: {
+        browserId_projectId: {
+          browserId,
+          projectId,
+        },
+      },
     });
 
     if (!host) {
       return c.json({ message: "削除権限がありません。" }, 403);
     }
-    // 関連データを削除（Cascade を使っていない場合）
+
     await prisma.project.delete({
       where: { id: projectId },
     });
-    return c.json({ message: "イベントを削除しました。" }, 200);
+    return c.json(204);
   })
 
   // 日程の提出。
@@ -253,17 +252,21 @@ const router = new Hono<{ Variables: AppVariables }>()
     zValidator("param", projectIdParamsSchema),
     zValidator("json", submitReqSchema),
     async (c) => {
-      const { projectId } = c.req.valid("param");
       const browserId = c.get("browserId");
+      const { projectId } = c.req.valid("param");
+      const { name, slots } = c.req.valid("json");
 
-      const existingGuest = await prisma.guest.findFirst({
-        where: { projectId, browserId },
+      const existingGuest = await prisma.guest.findUnique({
+        where: {
+          browserId_projectId: {
+            browserId,
+            projectId,
+          },
+        },
       });
       if (existingGuest) {
-        return c.json({ message: "すでに登録済みです" }, 403);
+        return c.json({ message: "提出済みです。" }, 403);
       }
-
-      const { name, slots } = c.req.valid("json");
 
       await prisma.guest.create({
         data: {
@@ -281,7 +284,7 @@ const router = new Hono<{ Variables: AppVariables }>()
         },
         include: { slots: true },
       });
-      return c.json("日時が登録されました！", 201);
+      return c.json("日程が提出されました。", 201);
     },
   )
 
@@ -291,18 +294,17 @@ const router = new Hono<{ Variables: AppVariables }>()
     zValidator("param", projectIdParamsSchema),
     zValidator("json", submitReqSchema),
     async (c) => {
-      const { projectId } = c.req.valid("param");
       const browserId = c.get("browserId");
-
+      const { projectId } = c.req.valid("param");
       const { name, slots } = c.req.valid("json");
 
-      const existingGuest = await prisma.guest.findFirst({
-        where: { projectId, browserId },
+      const existingGuest = await prisma.guest.findUnique({
+        where: { browserId_projectId: { browserId, projectId } },
         include: { slots: true },
       });
 
       if (!existingGuest) {
-        return c.json({ message: "ゲスト情報が見つかりません。" }, 404);
+        return c.json({ message: "既存の日程が見つかりません。" }, 404);
       }
       const slotData = slots?.map((slot) => ({
         from: slot.start,
@@ -313,7 +315,6 @@ const router = new Hono<{ Variables: AppVariables }>()
 
       await prisma.slot.deleteMany({ where: { guestId: existingGuest.id } });
 
-      // ゲスト情報更新
       const guest = await prisma.guest.update({
         where: { id: existingGuest.id },
         data: {
@@ -323,7 +324,7 @@ const router = new Hono<{ Variables: AppVariables }>()
         include: { slots: true },
       });
 
-      return c.json({ message: "ゲスト情報が更新されました！", guest }, 200);
+      return c.json({ message: "日程が更新されました。", guest }, 200);
     },
   );
 
