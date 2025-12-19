@@ -93,6 +93,7 @@ export default function ProjectPage() {
     projectName: string;
   } | null>(null);
 
+  // TODO: グローバルにしないと、delete の際は遷移を伴うので表示されない
   const [toast, setToast] = useState<{
     message: string;
     variant: "success" | "error";
@@ -215,9 +216,8 @@ export default function ProjectPage() {
           projectName: name,
         });
       } else {
-        const { message } = await res.json();
         setToast({
-          message,
+          message: "イベントの作成に失敗しました。",
           variant: "error",
         });
         setTimeout(() => setToast(null), 3000);
@@ -604,6 +604,7 @@ export default function ProjectPage() {
                             if (!res.ok) {
                               throw new Error("削除に失敗しました。");
                             }
+                            // TODO: トーストをグローバルにする
                             navigate("/home");
                             setToast({
                               message: "イベントを削除しました。",
