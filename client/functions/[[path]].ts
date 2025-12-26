@@ -17,7 +17,6 @@ interface ProjectData {
   }>;
 }
 
-// og:title を書き換える HTMLRewriter
 class OGTitleRewriter {
   private title: string;
 
@@ -32,7 +31,6 @@ class OGTitleRewriter {
   }
 }
 
-// og:description を書き換える HTMLRewriter
 class OGDescriptionRewriter {
   private description: string;
 
@@ -47,7 +45,20 @@ class OGDescriptionRewriter {
   }
 }
 
-// 日付を YYYY/MM/DD 形式にフォーマット（日本時間）
+class OGImageRewriter {
+  private imageUrl: string;
+
+  constructor(imageUrl: string) {
+    this.imageUrl = imageUrl;
+  }
+
+  element(element: Element) {
+    if (element.getAttribute("property") === "og:image") {
+      element.setAttribute("content", this.imageUrl);
+    }
+  }
+}
+
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return new Intl.DateTimeFormat("ja-JP", {
@@ -74,14 +85,12 @@ async function fetchProjectData(eventId: string, apiEndpoint: string): Promise<P
   }
 }
 
-// eventId が有効かチェック（21文字のnanoid）
-function isValidEventId(path: string): boolean {
+function isValidEventPath(path: string): boolean {
   // 新パス /e/eventId または 旧パス /eventId の形式で、eventId が21文字の英数字・ハイフン・アンダースコア
   const match = path.match(/^\/(?:e\/)?([A-Za-z0-9_-]{21})$/);
   return !!match;
 }
 
-// パスから eventId を抽出
 function extractEventId(path: string): string | null {
   // 新パス /e/eventId または 旧パス /eventId から eventId を抽出
   const match = path.match(/^\/(?:e\/)?([A-Za-z0-9_-]{21})$/);
@@ -104,8 +113,7 @@ export async function onRequest(context: EventContext<Env, any, any>): Promise<R
     return await next();
   }
 
-  // eventId パターンをチェック
-  if (!isValidEventId(path)) {
+  if (!isValidEventPath(path)) {
     return await next();
   }
 
@@ -117,33 +125,36 @@ export async function onRequest(context: EventContext<Env, any, any>): Promise<R
   // 元のHTMLレスポンスを取得
   const response = await next();
 
-  // HTMLでない場合はそのまま返す
   const contentType = response.headers.get("content-type");
 
-  // 304 Not Modified の場合やHTMLでない場合はスキップ
+  // 304 Not Modified や HTML でない場合はスキップ
   if (response.status === 304 || (!contentType?.includes("text/html") && contentType !== null)) {
     return response;
   }
 
-  // プロジェクト情報を取得
   const projectData = await fetchProjectData(eventId, env.API_ENDPOINT);
 
+  const defaultOgImageUrl = `${url.origin}/og-image.jpg`;
+
   if (!projectData) {
-    return response;
+    // プロジェクトが見つからない場合はデフォルト画像を設定
+    return new HTMLRewriter()
+      .on('meta[property="og:image"]', new OGImageRewriter(defaultOgImageUrl))
+      .transform(response);
   }
 
-  // og:title を書き換え
   const ogTitle = `${projectData.name} - イツヒマ`;
 
-  // og:description を作成
   const startDate = formatDate(projectData.startDate);
   const endDate = formatDate(projectData.endDate);
-  const dateRange = startDate === endDate ? startDate : `${startDate} - ${endDate}`;
-
+  const dateRange = startDate === endDate ? startDate : `${startDate} 〜 ${endDate}`;
   const ogDescription = `日程範囲: ${dateRange}`;
+
+  const ogImageUrl = `${url.origin}/og/${eventId}`;
 
   return new HTMLRewriter()
     .on('meta[property="og:title"]', new OGTitleRewriter(ogTitle))
     .on('meta[property="og:description"]', new OGDescriptionRewriter(ogDescription))
+    .on('meta[property="og:image"]', new OGImageRewriter(ogImageUrl))
     .transform(response);
 }
