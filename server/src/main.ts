@@ -3,16 +3,23 @@ import { PrismaClient } from "@prisma/client";
 import dotenv from "dotenv";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { customAlphabet } from "nanoid";
 import { browserIdMiddleware } from "./middleware/browserId.js";
 import projectsRoutes from "./routes/projects.js";
 
 dotenv.config();
 
+/**
+ * ハイフン・アンダースコアを含まない Nano ID 形式。
+ */
+export const nanoid = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 21);
+
 export const prisma = new PrismaClient();
-const port = process.env.PORT || 3000;
+
+const port = Number(process.env.PORT) || 3000;
 const allowedOrigins = process.env.CORS_ALLOW_ORIGINS?.split(",") || [];
 
-type AppVariables = {
+export type AppVariables = {
   browserId: string;
 };
 
@@ -28,12 +35,16 @@ const app = new Hono<{ Variables: AppVariables }>()
   .get("/", (c) => {
     return c.json({ message: "Hello! イツヒマ？" });
   })
-  .route("/projects", projectsRoutes);
+  .route("/projects", projectsRoutes)
+  .onError((err, c) => {
+    console.error(err);
+    return c.json({ message: "Internal Server Error" }, 500);
+  });
 
 serve(
   {
     fetch: app.fetch,
-    port: Number(port),
+    port,
     hostname: "0.0.0.0",
   },
   () => {
@@ -45,10 +56,9 @@ const isProduction = process.env.NODE_ENV === "prod";
 
 export const cookieOptions = {
   path: "/",
-  domain: process.env.DOMAIN,
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? "none" : "lax",
+  sameSite: "lax",
   maxAge: 60 * 60 * 24 * 365, // Express だとミリ秒だったが、Hono では秒らしい
 } as const;
 
