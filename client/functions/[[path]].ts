@@ -103,6 +103,14 @@ export async function onRequest(context: EventContext<Env, any, any>): Promise<R
   const url = new URL(request.url);
   const path = url.pathname;
 
+  // サービスにアクセスしたことがある場合、/home にリダイレクト
+  if (path === "/") {
+    const cookie = request.headers.get("cookie") ?? "";
+    if (cookie.includes("browserId=")) {
+      return Response.redirect(`${url.origin}/home`, 302);
+    }
+  }
+
   // 静的アセットや API ルートは通常通り処理
   if (
     path.startsWith("/assets/") ||
