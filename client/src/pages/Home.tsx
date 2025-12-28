@@ -1,6 +1,6 @@
 import { hc } from "hono/client";
 import { useEffect, useState } from "react";
-import { LuArrowRight, LuCalendar, LuLayoutDashboard, LuPlus, LuUser, LuUsers } from "react-icons/lu";
+import { LuCalendar, LuChevronRight, LuLayoutDashboard, LuPlus, LuUser, LuUsers } from "react-icons/lu";
 import { NavLink } from "react-router";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
@@ -64,12 +64,19 @@ export default function HomePage() {
     <>
       <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
         <Header />
-        <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="font-bold text-2xl text-slate-900 tracking-tight sm:text-3xl">ホーム</h1>
               <p className="mt-1 text-slate-500 text-sm">参加・主催しているイベントの管理</p>
             </div>
+            <NavLink
+              to="/new"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-semibold text-sm text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md"
+            >
+              <LuPlus className="h-4 w-4" />
+              新規作成
+            </NavLink>
           </div>
           {loading ? (
             <ProjectsSkeleton />
@@ -92,36 +99,51 @@ export default function HomePage() {
 }
 
 function ProjectDashboard({ involvedProjects }: { involvedProjects: BriefProject[] }) {
-  const sortedProjects = [...involvedProjects].sort((a, b) => {
-    if (a.isHost !== b.isHost) {
-      return a.isHost ? -1 : 1;
-    }
-    return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
-  });
+  const hostedProjects = involvedProjects
+    .filter((p) => p.isHost)
+    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+
+  const participatingProjects = involvedProjects
+    .filter((p) => !p.isHost)
+    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
   return (
     <div className="space-y-8">
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <NavLink
-          to="/new"
-          className="group relative flex min-h-[200px] flex-col items-center justify-center rounded-2xl border-2 border-slate-200 border-dashed bg-white/50 p-6 text-center transition-all hover:border-primary/50 hover:bg-primary/5"
-        >
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 transition-colors group-hover:bg-primary/10">
-            <LuPlus className="h-6 w-6 text-slate-400 group-hover:text-primary" />
-          </div>
-          <h3 className="font-semibold text-slate-900">新規作成</h3>
-          <p className="mt-1 text-slate-500 text-sm">新しい日程調整を始める</p>
-        </NavLink>
+      {hostedProjects.length > 0 && (
+        <ProjectSection title="主催しているイベント" icon={<LuUser className="h-5 w-5" />} projects={hostedProjects} />
+      )}
 
-        {sortedProjects.map((project) => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
-      </div>
+      {participatingProjects.length > 0 && (
+        <ProjectSection
+          title="参加しているイベント"
+          icon={<LuUsers className="h-5 w-5" />}
+          projects={participatingProjects}
+        />
+      )}
     </div>
   );
 }
 
-function ProjectCard({ project }: { project: BriefProject }) {
+function ProjectSection({ title, icon, projects }: { title: string; icon: React.ReactNode; projects: BriefProject[] }) {
+  return (
+    <section>
+      <div className="mb-4 flex items-center gap-2 text-slate-700">
+        {icon}
+        <h2 className="font-semibold text-lg">{title}</h2>
+        <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 font-medium text-slate-600 text-xs">
+          {projects.length}
+        </span>
+      </div>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        {projects.map((project, index) => (
+          <ProjectRow key={project.id} project={project} isLast={index === projects.length - 1} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProjectRow({ project, isLast }: { project: BriefProject; isLast: boolean }) {
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("ja-JP", { month: "short", day: "numeric" });
   };
@@ -129,96 +151,60 @@ function ProjectCard({ project }: { project: BriefProject }) {
   return (
     <NavLink
       to={`/e/${project.id}`}
-      className="group hover:-translate-y-1 relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-slate-200/60 hover:shadow-xl"
+      className={`group flex items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-slate-50 ${
+        !isLast ? "border-slate-100 border-b" : ""
+      }`}
     >
-      <div>
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            <span
-              className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-0.5 font-medium text-xs ring-1 ring-inset ${
-                project.isHost
-                  ? "bg-primary/10 text-primary ring-primary/20"
-                  : "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
-              }`}
-            >
-              {project.isHost ? (
-                <>
-                  <LuUser className="h-3 w-3" />
-                  主催
-                </>
-              ) : (
-                <>
-                  <LuUsers className="h-3 w-3" />
-                  参加
-                </>
-              )}
-            </span>
-            <h3 className="line-clamp-2 font-bold text-lg text-slate-900 leading-tight transition-colors group-hover:text-primary">
-              {project.name}
-            </h3>
-          </div>
-        </div>
-
-        <div className="mb-6 flex items-center gap-3 rounded-lg bg-slate-50 p-3 text-slate-600 text-sm">
-          <LuCalendar className="h-4 w-4 shrink-0 text-slate-400" />
-          <div className="flex items-center gap-2 font-medium">
-            <span>{formatDate(project.startDate)}</span>
-            <span className="text-slate-300">/</span>
-            <span>{formatDate(project.endDate)}</span>
-          </div>
+      <div className="min-w-0 flex-1">
+        <h3 className="truncate font-medium text-slate-900 transition-colors group-hover:text-primary">
+          {project.name}
+        </h3>
+        <div className="mt-1 flex items-center gap-1.5 text-slate-500 text-sm">
+          <LuCalendar className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            {formatDate(project.startDate)} 〜 {formatDate(project.endDate)}
+          </span>
         </div>
       </div>
-
-      <div className="mt-auto flex items-center justify-between border-slate-100 border-t pt-4">
-        <span className="font-medium text-slate-500 text-xs transition-colors group-hover:text-primary">
-          詳細を見る
-        </span>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-400 transition-all group-hover:bg-primary group-hover:text-white">
-          <LuArrowRight className="h-4 w-4" />
-        </div>
-      </div>
+      <LuChevronRight className="h-5 w-5 shrink-0 text-slate-400 transition-colors group-hover:text-primary" />
     </NavLink>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="flex min-h-[400px] flex-col items-center justify-center rounded-3xl border border-slate-300 border-dashed bg-slate-50/50 p-8 text-center">
-      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200">
-        <LuLayoutDashboard className="h-10 w-10 text-slate-400" />
+    <div className="flex min-h-[400px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+      <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+        <LuLayoutDashboard className="h-8 w-8 text-slate-400" />
       </div>
-      <h3 className="mb-2 font-bold text-slate-900 text-xl">まだイベントがありません</h3>
-      <p className="mb-8 max-w-sm text-slate-500">「イベント作成」ボタンから、新しい日程調整を始めましょう。</p>
-      <NavLink
-        to="/new"
-        className="hover:-translate-y-0.5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-3.5 font-semibold text-base text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl"
-      >
-        <LuPlus className="h-5 w-5" />
-        イベント作成
-      </NavLink>
+      <h3 className="mb-2 font-semibold text-lg text-slate-900">まだイベントがありません</h3>
+      <p className="max-w-sm text-slate-500 text-sm">右上の「新規作成」ボタンから、新しい日程調整を始めましょう。</p>
     </div>
   );
 }
 
 function ProjectsSkeleton() {
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }, (_, i) => (
-        <div
-          // biome-ignore lint/suspicious/noArrayIndexKey: skeleton is static
-          key={`skeleton-${i}`}
-          className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-        >
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <div className="h-6 w-16 animate-pulse rounded-full bg-slate-100" />
-            </div>
-            <div className="h-7 w-3/4 animate-pulse rounded-md bg-slate-100" />
-            <div className="h-12 w-full animate-pulse rounded-lg bg-slate-50" />
+    <div className="space-y-8">
+      {[1, 2].map((section) => (
+        <div key={`section-${section}`}>
+          <div className="mb-4 flex items-center gap-2">
+            <div className="h-5 w-5 animate-pulse rounded bg-slate-200" />
+            <div className="h-5 w-40 animate-pulse rounded bg-slate-200" />
           </div>
-          <div className="mt-6 flex items-center justify-between border-slate-100 border-t pt-4">
-            <div className="h-4 w-20 animate-pulse rounded bg-slate-100" />
-            <div className="h-8 w-8 animate-pulse rounded-full bg-slate-100" />
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            {[1, 2, 3].map((row, index) => (
+              <div
+                key={`row-${section}-${row}`}
+                className={`flex items-center justify-between gap-4 px-4 py-4 ${index < 2 ? "border-slate-100 border-b" : ""}`}
+              >
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="h-5 w-3/4 animate-pulse rounded bg-slate-100" />
+                  <div className="h-4 w-32 animate-pulse rounded bg-slate-100" />
+                </div>
+                <div className="h-5 w-5 animate-pulse rounded bg-slate-100" />
+              </div>
+            ))}
           </div>
         </div>
       ))}
