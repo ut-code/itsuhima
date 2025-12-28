@@ -11,7 +11,7 @@ export default function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2">
           <NavLink to="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
-            <img src="/logo.svg" alt="イツヒマ" className="h-8 w-8" />
+            <img src="/logo.svg" alt="イツヒマ" className="h-6 w-6" />
             <span className="font-bold font-mplus text-slate-800 text-xl tracking-tight">イツヒマ</span>
             <span className="hidden rounded-full bg-slate-100 px-2 py-0.5 font-medium text-[10px] text-slate-500 sm:inline-block">
               アルファ版
