@@ -228,42 +228,50 @@ export default function SubmissionPage() {
 
   return (
     <>
-      <div className="flex h-[100dvh] flex-col">
+      <div className="flex h-[100dvh] flex-col bg-slate-50">
         <Header />
         {loading ? (
           <div className="flex w-full flex-1 items-center justify-center">
-            <span className="loading loading-dots loading-md text-gray-400" />
+            <span className="loading loading-dots loading-md text-slate-400" />
           </div>
         ) : !project ? (
-          <div className="flex flex-col items-center justify-center gap-4 py-4">
-            <p className="text-gray-600 text-xl">イベントが見つかりませんでした。</p>
-            <NavLink to={"/"} className="link">
-              ホームに戻る
-            </NavLink>
+          <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-4 px-4 py-16 sm:px-6 lg:px-8">
+            <div className="flex min-h-[400px] w-full flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+              <p className="text-slate-600 text-xl">イベントが見つかりませんでした。</p>
+              <NavLink
+                to="/"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 font-semibold text-base text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md"
+              >
+                ホームに戻る
+              </NavLink>
+            </div>
           </div>
         ) : !selectedParticipationOptionId ? (
           <div className="flex w-full flex-1 items-center justify-center">
-            <span className="loading loading-dots loading-md text-gray-400" />
+            <span className="loading loading-dots loading-md text-slate-400" />
           </div>
         ) : (
-          <div className="flex h-full flex-1 flex-col overflow-y-auto p-4">
-            <div className="flex items-center justify-between">
-              <h1 className="mb-2 font-bold text-2xl text-gray-800">{project.name} の日程調整</h1>
-              {isHost && (
-                <NavLink to={`/e/${projectId}/edit`} className="btn btn-sm font-normal text-gray-600">
-                  <HiOutlineCog />
-                  イベント設定
-                </NavLink>
-              )}
-            </div>
-            {project.description && (
-              <p className="mb-4 whitespace-pre-wrap text-gray-600 text-sm">{project.description}</p>
-            )}
+          <div className="flex flex-1 flex-col overflow-y-auto">
+            <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pt-3 pb-3 sm:px-6 sm:pt-4 sm:pb-3 lg:px-8">
+              <div className="mb-2 flex items-center justify-between sm:mb-3">
+                <h1 className="truncate font-bold text-base text-slate-900 sm:text-lg">{project.name}</h1>
+                {isHost && (
+                  <NavLink
+                    to={`/e/${projectId}/edit`}
+                    className="ml-2 inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-600 text-xs transition-all hover:border-slate-300 hover:bg-slate-50 sm:gap-1.5 sm:px-2.5 sm:py-1.5"
+                  >
+                    <HiOutlineCog size={14} />
+                    <span className="hidden sm:inline">設定</span>
+                  </NavLink>
+                )}
+              </div>
 
-            {editMode && project.participationOptions.length > 1 && selectedParticipationOptionId !== null && (
-              <div className="mb-4">
-                <span className="label-text mb-2 block text-gray-400">参加形態を選択</span>
-                <div className="flex flex-wrap gap-2">
+              {project.description && (
+                <p className="mb-4 whitespace-pre-wrap text-slate-600 text-sm">{project.description}</p>
+              )}
+
+              {editMode && project.participationOptions.length > 1 && selectedParticipationOptionId !== null && (
+                <div className="mb-2 flex flex-wrap items-center gap-1.5 sm:mb-3 sm:gap-2">
                   {project.participationOptions.map((opt) => {
                     const rgb = hexToRgb(opt.color);
                     const lightBg = rgb
@@ -274,52 +282,54 @@ export default function SubmissionPage() {
                       <button
                         key={opt.id}
                         type="button"
-                        className="btn btn-sm md:btn-md gap-1 px-2 sm:gap-2 sm:px-4"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium text-xs transition-all sm:gap-2 sm:px-3 sm:py-2 sm:text-sm"
                         onClick={() => setSelectedParticipationOptionId(opt.id)}
                         style={
                           selectedParticipationOptionId === opt.id
-                            ? { backgroundColor: lightBg, borderColor: opt.color }
-                            : undefined
+                            ? { backgroundColor: lightBg, borderWidth: "2px", borderColor: opt.color }
+                            : { backgroundColor: "white", borderWidth: "2px", borderColor: "#e2e8f0" }
                         }
                       >
                         <span
-                          className="inline-block h-3 w-3 shrink-0 rounded-full sm:h-4 sm:w-4"
+                          className="inline-block h-2.5 w-2.5 shrink-0 rounded-full sm:h-3 sm:w-3"
                           style={{ backgroundColor: opt.color }}
                         />
-                        <span className="text-xs sm:text-sm">{opt.label}</span>
+                        <span>{opt.label}</span>
                       </button>
                     );
                   })}
                 </div>
-              </div>
-            )}
-            <Calendar
-              startDate={project.startDate}
-              endDate={project.endDate}
-              allowedRanges={project.allowedRanges}
-              editingSlots={editMode ? editingSlots : []}
-              viewingSlots={viewingSlots}
-              guestIdToName={guestIdToName}
-              participationOptions={project.participationOptions}
-              currentParticipationOptionId={selectedParticipationOptionId}
-              editMode={editMode}
-              onChangeEditingSlots={setEditingSlots}
-            />
-            <div className="flex w-full items-center justify-between gap-2 p-2">
-              {editMode ? (
-                <>
-                  <input
-                    type="text"
-                    placeholder="あなたの名前"
-                    value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
-                    className="input flex-1 text-base"
-                  />
-                  <div className="flex flex-row gap-2">
+              )}
+
+              <Calendar
+                startDate={project.startDate}
+                endDate={project.endDate}
+                allowedRanges={project.allowedRanges}
+                editingSlots={editMode ? editingSlots : []}
+                viewingSlots={viewingSlots}
+                guestIdToName={guestIdToName}
+                participationOptions={project.participationOptions}
+                currentParticipationOptionId={selectedParticipationOptionId}
+                editMode={editMode}
+                onChangeEditingSlots={setEditingSlots}
+              />
+            </div>
+
+            <div className="sticky bottom-0 z-10 border-slate-200 border-t bg-white/95 backdrop-blur-sm">
+              <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 sm:py-3 lg:px-8">
+                {editMode ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="名前"
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 sm:text-base"
+                    />
                     {!!myGuestId && (
                       <button
                         type="button"
-                        className="btn text-gray-500"
+                        className="shrink-0 rounded-lg border-2 border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 text-sm transition-all hover:border-slate-300 hover:bg-slate-50 sm:px-4 sm:py-2.5"
                         disabled={loading}
                         onClick={async () => {
                           if (confirm("更新をキャンセルします。よろしいですか？")) {
@@ -328,12 +338,13 @@ export default function SubmissionPage() {
                           }
                         }}
                       >
-                        キャンセル
+                        <span className="hidden sm:inline">キャンセル</span>
+                        <span className="sm:hidden">×</span>
                       </button>
                     )}
                     <button
                       type="button"
-                      className="btn btn-primary"
+                      className="shrink-0 rounded-lg bg-primary px-4 py-2 font-semibold text-sm text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 sm:px-6 sm:py-2.5"
                       disabled={loading || !guestName}
                       onClick={() => {
                         if (!guestName) return;
@@ -350,41 +361,47 @@ export default function SubmissionPage() {
                       {meAsGuest ? "更新" : "提出"}
                     </button>
                   </div>
-                </>
-              ) : (
-                <>
-                  <NavLink to={"/home"} className="btn btn-outline btn-primary">
-                    <HiOutlineHome size={20} />
-                    ホームに戻る
-                  </NavLink>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={loading}
-                    onClick={() => {
-                      setEditMode(true);
-                    }}
-                  >
-                    <HiPencil size={20} />
-                    日程を更新する
-                  </button>
-                </>
-              )}
+                ) : (
+                  <div className="flex items-center justify-between gap-2">
+                    <NavLink
+                      to="/home"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 text-sm transition-all hover:border-slate-300 hover:bg-slate-50 sm:gap-2 sm:px-4 sm:py-2.5"
+                    >
+                      <HiOutlineHome size={16} className="sm:h-5 sm:w-5" />
+                      <span className="hidden sm:inline">ホームに戻る</span>
+                      <span className="sm:hidden">ホーム</span>
+                    </NavLink>
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 font-semibold text-sm text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 sm:gap-2 sm:px-6 sm:py-2.5"
+                      disabled={loading}
+                      onClick={() => {
+                        setEditMode(true);
+                      }}
+                    >
+                      <HiPencil size={16} className="sm:h-5 sm:w-5" />
+                      <span className="hidden sm:inline">日程を更新する</span>
+                      <span className="sm:hidden">更新</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
       </div>
+
       {toast && (
-        <div className="toast toast-top toast-end z-50 mt-18">
+        <div className="fixed top-20 right-4 z-50">
           {toast.variant === "success" ? (
-            <div className="alert border-0 bg-gray-200">
-              <HiOutlineCheckCircle size={20} className="text-green-500" />
-              <span>{toast.message}</span>
+            <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-lg">
+              <HiOutlineCheckCircle size={24} className="shrink-0 text-emerald-600" />
+              <span className="font-medium text-emerald-900 text-sm">{toast.message}</span>
             </div>
           ) : (
-            <div className="alert border-0 bg-gray-200">
-              <HiOutlineExclamationCircle size={20} className="text-red-500" />
-              <span>{toast.message}</span>
+            <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
+              <HiOutlineExclamationCircle size={24} className="shrink-0 text-red-600" />
+              <span className="font-medium text-red-900 text-sm">{toast.message}</span>
             </div>
           )}
         </div>
