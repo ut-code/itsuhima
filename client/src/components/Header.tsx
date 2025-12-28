@@ -1,47 +1,91 @@
-import { HiOutlineHome, HiOutlineQuestionMarkCircle } from "react-icons/hi";
+import { useState } from "react";
+import { LuMenu, LuX } from "react-icons/lu";
 import { NavLink } from "react-router";
+import { EXTERNAL_LINKS } from "../constants/links";
 
 export default function Header() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   return (
-    <div className="navbar sticky top-0 left-0 z-50 bg-primary shadow-sm">
-      <div className="px-2 font-mplus text-2xl text-white">
-        <NavLink className="flex items-center gap-1" to="/">
-          <img src="/logo-white.svg" alt="logo" width={24} />
-          <span className="px-2">イツヒマ</span>
-          <span className="text-xs">(アルファ版)</span>
-        </NavLink>
-      </div>
-      <div>
-        <div className="dropdown dropdown-end -translate-y-1/2 absolute top-1/2 right-3 transform text-gray-600">
-          <NavLink className="btn btn-primary" to="/home">
-            <HiOutlineHome size={24} className="text-white" />
-            <span className="hidden md:block">ホーム</span>
+    <header className="sticky top-0 z-50 w-full border-slate-200/60 border-b bg-white/80 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-2">
+          <NavLink to="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
+            <img src="/logo.svg" alt="イツヒマ" className="h-8 w-8" />
+            <span className="font-bold font-mplus text-slate-800 text-xl tracking-tight">イツヒマ</span>
+            <span className="hidden rounded-full bg-slate-100 px-2 py-0.5 font-medium text-[10px] text-slate-500 sm:inline-block">
+              アルファ版
+            </span>
           </NavLink>
-          <button tabIndex={0} className="btn btn-circle btn-primary" type="button">
-            <HiOutlineQuestionMarkCircle size={28} className="text-white" />
+        </div>
+
+        <nav className="hidden items-center gap-6 md:flex">
+          <a
+            href={EXTERNAL_LINKS.GUIDE}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="font-medium text-slate-600 text-sm transition-colors hover:text-primary"
+          >
+            使い方
+          </a>
+          <NavLink to="/home" className="font-medium text-slate-600 text-sm transition-colors hover:text-primary">
+            ホーム
+          </NavLink>
+          <div className="h-4 w-px bg-slate-200" />
+          <NavLink
+            to="/new"
+            className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 font-semibold text-sm text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          >
+            イベント作成
+          </NavLink>
+        </nav>
+
+        <div className="flex items-center gap-2 md:hidden">
+          <NavLink
+            to="/new"
+            className="inline-flex items-center justify-center rounded-full bg-primary px-3 py-1.5 font-semibold text-sm text-white shadow-sm transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          >
+            イベント作成
+          </NavLink>
+          <button
+            type="button"
+            className="rounded-md p-2 text-slate-600 hover:bg-slate-100"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? <LuX className="h-6 w-6" /> : <LuMenu className="h-6 w-6" />}
           </button>
-          <div className="dropdown-content z-[1] w-56 rounded-box bg-base-100 p-2 shadow">
-            <p className="p-2 text-xs">イツヒマは現在アルファ版です。</p>
-            {/* biome-ignore lint/a11y/noNoninteractiveTabindex: daisyUI の仕様。tabIndex を消すとモバイルで開かないなどの問題が起こる */}
-            <ul tabIndex={0} className="menu p-0">
-              <li>
-                <a
-                  href="https://utcode.notion.site/1e4ca5f557bc80f2b697ca7b9342dc89?pvs=4"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  使い方ページ (臨時)
-                </a>
-              </li>
-              <li>
-                <a href="https://forms.gle/AB6xbgKjnDv5m1nm6" target="_blank" rel="noreferrer noopener">
-                  ご意見・バグ報告
-                </a>
-              </li>
-            </ul>
-          </div>
         </div>
       </div>
-    </div>
+
+      {isMenuOpen && (
+        <div className="absolute top-16 left-0 w-full border-slate-100 border-b bg-white shadow-lg md:hidden">
+          <div className="space-y-1 px-4 pt-2 pb-4">
+            <NavLink
+              to="/home"
+              className="block rounded-md px-3 py-2 font-medium text-base text-slate-600 hover:bg-slate-50 hover:text-primary"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              ホーム
+            </NavLink>
+            <a
+              href={EXTERNAL_LINKS.GUIDE}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="block rounded-md px-3 py-2 font-medium text-base text-slate-600 hover:bg-slate-50 hover:text-primary"
+            >
+              使い方ページ
+            </a>
+            <a
+              href={EXTERNAL_LINKS.FEEDBACK}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="block rounded-md px-3 py-2 font-medium text-base text-slate-600 hover:bg-slate-50 hover:text-primary"
+            >
+              ご意見・バグ報告
+            </a>
+          </div>
+        </div>
+      )}
+    </header>
   );
 }
