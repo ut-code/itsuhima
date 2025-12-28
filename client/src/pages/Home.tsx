@@ -1,6 +1,6 @@
 import { hc } from "hono/client";
 import { useEffect, useState } from "react";
-import { HiOutlineCalendar, HiOutlinePlus, HiOutlineUser, HiOutlineUsers } from "react-icons/hi";
+import { LuArrowRight, LuCalendar, LuLayoutDashboard, LuPlus, LuUser, LuUsers } from "react-icons/lu";
 import { NavLink } from "react-router";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
@@ -62,20 +62,24 @@ export default function HomePage() {
 
   return (
     <>
-      <Header />
-      {loading ? (
-        <div className="flex min-h-[calc(100dvh_-_64px)] items-center justify-center bg-blue-50">
-          <div className="py-4">
-            <span className="loading loading-dots loading-md text-gray-400" />
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+        <Header />
+        <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="font-bold text-2xl text-slate-900 tracking-tight sm:text-3xl">ホーム</h1>
+              <p className="mt-1 text-slate-500 text-sm">参加・主催しているイベントの管理</p>
+            </div>
           </div>
-        </div>
-      ) : involvedProjects ? (
-        <ProjectDashboard involvedProjects={involvedProjects} />
-      ) : (
-        <div className="flex min-h-[calc(100dvh_-_64px)] items-center justify-center bg-blue-50">
-          <EmptyState />
-        </div>
-      )}
+          {loading ? (
+            <ProjectsSkeleton />
+          ) : involvedProjects && involvedProjects.length > 0 ? (
+            <ProjectDashboard involvedProjects={involvedProjects} />
+          ) : (
+            <EmptyState />
+          )}
+        </main>
+      </div>
       {toast && (
         <div className="toast toast-top toast-center z-50">
           <div className={`alert ${toast.variant === "success" ? "alert-success" : "alert-error"}`}>
@@ -96,111 +100,128 @@ function ProjectDashboard({ involvedProjects }: { involvedProjects: BriefProject
   });
 
   return (
-    <div className="min-h-[calc(100dvh_-_64px)] bg-blue-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Hero Section */}
-        <div className="mb-12 text-center">
-          <div className="mt-2 mb-6 flex items-center justify-center">
-            <img src="/logo.svg" alt="logo" width={48} className="mr-4" />
-            <h1 className="font-mplus text-4xl text-primary">イツヒマ</h1>
+    <div className="space-y-8">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <NavLink
+          to="/new"
+          className="group relative flex min-h-[200px] flex-col items-center justify-center rounded-2xl border-2 border-slate-200 border-dashed bg-white/50 p-6 text-center transition-all hover:border-primary/50 hover:bg-primary/5"
+        >
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 transition-colors group-hover:bg-primary/10">
+            <LuPlus className="h-6 w-6 text-slate-400 group-hover:text-primary" />
           </div>
-          <p className="mb-8 text-gray-600 text-xl">「いつヒマ？」で日程調整しよう</p>
-          <NavLink
-            to="/new"
-            className="btn btn-primary btn-lg hover:-translate-y-1 transform px-8 py-4 text-lg shadow-lg transition-all duration-300 hover:shadow-xl"
-          >
-            <HiOutlinePlus className="mr-2" size={20} />
-            新しいイベントを作成
-          </NavLink>
-        </div>
+          <h3 className="font-semibold text-slate-900">新規作成</h3>
+          <p className="mt-1 text-slate-500 text-sm">新しい日程調整を始める</p>
+        </NavLink>
 
-        {involvedProjects.length > 0 && (
-          <div className="space-y-8">
-            {/* All Projects */}
-            <section>
-              <h2 className="mb-6 flex items-center font-bold text-2xl text-gray-800">
-                <HiOutlineCalendar className="mr-3 text-gray-700" size={28} />
-                あなたのイベント
-              </h2>
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {sortedProjects.map((project) => (
-                  <ProjectCard key={project.id} project={project} />
-                ))}
-              </div>
-            </section>
-          </div>
-        )}
+        {sortedProjects.map((project) => (
+          <ProjectCard key={project.id} project={project} />
+        ))}
       </div>
     </div>
   );
 }
 
 function ProjectCard({ project }: { project: BriefProject }) {
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString("ja-JP", { month: "short", day: "numeric" });
+  };
+
   return (
     <NavLink
       to={`/e/${project.id}`}
-      className={`group hover:-translate-y-1 relative block transform overflow-hidden rounded-xl border-l-4 bg-white shadow-lg transition-all duration-300 hover:shadow-xl ${project.isHost ? "border-primary" : "border-secondary"} focus:outline-none focus:ring-4 focus:ring-primary/20`}
-      aria-label={`「${project.name}」の詳細を見る`}
+      className="group hover:-translate-y-1 relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-slate-200/60 hover:shadow-xl"
     >
-      <div className="p-6">
-        <div className="mb-4">
-          <h3 className="mb-2 break-words font-semibold text-gray-800 text-xl">{project.name}</h3>
-          <span className={`badge badge-sm ${project.isHost ? "badge-primary" : "badge-secondary"}`}>
-            {project.isHost ? (
-              <>
-                <HiOutlineUser size={12} />
-                <span>主催者</span>
-              </>
-            ) : (
-              <>
-                <HiOutlineUsers size={12} />
-                <span>参加者</span>
-              </>
-            )}
-          </span>
+      <div>
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <span
+              className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-0.5 font-medium text-xs ring-1 ring-inset ${
+                project.isHost
+                  ? "bg-primary/10 text-primary ring-primary/20"
+                  : "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+              }`}
+            >
+              {project.isHost ? (
+                <>
+                  <LuUser className="h-3 w-3" />
+                  主催
+                </>
+              ) : (
+                <>
+                  <LuUsers className="h-3 w-3" />
+                  参加
+                </>
+              )}
+            </span>
+            <h3 className="line-clamp-2 font-bold text-lg text-slate-900 leading-tight transition-colors group-hover:text-primary">
+              {project.name}
+            </h3>
+          </div>
         </div>
 
-        <div className="mb-4 flex items-center text-gray-600">
-          <HiOutlineCalendar className="mr-2" size={16} />
-          <span className="text-sm">
-            {formatDate(project.startDate.toLocaleDateString())} ～{formatDate(project.endDate.toLocaleDateString())}
-          </span>
+        <div className="mb-6 flex items-center gap-3 rounded-lg bg-slate-50 p-3 text-slate-600 text-sm">
+          <LuCalendar className="h-4 w-4 shrink-0 text-slate-400" />
+          <div className="flex items-center gap-2 font-medium">
+            <span>{formatDate(project.startDate)}</span>
+            <span className="text-slate-300">/</span>
+            <span>{formatDate(project.endDate)}</span>
+          </div>
         </div>
       </div>
 
-      <span
-        className={`absolute right-4 bottom-4 ${project.isHost ? "text-primary" : "text-secondary"} pointer-events-none text-2xl transition-transform group-hover:translate-x-1`}
-        aria-hidden="true"
-      >
-        &rsaquo;
-      </span>
+      <div className="mt-auto flex items-center justify-between border-slate-100 border-t pt-4">
+        <span className="font-medium text-slate-500 text-xs transition-colors group-hover:text-primary">
+          詳細を見る
+        </span>
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-400 transition-all group-hover:bg-primary group-hover:text-white">
+          <LuArrowRight className="h-4 w-4" />
+        </div>
+      </div>
     </NavLink>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="py-16 text-center">
-      <div className="mb-8">
-        <div className="mx-auto mb-6 flex h-32 w-32 items-center justify-center rounded-full bg-gray-100">
-          <HiOutlineCalendar className="text-gray-400" size={64} />
-        </div>
-        <h3 className="mb-3 font-semibold text-2xl text-gray-800">まだイベントがありません</h3>
-        <p className="mx-auto mb-8 max-w-md text-gray-600">イベントを作成して、日程調整を始めましょう</p>
+    <div className="flex min-h-[400px] flex-col items-center justify-center rounded-3xl border border-slate-300 border-dashed bg-slate-50/50 p-8 text-center">
+      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200">
+        <LuLayoutDashboard className="h-10 w-10 text-slate-400" />
       </div>
+      <h3 className="mb-2 font-bold text-slate-900 text-xl">まだイベントがありません</h3>
+      <p className="mb-8 max-w-sm text-slate-500">「イベント作成」ボタンから、新しい日程調整を始めましょう。</p>
       <NavLink
         to="/new"
-        className="btn btn-primary btn-lg px-8 py-4 text-lg shadow-lg transition-all duration-300 hover:shadow-xl"
+        className="hover:-translate-y-0.5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-3.5 font-semibold text-base text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl"
       >
-        <HiOutlinePlus className="mr-2" size={20} />
-        イベントを作成する
+        <LuPlus className="h-5 w-5" />
+        イベント作成
       </NavLink>
     </div>
   );
 }
 
-// ---------- Utility ----------
-const formatDate = (isoDate: string) => {
-  const date = new Date(isoDate);
-  return date.toLocaleDateString("ja-JP");
-};
+function ProjectsSkeleton() {
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }, (_, i) => (
+        <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: skeleton is static
+          key={`skeleton-${i}`}
+          className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+        >
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <div className="h-6 w-16 animate-pulse rounded-full bg-slate-100" />
+            </div>
+            <div className="h-7 w-3/4 animate-pulse rounded-md bg-slate-100" />
+            <div className="h-12 w-full animate-pulse rounded-lg bg-slate-50" />
+          </div>
+          <div className="mt-6 flex items-center justify-between border-slate-100 border-t pt-4">
+            <div className="h-4 w-20 animate-pulse rounded bg-slate-100" />
+            <div className="h-8 w-8 animate-pulse rounded-full bg-slate-100" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
