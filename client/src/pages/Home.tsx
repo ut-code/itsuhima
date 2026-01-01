@@ -1,6 +1,6 @@
 import { hc } from "hono/client";
 import { useEffect, useState } from "react";
-import { LuCalendar, LuChevronRight, LuLayoutDashboard, LuPlus, LuUser, LuUsers } from "react-icons/lu";
+import { LuCalendar, LuChevronRight, LuLayoutDashboard, LuPlus, LuUser, LuUsers, LuX } from "react-icons/lu";
 import { NavLink } from "react-router";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
@@ -88,6 +88,9 @@ export default function HomePage() {
         <div className="toast toast-top toast-center z-50">
           <div className={`alert ${toast.variant === "success" ? "alert-success" : "alert-error"}`}>
             <span>{toast.message}</span>
+            <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">
+              <LuX className="h-4 w-4" />
+            </button>
           </div>
         </div>
       )}

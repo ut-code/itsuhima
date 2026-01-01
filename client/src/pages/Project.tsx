@@ -12,6 +12,7 @@ import {
   LuClipboardCheck,
   LuInfo,
   LuTrash2,
+  LuX,
 } from "react-icons/lu";
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
@@ -742,11 +743,17 @@ export default function ProjectPage() {
             <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-lg">
               <LuCircleCheck className="h-6 w-6 shrink-0 text-emerald-600" />
               <span className="font-medium text-emerald-900 text-sm">{toast.message}</span>
+              <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">
+                <LuX className="h-4 w-4" />
+              </button>
             </div>
           ) : (
             <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
               <LuCircleAlert className="h-6 w-6 shrink-0 text-red-600" />
               <span className="font-medium text-red-900 text-sm">{toast.message}</span>
+              <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">
+                <LuX className="h-4 w-4" />
+              </button>
             </div>
           )}
         </div>
