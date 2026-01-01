@@ -20,10 +20,9 @@ import Header from "../components/Header";
 import { projectReviver } from "../revivers";
 import type { Project } from "../types";
 import { API_ENDPOINT, FRONTEND_ORIGIN } from "../utils";
+import { EXTERNAL_LINKS } from "../constants/links";
 
 const client = hc<AppType>(API_ENDPOINT);
-
-const GUIDE_URL = "https://utcode.notion.site/1e4ca5f557bc80f2b697ca7b9342dc89?pvs=4";
 
 export default function ProjectPage() {
   const { eventId } = useParams();
@@ -358,7 +357,7 @@ export default function ProjectPage() {
                       <br />
                       詳しくは、
                       <a
-                        href={GUIDE_URL}
+                        href={EXTERNAL_LINKS.GUIDE}
                         target="_blank"
                         rel="noreferrer noopener"
                         className="font-medium text-primary underline hover:text-primary/80"
