@@ -283,7 +283,7 @@ export default function ProjectPage() {
           </div>
         ) : eventId !== undefined && !project ? (
           // TODO: NotFound に統一？
-          <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
             <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
               <p className="text-base text-slate-600 sm:text-xl">イベントが見つかりませんでした。</p>
               <NavLink to="/" className="btn btn-primary">
@@ -292,7 +292,7 @@ export default function ProjectPage() {
             </div>
           </div>
         ) : (
-          <main className="mx-auto max-w-4xl px-4 py-8 pb-24 sm:px-6 lg:px-8">
+          <main className="mx-auto max-w-7xl px-4 py-8 pb-24 sm:px-6 lg:px-8">
             <div className="mb-6">
               <h1 className="font-bold text-2xl text-slate-900">{project ? `${project.name} の編集` : "新規作成"}</h1>
             </div>
@@ -668,7 +668,7 @@ export default function ProjectPage() {
 
             {/* 固定フッター */}
             <div className="fixed right-0 bottom-0 left-0 z-10 border-slate-200 border-t bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm sm:py-4">
-              <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 sm:gap-4">
+              <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-4">
                 {eventId ? (
                   <NavLink to={`/e/${eventId}`} className="btn btn-outline gap-1.5 sm:gap-2">
                     <LuChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
