@@ -11,16 +11,17 @@ import {
   HiOutlineExclamationCircle,
   HiOutlineTrash,
 } from "react-icons/hi";
+import { LuChevronLeft } from "react-icons/lu";
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
 import { DEFAULT_PARTICIPATION_OPTION, generateDistinctColor } from "../../../common/colors";
 import { editReqSchema, projectReqSchema } from "../../../common/validators";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
+import { EXTERNAL_LINKS } from "../constants/links";
 import { projectReviver } from "../revivers";
 import type { Project } from "../types";
 import { API_ENDPOINT, FRONTEND_ORIGIN } from "../utils";
-import { EXTERNAL_LINKS } from "../constants/links";
 
 const client = hc<AppType>(API_ENDPOINT);
 
@@ -279,6 +280,7 @@ export default function ProjectPage() {
             <span className="loading loading-dots loading-md text-slate-400" />
           </div>
         ) : eventId !== undefined && !project ? (
+          // TODO: NotFound に統一？
           <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
             <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
               <p className="text-base text-slate-600 sm:text-xl">イベントが見つかりませんでした。</p>
@@ -690,16 +692,17 @@ export default function ProjectPage() {
                 {eventId ? (
                   <NavLink
                     to={`/e/${eventId}`}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 text-sm transition-all hover:border-slate-300 hover:bg-slate-50 sm:gap-2 sm:px-6 sm:py-2.5"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 text-sm transition-all hover:border-slate-300 hover:bg-slate-50 sm:gap-2 sm:px-4 sm:py-2.5"
                   >
-                    日程調整に戻る
+                    <LuChevronLeft size={16} className="sm:h-5 sm:w-5" />
+                    <span>日程調整に戻る</span>
                   </NavLink>
                 ) : (
                   <NavLink
                     to="/home"
                     className="inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 text-sm transition-all hover:border-slate-300 hover:bg-slate-50 sm:gap-2 sm:px-6 sm:py-2.5"
                   >
-                    ホームに戻る
+                    キャンセル
                   </NavLink>
                 )}
                 <button

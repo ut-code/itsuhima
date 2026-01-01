@@ -1,4 +1,4 @@
-import { LuArrowLeft, LuCircleAlert, LuHouse } from "react-icons/lu";
+import { LuCircleAlert, LuHouse } from "react-icons/lu";
 import { NavLink } from "react-router";
 import Header from "../components/Header";
 
@@ -16,23 +16,13 @@ export default function NotFoundPage() {
           <p className="mb-8 max-w-md text-slate-600">
             お探しのページは存在しないか、移動または削除された可能性があります。
           </p>
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <NavLink
-              to="/home"
-              className="hover:-translate-y-0.5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-base text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
-              <LuHouse className="h-5 w-5" />
-              ホームに戻る
-            </NavLink>
-            <button
-              type="button"
-              onClick={() => window.history.back()}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-6 py-3 font-semibold text-base text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50"
-            >
-              <LuArrowLeft className="h-5 w-5" />
-              前のページに戻る
-            </button>
-          </div>
+          <NavLink
+            to="/home"
+            className="hover:-translate-y-0.5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-base text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          >
+            <LuHouse className="h-5 w-5" />
+            ホームに戻る
+          </NavLink>
         </div>
       </main>
     </div>

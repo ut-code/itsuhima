@@ -1,12 +1,7 @@
 import { hc } from "hono/client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  HiOutlineCheckCircle,
-  HiOutlineCog,
-  HiOutlineExclamationCircle,
-  HiOutlineHome,
-  HiPencil,
-} from "react-icons/hi";
+import { HiOutlineCheckCircle, HiOutlineExclamationCircle, HiPencil } from "react-icons/hi";
+import { LuChevronLeft, LuSettings } from "react-icons/lu";
 import { NavLink, useParams } from "react-router";
 import type { AppType } from "../../../../server/src/main";
 import { Calendar } from "../../components/Calendar";
@@ -255,15 +250,6 @@ export default function SubmissionPage() {
             <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pt-3 pb-3 sm:px-6 sm:pt-4 sm:pb-3 lg:px-8">
               <div className="mb-2 flex items-center justify-between sm:mb-3">
                 <h1 className="truncate font-bold text-base text-slate-900 sm:text-lg">{project.name}</h1>
-                {isHost && (
-                  <NavLink
-                    to={`/e/${projectId}/edit`}
-                    className="ml-2 inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-600 text-xs transition-all hover:border-slate-300 hover:bg-slate-50 sm:gap-1.5 sm:px-2.5 sm:py-1.5"
-                  >
-                    <HiOutlineCog size={14} />
-                    <span className="hidden sm:inline">設定</span>
-                  </NavLink>
-                )}
               </div>
 
               {project.description && (
@@ -338,8 +324,7 @@ export default function SubmissionPage() {
                           }
                         }}
                       >
-                        <span className="hidden sm:inline">キャンセル</span>
-                        <span className="sm:hidden">×</span>
+                        <span>キャンセル</span>
                       </button>
                     )}
                     <button
@@ -367,22 +352,32 @@ export default function SubmissionPage() {
                       to="/home"
                       className="inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 text-sm transition-all hover:border-slate-300 hover:bg-slate-50 sm:gap-2 sm:px-4 sm:py-2.5"
                     >
-                      <HiOutlineHome size={16} className="sm:h-5 sm:w-5" />
-                      <span className="hidden sm:inline">ホームに戻る</span>
-                      <span className="sm:hidden">ホーム</span>
+                      <LuChevronLeft size={16} className="sm:h-5 sm:w-5" />
+                      <span>ホームに戻る</span>
                     </NavLink>
-                    <button
-                      type="button"
-                      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 font-semibold text-sm text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 sm:gap-2 sm:px-6 sm:py-2.5"
-                      disabled={loading}
-                      onClick={() => {
-                        setEditMode(true);
-                      }}
-                    >
-                      <HiPencil size={16} className="sm:h-5 sm:w-5" />
-                      <span className="hidden sm:inline">日程を更新する</span>
-                      <span className="sm:hidden">更新</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {isHost && (
+                        <NavLink
+                          to={`/e/${projectId}/edit`}
+                          className="inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-primary bg-white px-3 py-2 font-semibold text-primary text-sm transition-all hover:border-slate-300 hover:bg-slate-50 sm:gap-2 sm:px-4 sm:py-2.5"
+                        >
+                          <LuSettings size={16} className="sm:h-5 sm:w-5" />
+                          <span>管理</span>
+                        </NavLink>
+                      )}
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 font-semibold text-sm text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 sm:gap-2 sm:px-6 sm:py-2.5"
+                        disabled={loading}
+                        onClick={() => {
+                          setEditMode(true);
+                        }}
+                      >
+                        <HiPencil size={16} className="sm:h-5 sm:w-5" />
+                        <span className="hidden sm:inline">日程を更新する</span>
+                        <span className="sm:hidden">日程更新</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
