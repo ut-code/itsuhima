@@ -7,19 +7,20 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-slate-200/60 border-b bg-white/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-2">
-          <NavLink to="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
-            <img src="/logo.svg" alt="イツヒマ" className="h-6 w-6" />
-            <span className="font-bold font-mplus text-slate-800 text-xl tracking-tight">イツヒマ</span>
-            <span className="hidden rounded-full bg-slate-100 px-2 py-0.5 font-medium text-[10px] text-slate-500 sm:inline-block">
-              アルファ版
-            </span>
-          </NavLink>
-        </div>
+    <header className="sticky top-0 z-50 w-full border-slate-200 border-b bg-white">
+      <div className="flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <NavLink to="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
+          <img src="/logo.svg" alt="イツヒマ" className="h-6 w-6" />
+          <span className="font-bold font-mplus text-slate-800 text-xl tracking-tight">イツヒマ</span>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-[10px] text-slate-500">
+            アルファ版
+          </span>
+        </NavLink>
 
         <nav className="hidden items-center gap-6 md:flex">
+          <NavLink to="/home" className="font-medium text-slate-600 text-sm transition-colors hover:text-primary">
+            ホーム
+          </NavLink>
           <a
             href={EXTERNAL_LINKS.GUIDE}
             target="_blank"
@@ -28,25 +29,16 @@ export default function Header() {
           >
             使い方
           </a>
-          <NavLink to="/home" className="font-medium text-slate-600 text-sm transition-colors hover:text-primary">
-            ホーム
-          </NavLink>
-          <div className="h-4 w-px bg-slate-200" />
+          <div className="h-4 w-[1px] bg-slate-200" />
           <NavLink
             to="/new"
-            className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 font-semibold text-sm text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 font-bold text-sm text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
           >
             イベント作成
           </NavLink>
         </nav>
 
-        <div className="flex items-center gap-2 md:hidden">
-          <NavLink
-            to="/new"
-            className="inline-flex items-center justify-center rounded-full bg-primary px-3 py-1.5 font-semibold text-sm text-white shadow-sm transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-          >
-            イベント作成
-          </NavLink>
+        <div className="flex items-center md:hidden">
           <button
             type="button"
             className="rounded-md p-2 text-slate-600 hover:bg-slate-100"
@@ -59,7 +51,7 @@ export default function Header() {
 
       {isMenuOpen && (
         <div className="absolute top-16 left-0 w-full border-slate-100 border-b bg-white shadow-lg md:hidden">
-          <div className="space-y-1 px-4 pt-2 pb-4">
+          <div className="flex flex-col gap-1 px-4 pt-2 pb-4">
             <NavLink
               to="/home"
               className="block rounded-md px-3 py-2 font-medium text-base text-slate-600 hover:bg-slate-50 hover:text-primary"
@@ -83,6 +75,12 @@ export default function Header() {
             >
               ご意見・バグ報告
             </a>
+            <NavLink
+              to="/new"
+              className="my-2 inline-flex items-center justify-center rounded-full bg-primary px-3 py-1.5 font-bold text-sm text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            >
+              イベント作成
+            </NavLink>
           </div>
         </div>
       )}
