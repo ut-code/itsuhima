@@ -294,12 +294,7 @@ export default function ProjectPage() {
         ) : (
           <main className="mx-auto max-w-4xl px-4 py-8 pb-24 sm:px-6 lg:px-8">
             <div className="mb-6">
-              <h1 className="font-bold text-slate-900 text-xl tracking-tight sm:text-2xl">
-                {project ? `${project.name} の編集` : "イベントの作成"}
-              </h1>
-              <p className="mt-1.5 text-slate-500 text-sm">
-                {project ? "イベントの詳細を編集できます" : "新しい日程調整イベントを作成しましょう"}
-              </p>
+              <h1 className="font-bold text-2xl text-slate-900">{project ? `${project.name} の編集` : "新規作成"}</h1>
             </div>
 
             <form id="project-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">

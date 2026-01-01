@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { LuCalendar, LuChevronRight, LuLayoutDashboard, LuPlus, LuUser, LuUsers, LuX } from "react-icons/lu";
 import { NavLink } from "react-router";
 import type { AppType } from "../../../server/src/main";
+import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { briefProjectReviver } from "../revivers";
 import type { BriefProject } from "../types";
@@ -62,13 +63,13 @@ export default function HomePage() {
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <div className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-900">
         <Header />
-        <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="font-bold text-2xl text-slate-900 tracking-tight sm:text-3xl">ホーム</h1>
-              <p className="mt-1 text-slate-500 text-sm">参加・主催しているイベントの管理</p>
+              <p className="mt-1 text-slate-500 text-sm">日程調整イベントの管理</p>
             </div>
             <NavLink to="/new" className="btn btn-primary w-full gap-2 sm:w-auto">
               <LuPlus className="h-4 w-4" />
@@ -83,6 +84,7 @@ export default function HomePage() {
             <EmptyState />
           )}
         </main>
+        <Footer />
       </div>
       {toast && (
         <div className="toast toast-top toast-center z-50">
