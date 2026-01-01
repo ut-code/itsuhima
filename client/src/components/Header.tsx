@@ -29,10 +29,6 @@ export default function Header() {
           >
             使い方
           </a>
-          <div className="h-4 w-[1px] bg-slate-200" />
-          <NavLink to="/new" className="btn btn-primary">
-            イベント作成
-          </NavLink>
         </nav>
 
         <div className="flex items-center md:hidden">
@@ -72,9 +68,6 @@ export default function Header() {
             >
               ご意見・バグ報告
             </a>
-            <NavLink to="/new" className="btn btn-primary btn-sm my-3">
-              イベント作成
-            </NavLink>
           </div>
         </div>
       )}
