@@ -1,6 +1,14 @@
 import { hc } from "hono/client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LuChevronLeft, LuCircleAlert, LuCircleCheck, LuPencil, LuSettings } from "react-icons/lu";
+import {
+  LuChevronDown,
+  LuChevronLeft,
+  LuChevronUp,
+  LuCircleAlert,
+  LuCircleCheck,
+  LuPencil,
+  LuSettings,
+} from "react-icons/lu";
 import { NavLink, useParams } from "react-router";
 import type { AppType } from "../../../../server/src/main";
 import { Calendar } from "../../components/Calendar";
@@ -12,6 +20,41 @@ import { API_ENDPOINT } from "../../utils";
 const client = hc<AppType>(API_ENDPOINT);
 
 export type EditingSlot = Pick<Slot, "from" | "to" | "participationOptionId">;
+
+/**
+ * テキストを簡易的に切り詰める。
+ * - ASCII なら 1, 非 ASCII なら 2。
+ * - 改行コード数も考慮。
+ */
+const truncateText = (text: string, maxWidth = 80, maxLines = 3): { text: string; truncated: boolean } => {
+  const lines = text.split("\n");
+  let width = 0;
+  let result = "";
+  let lineCount = 0;
+
+  for (const line of lines) {
+    if (lineCount >= maxLines) {
+      return { text: `${result.trimEnd()}…`, truncated: true };
+    }
+
+    if (lineCount > 0) {
+      result += "\n";
+    }
+
+    for (const char of line) {
+      const charWidth = char.charCodeAt(0) < 128 ? 1 : 2;
+      if (width + charWidth > maxWidth) {
+        return { text: `${result.trimEnd()}…`, truncated: true };
+      }
+      width += charWidth;
+      result += char;
+    }
+
+    lineCount++;
+  }
+
+  return { text: result, truncated: false };
+};
 
 const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -95,6 +138,8 @@ export default function SubmissionPage() {
   const [editingSlots, setEditingSlots] = useState<EditingSlot[]>([]);
 
   const [selectedParticipationOptionId, setSelectedParticipationOptionId] = useState<string | null>(null);
+
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   const [toast, setToast] = useState<{
     message: string;
@@ -251,9 +296,36 @@ export default function SubmissionPage() {
                 <h1 className="truncate font-bold text-base text-slate-900 sm:text-lg">{project.name}</h1>
               </div>
 
-              {project.description && (
-                <p className="mb-4 whitespace-pre-wrap text-slate-600 text-sm">{project.description}</p>
-              )}
+              {project.description &&
+                (() => {
+                  const { text: truncatedText, truncated } = truncateText(project.description);
+                  return (
+                    <div className="mb-4">
+                      <p className="whitespace-pre-wrap text-slate-600 text-sm">
+                        {descriptionExpanded ? project.description : truncatedText}
+                      </p>
+                      {truncated && (
+                        <button
+                          type="button"
+                          onClick={() => setDescriptionExpanded(!descriptionExpanded)}
+                          className="mt-1 inline-flex items-center gap-0.5 text-primary text-sm hover:underline"
+                        >
+                          {descriptionExpanded ? (
+                            <>
+                              閉じる
+                              <LuChevronUp size={16} />
+                            </>
+                          ) : (
+                            <>
+                              もっと見る
+                              <LuChevronDown size={16} />
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
 
               {editMode && project.participationOptions.length > 1 && selectedParticipationOptionId !== null && (
                 <div className="mb-2 flex flex-wrap items-center gap-1.5 sm:mb-3 sm:gap-2">
