@@ -336,38 +336,30 @@ export default function ProjectPage() {
               </div>
 
               {/* 情報ボックス */}
-              <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-5 text-primary shadow-sm">
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between text-left"
-                  onClick={() => setIsInfoExpanded(!isInfoExpanded)}
-                >
-                  <div className="flex items-center gap-2 font-medium text-sm">
-                    <LuInfo className="h-5 w-5" />
-                    開始日・終了日／時間帯について
-                  </div>
-                  <span className={`transition-transform ${isInfoExpanded ? "rotate-180" : ""}`}>▼</span>
-                </button>
-                {isInfoExpanded && (
-                  <div className="mt-3 border-blue-200 border-t pt-3 text-sm">
-                    <p>
-                      イツヒマでは、<strong>主催者側で候補日程を設定せずに</strong>日程調整します。
-                      <br />
-                      ここでは、参加者の日程を知りたい日付の範囲と時間帯の範囲を設定してください。
-                      <br />
-                      詳しくは、
-                      <a
-                        href={EXTERNAL_LINKS.GUIDE}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="font-medium text-primary underline hover:text-primary/80"
-                      >
-                        使い方ページ
-                      </a>
-                      をご覧ください。
-                    </p>
-                  </div>
-                )}
+              <div className="collapse-arrow collapse rounded-2xl border border-blue-200 bg-blue-50/50 p-1 text-primary shadow-sm">
+                <input type="checkbox" checked={isInfoExpanded} onChange={(e) => setIsInfoExpanded(e.target.checked)} />
+                <div className="collapse-title flex items-center gap-2 font-medium text-sm">
+                  <LuInfo className="h-5 w-5" />
+                  開始日・終了日／時間帯について
+                </div>
+                <div className="collapse-content px-6 text-sm">
+                  <p>
+                    イツヒマでは、<strong>主催者側で候補日程を設定せずに</strong>日程調整します。
+                    <br />
+                    ここでは、参加者の日程を知りたい日付の範囲と時間帯の範囲を設定してください。
+                    <br />
+                    詳しくは、
+                    <a
+                      href={EXTERNAL_LINKS.GUIDE}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="font-medium text-primary underline hover:text-primary/80"
+                    >
+                      使い方ページ
+                    </a>
+                    をご覧ください。
+                  </p>
+                </div>
               </div>
 
               {/* 日程の範囲 */}
@@ -538,102 +530,96 @@ export default function ProjectPage() {
               </div>
 
               {/* 参加形態 */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between text-left"
-                  onClick={() => setIsParticipationExpanded(!isParticipationExpanded)}
-                >
-                  <h2 className="font-semibold text-base text-slate-900 sm:text-lg">参加形態の設定 (任意)</h2>
-                  <span
-                    className={`text-slate-600 transition-transform ${isParticipationExpanded ? "rotate-180" : ""}`}
-                  >
-                    ▼
-                  </span>
-                </button>
-                {isParticipationExpanded && (
-                  <div className="mt-4 border-slate-200 border-t pt-4">
-                    <p className="mb-4 text-slate-600 text-sm">
-                      参加形態を設定すると、参加者は「対面」「オンライン」などの形態を選んで日程を登録できます。
-                    </p>
+              <div className="collapse-arrow collapse rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                <input
+                  type="checkbox"
+                  checked={isParticipationExpanded}
+                  onChange={(e) => setIsParticipationExpanded(e.target.checked)}
+                />
+                <div className="collapse-title font-semibold text-base text-slate-900 sm:text-lg">
+                  参加形態の設定 (任意)
+                </div>
+                <div className="collapse-content px-6">
+                  <p className="mb-4 text-slate-600 text-sm">
+                    参加形態を設定すると、参加者は「対面」「オンライン」などの形態を選んで日程を登録できます。
+                  </p>
 
-                    <div className="space-y-3">
-                      {participationFields.map((field, index) => {
-                        const hasSlots = project?.guests.some((guest) =>
-                          guest.slots.some((slot) => slot.participationOptionId === field.id),
-                        );
-                        const isLastOption = participationFields.length === 1;
-                        const cannotDelete = hasSlots || isLastOption;
-                        const tooltipMessage = hasSlots
-                          ? "すでにこの参加形態の日程が登録されているため、削除できません"
-                          : isLastOption
-                            ? "最低1つの参加形態が必要です"
-                            : "";
-                        return (
-                          <div key={field.id} className="w-full">
-                            <div className="flex items-center gap-2 sm:gap-3">
-                              <input type="hidden" {...register(`participationOptions.${index}.id`)} value={field.id} />
-                              <div className="relative h-10 w-10 shrink-0 sm:h-11 sm:w-11">
-                                <input
-                                  type="color"
-                                  {...register(`participationOptions.${index}.color`)}
-                                  defaultValue={field.color}
-                                  // カラーピッカーのスタイルはブラウザに依存した調整が必要
-                                  className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-lg border-0 shadow-[0_0_0_2px_rgb(226_232_240),0_1px_2px_0_rgb(0_0_0/0.05)] [&::-moz-color-swatch]:rounded-lg [&::-moz-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-lg [&::-webkit-color-swatch]:border-0"
-                                />
-                              </div>
+                  <div className="space-y-3">
+                    {participationFields.map((field, index) => {
+                      const hasSlots = project?.guests.some((guest) =>
+                        guest.slots.some((slot) => slot.participationOptionId === field.id),
+                      );
+                      const isLastOption = participationFields.length === 1;
+                      const cannotDelete = hasSlots || isLastOption;
+                      const tooltipMessage = hasSlots
+                        ? "すでにこの参加形態の日程が登録されているため、削除できません"
+                        : isLastOption
+                          ? "最低1つの参加形態が必要です"
+                          : "";
+                      return (
+                        <div key={field.id} className="w-full">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <input type="hidden" {...register(`participationOptions.${index}.id`)} value={field.id} />
+                            <div className="relative h-10 w-10 shrink-0 sm:h-11 sm:w-11">
                               <input
-                                type="text"
-                                {...register(`participationOptions.${index}.label`)}
-                                defaultValue={field.label}
-                                placeholder="参加形態名（例：対面、オンライン）"
-                                className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 sm:text-base ${errors.participationOptions?.[index]?.label ? "border-red-500" : "border-slate-300"}`}
-                                onBlur={() => {
-                                  trigger(`participationOptions.${index}.label` as const);
-                                }}
+                                type="color"
+                                {...register(`participationOptions.${index}.color`)}
+                                defaultValue={field.color}
+                                // カラーピッカーのスタイルはブラウザに依存した調整が必要
+                                className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-lg border-0 shadow-[0_0_0_2px_rgb(226_232_240),0_1px_2px_0_rgb(0_0_0/0.05)] [&::-moz-color-swatch]:rounded-lg [&::-moz-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-lg [&::-webkit-color-swatch]:border-0"
                               />
-                              <div className={cannotDelete ? "tooltip tooltip-left" : ""} data-tip={tooltipMessage}>
-                                <button
-                                  type="button"
-                                  onClick={() => removeParticipation(index)}
-                                  className={`rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 sm:p-2.5 ${cannotDelete ? "cursor-not-allowed opacity-40" : ""}`}
-                                  disabled={cannotDelete}
-                                >
-                                  <LuTrash2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                                </button>
-                              </div>
                             </div>
-                            {errors.participationOptions?.[index]?.label && (
-                              <p className="mt-1.5 text-red-600 text-sm">
-                                {errors.participationOptions[index]?.label?.message as string}
-                              </p>
-                            )}
-                            {errors.participationOptions?.[index]?.color && (
-                              <p className="mt-1.5 text-red-600 text-sm">
-                                {errors.participationOptions[index]?.color?.message as string}
-                              </p>
-                            )}
+                            <input
+                              type="text"
+                              {...register(`participationOptions.${index}.label`)}
+                              defaultValue={field.label}
+                              placeholder="参加形態名（例：対面、オンライン）"
+                              className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 sm:text-base ${errors.participationOptions?.[index]?.label ? "border-red-500" : "border-slate-300"}`}
+                              onBlur={() => {
+                                trigger(`participationOptions.${index}.label` as const);
+                              }}
+                            />
+                            <div className={cannotDelete ? "tooltip tooltip-left" : ""} data-tip={tooltipMessage}>
+                              <button
+                                type="button"
+                                onClick={() => removeParticipation(index)}
+                                className={`rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 sm:p-2.5 ${cannotDelete ? "cursor-not-allowed opacity-40" : ""}`}
+                                disabled={cannotDelete}
+                              >
+                                <LuTrash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                              </button>
+                            </div>
                           </div>
-                        );
-                      })}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const existingColors = participationFields.map((o) => o.color);
-                        appendParticipation({
-                          id: crypto.randomUUID(),
-                          label: "",
-                          color: generateDistinctColor(existingColors),
-                        });
-                      }}
-                      className="btn btn-outline btn-sm sm:btn-md mt-4"
-                    >
-                      + 参加形態を追加
-                    </button>
+                          {errors.participationOptions?.[index]?.label && (
+                            <p className="mt-1.5 text-red-600 text-sm">
+                              {errors.participationOptions[index]?.label?.message as string}
+                            </p>
+                          )}
+                          {errors.participationOptions?.[index]?.color && (
+                            <p className="mt-1.5 text-red-600 text-sm">
+                              {errors.participationOptions[index]?.color?.message as string}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const existingColors = participationFields.map((o) => o.color);
+                      appendParticipation({
+                        id: crypto.randomUUID(),
+                        label: "",
+                        color: generateDistinctColor(existingColors),
+                      });
+                    }}
+                    className="btn btn-outline btn-sm sm:btn-md mt-4"
+                  >
+                    + 参加形態を追加
+                  </button>
+                </div>
               </div>
 
               {/* イベントの削除 */}
