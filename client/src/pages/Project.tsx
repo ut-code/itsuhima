@@ -4,14 +4,14 @@ import { hc } from "hono/client";
 import { useCallback, useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import {
-  HiClipboardCheck,
-  HiClipboardCopy,
-  HiInformationCircle,
-  HiOutlineCheckCircle,
-  HiOutlineExclamationCircle,
-  HiOutlineTrash,
-} from "react-icons/hi";
-import { LuChevronLeft } from "react-icons/lu";
+  LuChevronLeft,
+  LuCircleAlert,
+  LuCircleCheck,
+  LuClipboard,
+  LuClipboardCheck,
+  LuInfo,
+  LuTrash2,
+} from "react-icons/lu";
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
 import { DEFAULT_PARTICIPATION_OPTION, generateDistinctColor } from "../../../common/colors";
@@ -345,7 +345,7 @@ export default function ProjectPage() {
                   onClick={() => setIsInfoExpanded(!isInfoExpanded)}
                 >
                   <div className="flex items-center gap-2 font-medium text-sm">
-                    <HiInformationCircle className="h-5 w-5" />
+                    <LuInfo className="h-5 w-5" />
                     開始日・終了日／時間帯について
                   </div>
                   <span className={`transition-transform ${isInfoExpanded ? "rotate-180" : ""}`}>▼</span>
@@ -601,7 +601,7 @@ export default function ProjectPage() {
                                   className={`rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 sm:p-2.5 ${cannotDelete ? "cursor-not-allowed opacity-40" : ""}`}
                                   disabled={cannotDelete}
                                 >
-                                  <HiOutlineTrash size={18} className="sm:h-5 sm:w-5" />
+                                  <LuTrash2 size={18} className="sm:h-5 sm:w-5" />
                                 </button>
                               </div>
                             </div>
@@ -679,7 +679,7 @@ export default function ProjectPage() {
                       }
                     }}
                   >
-                    <HiOutlineTrash size={16} className="sm:h-5 sm:w-5" />
+                    <LuTrash2 size={16} className="sm:h-5 sm:w-5" />
                     イベントを削除する
                   </button>
                 </div>
@@ -747,9 +747,9 @@ export default function ProjectPage() {
                 disabled={copied}
               >
                 {!copied ? (
-                  <HiClipboardCopy size={16} className="sm:h-5 sm:w-5" />
+                  <LuClipboard size={16} className="sm:h-5 sm:w-5" />
                 ) : (
-                  <HiClipboardCheck size={16} className="sm:h-5 sm:w-5" />
+                  <LuClipboardCheck size={16} className="sm:h-5 sm:w-5" />
                 )}{" "}
                 <span className="hidden sm:inline">コピー</span>
               </button>
@@ -771,12 +771,12 @@ export default function ProjectPage() {
         <div className="fixed top-20 right-4 z-50">
           {toast.variant === "success" ? (
             <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-lg">
-              <HiOutlineCheckCircle size={24} className="shrink-0 text-emerald-600" />
+              <LuCircleCheck size={24} className="shrink-0 text-emerald-600" />
               <span className="font-medium text-emerald-900 text-sm">{toast.message}</span>
             </div>
           ) : (
             <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
-              <HiOutlineExclamationCircle size={24} className="shrink-0 text-red-600" />
+              <LuCircleAlert size={24} className="shrink-0 text-red-600" />
               <span className="font-medium text-red-900 text-sm">{toast.message}</span>
             </div>
           )}
