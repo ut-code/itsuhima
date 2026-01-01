@@ -7,7 +7,9 @@ import {
   LuCircleAlert,
   LuCircleCheck,
   LuPencil,
+  LuSend,
   LuSettings,
+  LuSettings2,
 } from "react-icons/lu";
 import { NavLink, useParams } from "react-router";
 import type { AppType } from "../../../../server/src/main";
@@ -277,10 +279,7 @@ export default function SubmissionPage() {
           <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-4 px-4 py-16 sm:px-6 lg:px-8">
             <div className="flex min-h-[400px] w-full flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
               <p className="text-slate-600 text-xl">イベントが見つかりませんでした。</p>
-              <NavLink
-                to="/"
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 font-semibold text-base text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md"
-              >
+              <NavLink to="/" className="btn btn-primary">
                 ホームに戻る
               </NavLink>
             </div>
@@ -339,7 +338,7 @@ export default function SubmissionPage() {
                       <button
                         key={opt.id}
                         type="button"
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium text-xs transition-all sm:gap-2 sm:px-3 sm:py-2 sm:text-sm"
+                        className="btn btn-sm sm:btn-md gap-1.5 sm:gap-2"
                         onClick={() => setSelectedParticipationOptionId(opt.id)}
                         style={
                           selectedParticipationOptionId === opt.id
@@ -386,7 +385,7 @@ export default function SubmissionPage() {
                     {!!myGuestId && (
                       <button
                         type="button"
-                        className="shrink-0 rounded-lg border-2 border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 text-sm transition-all hover:border-slate-300 hover:bg-slate-50 sm:px-4 sm:py-2.5"
+                        className="btn btn-outline shrink-0"
                         disabled={loading}
                         onClick={async () => {
                           if (confirm("更新をキャンセルします。よろしいですか？")) {
@@ -400,7 +399,7 @@ export default function SubmissionPage() {
                     )}
                     <button
                       type="button"
-                      className="shrink-0 rounded-lg bg-primary px-4 py-2 font-semibold text-sm text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 sm:px-6 sm:py-2.5"
+                      className="btn btn-primary inline-flex shrink-0 gap-1.5 sm:gap-2"
                       disabled={loading || !guestName}
                       onClick={() => {
                         if (!guestName) return;
@@ -414,31 +413,27 @@ export default function SubmissionPage() {
                         );
                       }}
                     >
-                      {meAsGuest ? "更新" : "提出"}
+                      <LuSend className="sm:h-5 sm:w-5" />
+                      <span>{meAsGuest ? "更新" : "提出"}</span>
                     </button>
+                    {isHost && (
+                      <NavLink to={`/e/${projectId}/edit`} className="btn btn-outline gap-1.5 sm:gap-2">
+                        <LuSettings2 className="sm:h-5 sm:w-5" />
+                        <span>編集</span>
+                      </NavLink>
+                    )}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between gap-2">
-                    <NavLink
-                      to="/home"
-                      className="inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 text-sm transition-all hover:border-slate-300 hover:bg-slate-50 sm:gap-2 sm:px-4 sm:py-2.5"
-                    >
+                  <div className="flex items-center justify-between">
+                    <NavLink to="/home" className="btn btn-outline gap-1.5 sm:gap-2">
                       <LuChevronLeft size={16} className="sm:h-5 sm:w-5" />
-                      <span>ホームに戻る</span>
+                      <span className="hidden sm:inline">ホームに戻る</span>
+                      <span className="sm:hidden">ホーム</span>
                     </NavLink>
                     <div className="flex items-center gap-2">
-                      {isHost && (
-                        <NavLink
-                          to={`/e/${projectId}/edit`}
-                          className="inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-primary bg-white px-3 py-2 font-semibold text-primary text-sm transition-all hover:border-slate-300 hover:bg-slate-50 sm:gap-2 sm:px-4 sm:py-2.5"
-                        >
-                          <LuSettings size={16} className="sm:h-5 sm:w-5" />
-                          <span>管理</span>
-                        </NavLink>
-                      )}
                       <button
                         type="button"
-                        className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 font-semibold text-sm text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 sm:gap-2 sm:px-6 sm:py-2.5"
+                        className="btn btn-primary gap-1.5 sm:gap-2"
                         disabled={loading}
                         onClick={() => {
                           setEditMode(true);
@@ -448,6 +443,12 @@ export default function SubmissionPage() {
                         <span className="hidden sm:inline">日程を更新する</span>
                         <span className="sm:hidden">日程更新</span>
                       </button>
+                      {isHost && (
+                        <NavLink to={`/e/${projectId}/edit`} className="btn btn-outline gap-1.5 sm:gap-2">
+                          <LuSettings size={16} className="sm:h-5 sm:w-5" />
+                          <span>管理</span>
+                        </NavLink>
+                      )}
                     </div>
                   </div>
                 )}

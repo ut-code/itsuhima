@@ -15,7 +15,20 @@
 }
 
 .btn {
-  font-weight: normal;
+  font-weight: bold;
+  @apply rounded-lg transition-all;
+}
+
+.btn-primary {
+  @apply bg-primary text-white shadow-sm hover:bg-primary/90 hover:shadow-md;
+}
+
+.btn-outline {
+  @apply border-2 border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50;
+}
+
+.btn-ghost {
+  @apply bg-transparent hover:bg-slate-50;
 }
 
 :root {

@@ -17,12 +17,9 @@ function HeroSection() {
               <p className="mx-auto max-w-lg text-lg text-slate-600 lg:mx-0">
                 とりあえずみんなの空いている時間を訊いてから、何を何時間やるか決めたい。そんな仲間うちでの調整に最適な、シンプルで直感的なツールです。
               </p>
-              <NavLink
-                to="/new"
-                className="hover:-translate-y-0.5 mt-8 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-3.5 font-bold text-base text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-              >
+              <NavLink to="/new" className="btn btn-primary btn-lg hover:-translate-y-0.5 mt-8 gap-2 px-8 py-6">
                 イベントを作成
-                <LuChevronRight className="h-4 w-4" />
+                <LuChevronRight className="h-6 w-6" />
               </NavLink>
             </div>
 

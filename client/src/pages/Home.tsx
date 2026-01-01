@@ -70,10 +70,7 @@ export default function HomePage() {
               <h1 className="font-bold text-2xl text-slate-900 tracking-tight sm:text-3xl">ホーム</h1>
               <p className="mt-1 text-slate-500 text-sm">参加・主催しているイベントの管理</p>
             </div>
-            <NavLink
-              to="/new"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-semibold text-sm text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md"
-            >
+            <NavLink to="/new" className="btn btn-primary w-full gap-2 sm:w-auto">
               <LuPlus className="h-4 w-4" />
               新規作成
             </NavLink>

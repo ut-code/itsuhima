@@ -30,10 +30,7 @@ export default function Header() {
             使い方
           </a>
           <div className="h-4 w-[1px] bg-slate-200" />
-          <NavLink
-            to="/new"
-            className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 font-bold text-sm text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-          >
+          <NavLink to="/new" className="btn btn-primary">
             イベント作成
           </NavLink>
         </nav>
@@ -75,10 +72,7 @@ export default function Header() {
             >
               ご意見・バグ報告
             </a>
-            <NavLink
-              to="/new"
-              className="my-2 inline-flex items-center justify-center rounded-full bg-primary px-3 py-1.5 font-bold text-sm text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
+            <NavLink to="/new" className="btn btn-primary btn-sm my-3">
               イベント作成
             </NavLink>
           </div>

@@ -16,10 +16,7 @@ export default function NotFoundPage() {
           <p className="mb-8 max-w-md text-slate-600">
             お探しのページは存在しないか、移動または削除された可能性があります。
           </p>
-          <NavLink
-            to="/home"
-            className="hover:-translate-y-0.5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-base text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-          >
+          <NavLink to="/home" className="btn btn-primary btn-lg gap-2">
             <LuHouse className="h-5 w-5" />
             ホームに戻る
           </NavLink>

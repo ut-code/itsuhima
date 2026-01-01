@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import {
   LuChevronLeft,
+  LuChevronRight,
   LuCircleAlert,
   LuCircleCheck,
   LuClipboard,
@@ -284,10 +285,7 @@ export default function ProjectPage() {
           <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
             <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
               <p className="text-base text-slate-600 sm:text-xl">イベントが見つかりませんでした。</p>
-              <NavLink
-                to="/"
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 font-semibold text-sm text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md sm:px-6 sm:py-2.5"
-              >
+              <NavLink to="/" className="btn btn-primary">
                 ホームに戻る
               </NavLink>
             </div>
@@ -630,7 +628,7 @@ export default function ProjectPage() {
                           color: generateDistinctColor(existingColors),
                         });
                       }}
-                      className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-slate-200 bg-white px-3 py-2 font-medium text-slate-700 text-xs transition-all hover:border-slate-300 hover:bg-slate-50 sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
+                      className="btn btn-outline btn-sm sm:btn-md mt-4"
                     >
                       + 参加形態を追加
                     </button>
@@ -646,7 +644,7 @@ export default function ProjectPage() {
                   <button
                     type="button"
                     id="delete-button"
-                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 font-semibold text-white text-xs transition-all hover:bg-red-700 sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
+                    className="btn btn-sm sm:btn-md gap-1.5 bg-red-600 text-white hover:bg-red-700 sm:gap-2"
                     onClick={async () => {
                       if (confirm("本当にこのイベントを削除しますか？")) {
                         try {
@@ -690,27 +688,16 @@ export default function ProjectPage() {
             <div className="fixed right-0 bottom-0 left-0 z-10 border-slate-200 border-t bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm sm:py-4">
               <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 sm:gap-4">
                 {eventId ? (
-                  <NavLink
-                    to={`/e/${eventId}`}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 text-sm transition-all hover:border-slate-300 hover:bg-slate-50 sm:gap-2 sm:px-4 sm:py-2.5"
-                  >
+                  <NavLink to={`/e/${eventId}`} className="btn btn-outline gap-1.5 sm:gap-2">
                     <LuChevronLeft size={16} className="sm:h-5 sm:w-5" />
                     <span>日程調整に戻る</span>
                   </NavLink>
                 ) : (
-                  <NavLink
-                    to="/home"
-                    className="inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 text-sm transition-all hover:border-slate-300 hover:bg-slate-50 sm:gap-2 sm:px-6 sm:py-2.5"
-                  >
+                  <NavLink to="/home" className="btn btn-outline">
                     キャンセル
                   </NavLink>
                 )}
-                <button
-                  type="submit"
-                  form="project-form"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 font-semibold text-sm text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 sm:gap-2 sm:px-6 sm:py-2.5"
-                  disabled={!isValid || !isDirty}
-                >
+                <button type="submit" form="project-form" className="btn btn-primary" disabled={!isValid || !isDirty}>
                   イベントを{project ? "更新" : "作成"}する
                 </button>
               </div>
@@ -743,25 +730,21 @@ export default function ProjectPage() {
                     setCopied(false);
                   }, 2000);
                 }}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-primary bg-white px-3 py-2 font-semibold text-primary text-xs transition-all hover:bg-primary/5 sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
+                className="btn btn-outline btn-sm sm:btn-md gap-1.5"
                 disabled={copied}
               >
                 {!copied ? (
                   <LuClipboard size={16} className="sm:h-5 sm:w-5" />
                 ) : (
                   <LuClipboardCheck size={16} className="sm:h-5 sm:w-5" />
-                )}{" "}
+                )}
                 <span className="hidden sm:inline">コピー</span>
               </button>
             </div>
-            <div className="flex justify-end">
-              <NavLink
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 font-semibold text-sm text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl sm:gap-2 sm:px-6 sm:py-2.5"
-                to={`/e/${dialogStatus.projectId}`}
-              >
-                イベントへ
-              </NavLink>
-            </div>
+            <NavLink className="btn btn-primary w-full" to={`/e/${dialogStatus.projectId}`}>
+              イベントへ
+              <LuChevronRight size={16} className="ml-1 sm:h-5 sm:w-5" />
+            </NavLink>
           </div>
         </div>
       )}
