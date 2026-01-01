@@ -599,7 +599,7 @@ export default function ProjectPage() {
                                   className={`rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 sm:p-2.5 ${cannotDelete ? "cursor-not-allowed opacity-40" : ""}`}
                                   disabled={cannotDelete}
                                 >
-                                  <LuTrash2 size={18} className="sm:h-5 sm:w-5" />
+                                  <LuTrash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                                 </button>
                               </div>
                             </div>
@@ -677,7 +677,7 @@ export default function ProjectPage() {
                       }
                     }}
                   >
-                    <LuTrash2 size={16} className="sm:h-5 sm:w-5" />
+                    <LuTrash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                     イベントを削除する
                   </button>
                 </div>
@@ -689,7 +689,7 @@ export default function ProjectPage() {
               <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 sm:gap-4">
                 {eventId ? (
                   <NavLink to={`/e/${eventId}`} className="btn btn-outline gap-1.5 sm:gap-2">
-                    <LuChevronLeft size={16} className="sm:h-5 sm:w-5" />
+                    <LuChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span>日程調整に戻る</span>
                   </NavLink>
                 ) : (
@@ -734,16 +734,16 @@ export default function ProjectPage() {
                 disabled={copied}
               >
                 {!copied ? (
-                  <LuClipboard size={16} className="sm:h-5 sm:w-5" />
+                  <LuClipboard className="h-4 w-4 sm:h-5 sm:w-5" />
                 ) : (
-                  <LuClipboardCheck size={16} className="sm:h-5 sm:w-5" />
+                  <LuClipboardCheck className="h-4 w-4 sm:h-5 sm:w-5" />
                 )}
                 <span className="hidden sm:inline">コピー</span>
               </button>
             </div>
             <NavLink className="btn btn-primary w-full" to={`/e/${dialogStatus.projectId}`}>
               イベントへ
-              <LuChevronRight size={16} className="ml-1 sm:h-5 sm:w-5" />
+              <LuChevronRight className="ml-1 h-4 w-4 sm:h-5 sm:w-5" />
             </NavLink>
           </div>
         </div>
@@ -754,12 +754,12 @@ export default function ProjectPage() {
         <div className="fixed top-20 right-4 z-50">
           {toast.variant === "success" ? (
             <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-lg">
-              <LuCircleCheck size={24} className="shrink-0 text-emerald-600" />
+              <LuCircleCheck className="h-6 w-6 shrink-0 text-emerald-600" />
               <span className="font-medium text-emerald-900 text-sm">{toast.message}</span>
             </div>
           ) : (
             <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
-              <LuCircleAlert size={24} className="shrink-0 text-red-600" />
+              <LuCircleAlert className="h-6 w-6 shrink-0 text-red-600" />
               <span className="font-medium text-red-900 text-sm">{toast.message}</span>
             </div>
           )}

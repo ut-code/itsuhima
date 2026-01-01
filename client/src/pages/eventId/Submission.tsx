@@ -311,12 +311,12 @@ export default function SubmissionPage() {
                           {descriptionExpanded ? (
                             <>
                               閉じる
-                              <LuChevronUp size={16} />
+                              <LuChevronUp className="h-4 w-4" />
                             </>
                           ) : (
                             <>
                               もっと見る
-                              <LuChevronDown size={16} />
+                              <LuChevronDown className="h-4 w-4" />
                             </>
                           )}
                         </button>
@@ -438,7 +438,7 @@ export default function SubmissionPage() {
                           setEditMode(true);
                         }}
                       >
-                        <LuPencil size={16} className="sm:h-5 sm:w-5" />
+                        <LuPencil className="h-4 w-4 sm:h-5 sm:w-5" />
                         <span className="hidden sm:inline">日程を更新する</span>
                         <span className="sm:hidden">日程更新</span>
                       </button>
@@ -461,12 +461,12 @@ export default function SubmissionPage() {
         <div className="fixed top-20 right-4 z-50">
           {toast.variant === "success" ? (
             <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-lg">
-              <LuCircleCheck size={24} className="shrink-0 text-emerald-600" />
+              <LuCircleCheck className="h-6 w-6 shrink-0 text-emerald-600" />
               <span className="font-medium text-emerald-900 text-sm">{toast.message}</span>
             </div>
           ) : (
             <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
-              <LuCircleAlert size={24} className="shrink-0 text-red-600" />
+              <LuCircleAlert className="h-6 w-6 shrink-0 text-red-600" />
               <span className="font-medium text-red-900 text-sm">{toast.message}</span>
             </div>
           )}
