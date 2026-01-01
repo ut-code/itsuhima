@@ -8,7 +8,6 @@ import {
   LuCircleCheck,
   LuPencil,
   LuSend,
-  LuSettings,
   LuSettings2,
 } from "react-icons/lu";
 import { NavLink, useParams } from "react-router";
@@ -426,7 +425,7 @@ export default function SubmissionPage() {
                 ) : (
                   <div className="flex items-center justify-between">
                     <NavLink to="/home" className="btn btn-outline gap-1.5 sm:gap-2">
-                      <LuChevronLeft size={16} className="sm:h-5 sm:w-5" />
+                      <LuChevronLeft className="sm:h-5 sm:w-5" />
                       <span className="hidden sm:inline">ホームに戻る</span>
                       <span className="sm:hidden">ホーム</span>
                     </NavLink>
@@ -445,8 +444,8 @@ export default function SubmissionPage() {
                       </button>
                       {isHost && (
                         <NavLink to={`/e/${projectId}/edit`} className="btn btn-outline gap-1.5 sm:gap-2">
-                          <LuSettings size={16} className="sm:h-5 sm:w-5" />
-                          <span>管理</span>
+                          <LuSettings2 className="sm:h-5 sm:w-5" />
+                          <span>編集</span>
                         </NavLink>
                       )}
                     </div>
