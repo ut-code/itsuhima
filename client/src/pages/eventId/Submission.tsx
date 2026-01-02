@@ -291,8 +291,14 @@ export default function SubmissionPage() {
         ) : (
           <div className="flex flex-1 flex-col overflow-y-auto">
             <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pt-3 pb-3 sm:px-6 sm:pt-4 sm:pb-3 lg:px-8">
-              <div className="mb-2 flex items-center justify-between sm:mb-3">
+              <div className="mb-2 flex items-center justify-between gap-2 sm:mb-3">
                 <h1 className="truncate font-bold text-base text-slate-900 sm:text-lg">{project.name}</h1>
+                {isHost && (
+                  <NavLink to={`/e/${projectId}/edit`} className="btn btn-sm btn-outline shrink-0 gap-1.5">
+                    <LuSettings2 className="h-4 w-4" />
+                    <span>編集</span>
+                  </NavLink>
+                )}
               </div>
 
               {project.description &&
@@ -416,12 +422,6 @@ export default function SubmissionPage() {
                       <LuSend className="sm:h-5 sm:w-5" />
                       <span>{meAsGuest ? "更新" : "提出"}</span>
                     </button>
-                    {isHost && (
-                      <NavLink to={`/e/${projectId}/edit`} className="btn btn-outline gap-1.5 sm:gap-2">
-                        <LuSettings2 className="sm:h-5 sm:w-5" />
-                        <span>編集</span>
-                      </NavLink>
-                    )}
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">
@@ -430,26 +430,18 @@ export default function SubmissionPage() {
                       <span className="hidden sm:inline">ホームに戻る</span>
                       <span className="sm:hidden">ホーム</span>
                     </NavLink>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        className="btn btn-primary gap-1.5 sm:gap-2"
-                        disabled={loading}
-                        onClick={() => {
-                          setEditMode(true);
-                        }}
-                      >
-                        <LuPencil className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="hidden sm:inline">日程を更新する</span>
-                        <span className="sm:hidden">日程更新</span>
-                      </button>
-                      {isHost && (
-                        <NavLink to={`/e/${projectId}/edit`} className="btn btn-outline gap-1.5 sm:gap-2">
-                          <LuSettings2 className="sm:h-5 sm:w-5" />
-                          <span>編集</span>
-                        </NavLink>
-                      )}
-                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-primary gap-1.5 sm:gap-2"
+                      disabled={loading}
+                      onClick={() => {
+                        setEditMode(true);
+                      }}
+                    >
+                      <LuPencil className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <span className="hidden sm:inline">日程を更新する</span>
+                      <span className="sm:hidden">日程更新</span>
+                    </button>
                   </div>
                 )}
               </div>
