@@ -380,7 +380,7 @@ export default function SubmissionPage() {
                       placeholder="名前"
                       value={guestName}
                       onChange={(e) => setGuestName(e.target.value)}
-                      className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 sm:text-base"
+                      className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5"
                     />
                     {!!myGuestId && (
                       <button

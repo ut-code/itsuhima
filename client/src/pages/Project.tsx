@@ -309,7 +309,7 @@ export default function ProjectPage() {
                     <input
                       {...register("name")}
                       id="input-name"
-                      className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 sm:text-base ${errors.name ? "border-red-500" : "border-slate-300"}`}
+                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.name ? "border-red-500" : "border-slate-300"}`}
                       placeholder="例: 3月度 同期飲み会"
                       onBlur={() => trigger("name")}
                     />
@@ -322,7 +322,7 @@ export default function ProjectPage() {
                     <textarea
                       {...register("description")}
                       id="input-description"
-                      className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 sm:text-base ${errors.description ? "border-red-500" : "border-slate-300"}`}
+                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.description ? "border-red-500" : "border-slate-300"}`}
                       placeholder="イベントの詳細や注意事項などを入力"
                       rows={3}
                     />
@@ -377,7 +377,7 @@ export default function ProjectPage() {
                       type="date"
                       {...register("startDate")}
                       id="input-start"
-                      className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 sm:text-base ${errors.startDate ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
+                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.startDate ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
                       onFocus={handleFieldFocus}
                       disabled={!!(project && project.guests.length > 0)}
                     />
@@ -398,7 +398,7 @@ export default function ProjectPage() {
                       type="date"
                       {...register("endDate")}
                       id="input-end"
-                      className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 sm:text-base ${errors.endDate ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
+                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.endDate ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
                       onFocus={handleFieldFocus}
                       disabled={!!(project && project.guests.length > 0)}
                     />
@@ -421,7 +421,7 @@ export default function ProjectPage() {
                   <div className="flex items-center gap-2 sm:gap-3">
                     <div className="flex flex-1 items-center gap-1.5 sm:gap-2">
                       <select
-                        className={`flex-1 rounded-lg border px-2 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 sm:text-base ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
                         value={allowedRangeFields[0].startTime.split(":")[0]}
                         onChange={(e) => {
                           replace([
@@ -445,7 +445,7 @@ export default function ProjectPage() {
                       </select>
                       <span className="font-medium text-slate-600 text-sm sm:text-base">:</span>
                       <select
-                        className={`flex-1 rounded-lg border px-2 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 sm:text-base ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
                         value={allowedRangeFields[0].startTime.split(":")[1]}
                         onChange={(e) => {
                           replace([
@@ -471,7 +471,7 @@ export default function ProjectPage() {
                     <span className="font-medium text-slate-600 text-sm sm:text-base">〜</span>
                     <div className="flex flex-1 items-center gap-1.5 sm:gap-2">
                       <select
-                        className={`flex-1 rounded-lg border px-2 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 sm:text-base ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
                         value={allowedRangeFields[0].endTime.split(":")[0]}
                         onChange={(e) => {
                           replace([
@@ -495,7 +495,7 @@ export default function ProjectPage() {
                       </select>
                       <span className="font-medium text-slate-600 text-sm sm:text-base">:</span>
                       <select
-                        className={`flex-1 rounded-lg border px-2 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 sm:text-base ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
                         value={allowedRangeFields[0].endTime.split(":")[1]}
                         onChange={(e) => {
                           replace([
@@ -570,7 +570,7 @@ export default function ProjectPage() {
                               {...register(`participationOptions.${index}.label`)}
                               defaultValue={field.label}
                               placeholder="参加形態名（例：対面、オンライン）"
-                              className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 sm:text-base ${errors.participationOptions?.[index]?.label ? "border-red-500" : "border-slate-300"}`}
+                              className={`flex-1 rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.participationOptions?.[index]?.label ? "border-red-500" : "border-slate-300"}`}
                               onBlur={() => {
                                 trigger(`participationOptions.${index}.label` as const);
                               }}
@@ -700,7 +700,7 @@ export default function ProjectPage() {
               <input
                 type="text"
                 disabled
-                className="flex-1 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-slate-700 text-xs sm:px-4 sm:py-2.5 sm:text-sm"
+                className="flex-1 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-base text-slate-700 sm:px-4 sm:py-2.5"
                 value={`${FRONTEND_ORIGIN}/e/${dialogStatus.projectId}`}
               />
               <button
