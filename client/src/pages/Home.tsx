@@ -1,6 +1,6 @@
 import { hc } from "hono/client";
 import { useEffect, useState } from "react";
-import { LuCalendar, LuChevronRight, LuLayoutDashboard, LuPlus, LuUser, LuUsers, LuX } from "react-icons/lu";
+import { LuCalendar, LuChevronRight, LuLayoutList, LuPlus, LuUser, LuUsers, LuX } from "react-icons/lu";
 import { NavLink } from "react-router";
 import type { AppType } from "../../../server/src/main";
 import Footer from "../components/Footer";
@@ -177,10 +177,10 @@ function EmptyState() {
   return (
     <div className="flex min-h-[400px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
       <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-        <LuLayoutDashboard className="h-8 w-8 text-slate-400" />
+        <LuLayoutList className="h-8 w-8 text-slate-400" />
       </div>
       <h3 className="mb-2 font-semibold text-lg text-slate-900">まだイベントがありません</h3>
-      <p className="max-w-sm text-slate-500 text-sm">右上の「新規作成」ボタンから、新しい日程調整を始めましょう。</p>
+      <p className="max-w-sm text-slate-500 text-sm">「新規作成」ボタンから、新しい日程調整を始めましょう。</p>
     </div>
   );
 }
