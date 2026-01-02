@@ -338,7 +338,7 @@ export default function ProjectPage() {
                   <LuInfo className="h-5 w-5" />
                   開始日・終了日／時間帯について
                 </div>
-                <div className="collapse-content px-6 text-sm">
+                <div className="collapse-content px-4 text-sm">
                   <p>
                     イツヒマでは、<strong>主催者側で候補日程を設定せずに</strong>日程調整します。
                     <br />
@@ -535,7 +535,7 @@ export default function ProjectPage() {
                 <div className="collapse-title font-semibold text-base text-slate-900 sm:text-lg">
                   参加形態の設定 (任意)
                 </div>
-                <div className="collapse-content px-6">
+                <div className="collapse-content px-4">
                   <p className="mb-4 text-slate-600 text-sm">
                     参加形態を設定すると、参加者は「対面」「オンライン」などの形態を選んで日程を登録できます。
                   </p>
