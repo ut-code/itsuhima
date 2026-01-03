@@ -4,7 +4,7 @@ import Header from "../components/Header";
 
 export default function NotFoundPage() {
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       <Header />
       <main className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
         <div className="fade-in zoom-in-95 flex min-h-[500px] animate-in flex-col items-center justify-center rounded-3xl border border-slate-300 border-dashed bg-white/50 p-8 text-center duration-500">

@@ -275,7 +275,7 @@ export default function ProjectPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <div className="min-h-screen bg-slate-50 text-slate-900">
         <Header />
         {loading ? (
           <div className="flex min-h-[60vh] items-center justify-center">
@@ -300,7 +300,7 @@ export default function ProjectPage() {
             <form id="project-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* 基本情報 */}
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="mb-4 font-semibold text-base text-slate-900 sm:text-lg">基本情報</h2>
+                <h2 className="mb-4 font-bold text-base text-slate-900 sm:text-lg">基本情報</h2>
                 <div className="space-y-4">
                   <div>
                     <label className="mb-2 block font-medium text-slate-700 text-sm" htmlFor="input-name">
@@ -360,7 +360,7 @@ export default function ProjectPage() {
 
               {/* 日程の範囲 */}
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="mb-4 font-semibold text-base text-slate-900 sm:text-lg">日程の範囲</h2>
+                <h2 className="mb-4 font-bold text-base text-slate-900 sm:text-lg">日程の範囲</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div
                     className={project && project.guests.length > 0 ? "tooltip tooltip-top" : ""}
@@ -409,7 +409,7 @@ export default function ProjectPage() {
 
               {/* 時間帯 */}
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="mb-4 font-semibold text-base text-slate-900 sm:text-lg">時間帯</h2>
+                <h2 className="mb-4 font-bold text-base text-slate-900 sm:text-lg">時間帯</h2>
                 <div
                   className={project && project.guests.length > 0 ? "tooltip tooltip-top w-full" : "w-full"}
                   data-tip={
@@ -532,7 +532,7 @@ export default function ProjectPage() {
                   checked={isParticipationExpanded}
                   onChange={(e) => setIsParticipationExpanded(e.target.checked)}
                 />
-                <div className="collapse-title font-semibold text-base text-slate-900 sm:text-lg">
+                <div className="collapse-title font-bold text-base text-slate-900 sm:text-lg">
                   参加形態の設定 (任意)
                 </div>
                 <div className="collapse-content px-4">
@@ -621,7 +621,7 @@ export default function ProjectPage() {
               {/* イベントの削除 */}
               {project && (
                 <div className="rounded-2xl border border-red-200 bg-red-50/50 p-6 shadow-sm">
-                  <h2 className="mb-2 font-semibold text-base text-slate-900 sm:text-lg">イベントの削除</h2>
+                  <h2 className="mb-2 font-bold text-base text-slate-900 sm:text-lg">イベントの削除</h2>
                   <p className="mb-4 text-slate-600 text-sm">この操作は取り消せません。慎重に行ってください。</p>
                   <button
                     type="button"
