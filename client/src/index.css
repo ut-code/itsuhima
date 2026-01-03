@@ -15,7 +15,56 @@
 }
 
 .btn {
-  font-weight: normal;
+  font-weight: bold;
+  @apply rounded-lg transition-all;
+}
+
+.btn-primary {
+  @apply bg-primary text-white shadow-sm hover:bg-primary/90 hover:shadow-md;
+}
+
+.btn-primary:disabled {
+  @apply bg-slate-300 text-slate-500 cursor-not-allowed opacity-60 hover:bg-slate-300 hover:shadow-sm;
+}
+
+.btn-primary:focus-visible {
+  @apply outline-none ring-2 ring-primary ring-offset-2;
+}
+
+.btn-primary:active:not(:disabled) {
+  @apply scale-95 shadow-none;
+}
+
+.btn-outline {
+  @apply border-2 border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50;
+}
+
+.btn-outline:disabled {
+  @apply border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed opacity-60 hover:border-slate-200 hover:bg-slate-50;
+}
+
+.btn-outline:focus-visible {
+  @apply outline-none ring-2 ring-slate-400 ring-offset-2;
+}
+
+.btn-outline:active:not(:disabled) {
+  @apply scale-95 bg-slate-100;
+}
+
+.btn-ghost {
+  @apply bg-transparent hover:bg-slate-50;
+}
+
+.btn-ghost:disabled {
+  @apply text-slate-400 cursor-not-allowed opacity-60 hover:bg-transparent;
+}
+
+.btn-ghost:focus-visible {
+  @apply outline-none ring-2 ring-slate-300 ring-offset-2;
+}
+
+.btn-ghost:active:not(:disabled) {
+  @apply scale-95 bg-slate-100;
 }
 
 :root {
@@ -86,10 +135,6 @@
 .fc-prev-button:disabled {
   color: var(--color-gray-200) !important;
   border: 1px solid var(--color-gray-200) !important;
-}
-
-body {
-  background-color: var(--color-primary);
 }
 
 #root {
