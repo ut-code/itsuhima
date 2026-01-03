@@ -56,6 +56,7 @@ const isProduction = process.env.NODE_ENV === "prod";
 
 export const cookieOptions = {
   path: "/",
+  domain: process.env.DOMAIN || "localhost", // /home へのリダイレクトのためフロントエンドにも送る
   httpOnly: true,
   secure: isProduction,
   sameSite: "lax",
