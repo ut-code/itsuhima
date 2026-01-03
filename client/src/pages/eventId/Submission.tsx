@@ -290,50 +290,53 @@ export default function SubmissionPage() {
           </div>
         ) : (
           <div className="flex flex-1 flex-col overflow-y-auto">
-            <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pt-3 pb-3 sm:px-6 sm:pt-4 sm:pb-3 lg:px-8">
-              <div className="mb-2 flex items-center justify-between gap-2 sm:mb-3">
-                <h1 className="truncate font-bold text-base text-slate-900 sm:text-lg">{project.name}</h1>
-                {isHost && (
-                  <NavLink to={`/e/${projectId}/edit`} className="btn btn-sm btn-outline shrink-0 gap-1.5">
-                    <LuSettings2 className="h-4 w-4" />
-                    <span>編集</span>
-                  </NavLink>
-                )}
+            <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
+              {/* プロジェクト情報 */}
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <h1 className="truncate font-bold text-base text-slate-900 sm:text-lg">{project.name}</h1>
+                  {isHost && (
+                    <NavLink to={`/e/${projectId}/edit`} className="btn btn-sm btn-outline shrink-0 gap-1.5">
+                      <LuSettings2 className="h-4 w-4" />
+                      <span>編集</span>
+                    </NavLink>
+                  )}
+                </div>
+                {project.description &&
+                  (() => {
+                    const { text: truncatedText, truncated } = truncateText(project.description);
+                    return (
+                      <div className="mt-2 sm:mt-3">
+                        <p className="whitespace-pre-wrap text-slate-600 text-sm">
+                          {descriptionExpanded ? project.description : truncatedText}
+                        </p>
+                        {truncated && (
+                          <button
+                            type="button"
+                            onClick={() => setDescriptionExpanded(!descriptionExpanded)}
+                            className="mt-1 inline-flex items-center gap-0.5 text-primary text-sm hover:underline"
+                          >
+                            {descriptionExpanded ? (
+                              <>
+                                閉じる
+                                <LuChevronUp className="h-4 w-4" />
+                              </>
+                            ) : (
+                              <>
+                                もっと見る
+                                <LuChevronDown className="h-4 w-4" />
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
               </div>
 
-              {project.description &&
-                (() => {
-                  const { text: truncatedText, truncated } = truncateText(project.description);
-                  return (
-                    <div className="mb-4">
-                      <p className="whitespace-pre-wrap text-slate-600 text-sm">
-                        {descriptionExpanded ? project.description : truncatedText}
-                      </p>
-                      {truncated && (
-                        <button
-                          type="button"
-                          onClick={() => setDescriptionExpanded(!descriptionExpanded)}
-                          className="mt-1 inline-flex items-center gap-0.5 text-primary text-sm hover:underline"
-                        >
-                          {descriptionExpanded ? (
-                            <>
-                              閉じる
-                              <LuChevronUp className="h-4 w-4" />
-                            </>
-                          ) : (
-                            <>
-                              もっと見る
-                              <LuChevronDown className="h-4 w-4" />
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  );
-                })()}
-
+              {/* 参加形態選択ボタン */}
               {editMode && project.participationOptions.length > 1 && selectedParticipationOptionId !== null && (
-                <div className="mb-2 flex flex-wrap items-center gap-1.5 sm:mb-3 sm:gap-2">
+                <div className="mt-3 mb-2 flex flex-wrap items-center gap-1.5">
                   {project.participationOptions.map((opt) => {
                     const rgb = hexToRgb(opt.color);
                     const lightBg = rgb
@@ -344,7 +347,7 @@ export default function SubmissionPage() {
                       <button
                         key={opt.id}
                         type="button"
-                        className="btn btn-sm sm:btn-md gap-1.5 sm:gap-2"
+                        className="btn btn-sm gap-1.5"
                         onClick={() => setSelectedParticipationOptionId(opt.id)}
                         style={
                           selectedParticipationOptionId === opt.id
@@ -377,7 +380,7 @@ export default function SubmissionPage() {
               />
             </div>
 
-            <div className="sticky bottom-0 z-10 border-slate-200 border-t bg-white/95 backdrop-blur-sm">
+            <div className="sticky bottom-0 z-10 border-slate-200 border-t bg-white">
               <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 sm:py-3 lg:px-8">
                 {editMode ? (
                   <div className="flex items-center gap-2">
