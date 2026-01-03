@@ -11,6 +11,7 @@ import {
   LuClipboard,
   LuClipboardCheck,
   LuInfo,
+  LuPlus,
   LuTrash2,
   LuX,
 } from "react-icons/lu";
@@ -282,7 +283,6 @@ export default function ProjectPage() {
             <span className="loading loading-dots loading-md text-slate-400" />
           </div>
         ) : eventId !== undefined && !project ? (
-          // TODO: NotFound に統一？
           <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
             <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
               <p className="text-base text-slate-600 sm:text-xl">イベントが見つかりませんでした。</p>
@@ -310,7 +310,7 @@ export default function ProjectPage() {
                       {...register("name")}
                       id="input-name"
                       className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.name ? "border-red-500" : "border-slate-300"}`}
-                      placeholder="例: 3月度 同期飲み会"
+                      placeholder="例: 〇〇サークル 対面定例会議"
                       onBlur={() => trigger("name")}
                     />
                     {errors.name && <p className="mt-1.5 text-red-600 text-sm">{errors.name.message}</p>}
@@ -328,33 +328,6 @@ export default function ProjectPage() {
                     />
                     {errors.description && <p className="mt-1.5 text-red-600 text-sm">{errors.description.message}</p>}
                   </div>
-                </div>
-              </div>
-
-              {/* 情報ボックス */}
-              <div className="collapse-arrow collapse rounded-2xl border border-blue-200 bg-blue-50/50 p-1 text-primary shadow-sm">
-                <input type="checkbox" checked={isInfoExpanded} onChange={(e) => setIsInfoExpanded(e.target.checked)} />
-                <div className="collapse-title flex items-center gap-2 font-medium text-sm">
-                  <LuInfo className="h-5 w-5" />
-                  開始日・終了日／時間帯について
-                </div>
-                <div className="collapse-content px-4 text-sm">
-                  <p>
-                    イツヒマでは、<strong>主催者側で候補日程を設定せずに</strong>日程調整します。
-                    <br />
-                    ここでは、参加者の日程を知りたい日付の範囲と時間帯の範囲を設定してください。
-                    <br />
-                    詳しくは、
-                    <a
-                      href={EXTERNAL_LINKS.GUIDE}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="font-medium text-primary underline hover:text-primary/80"
-                    >
-                      使い方ページ
-                    </a>
-                    をご覧ください。
-                  </p>
                 </div>
               </div>
 
@@ -419,6 +392,7 @@ export default function ProjectPage() {
                   }
                 >
                   <div className="flex items-center gap-2 sm:gap-3">
+                    {/* from */}
                     <div className="flex flex-1 items-center gap-1.5 sm:gap-2">
                       <select
                         className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
@@ -469,6 +443,7 @@ export default function ProjectPage() {
                       </select>
                     </div>
                     <span className="font-medium text-slate-600 text-sm sm:text-base">〜</span>
+                    {/* to */}
                     <div className="flex flex-1 items-center gap-1.5 sm:gap-2">
                       <select
                         className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
@@ -523,6 +498,33 @@ export default function ProjectPage() {
                 {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
                   <p className="mt-2 text-red-600 text-sm">{errors.allowedRanges.message}</p>
                 )}
+              </div>
+
+              {/* 情報ボックス */}
+              <div className="collapse-arrow collapse rounded-2xl border border-blue-200 bg-blue-50/50 p-1 text-primary shadow-sm">
+                <input type="checkbox" checked={isInfoExpanded} onChange={(e) => setIsInfoExpanded(e.target.checked)} />
+                <div className="collapse-title flex items-center gap-2 font-medium text-sm">
+                  <LuInfo className="h-5 w-5" />
+                  開始日・終了日／時間帯について
+                </div>
+                <div className="collapse-content px-4 text-sm">
+                  <p>
+                    イツヒマでは、<strong>主催者側で候補日程を設定せずに</strong>日程調整します。
+                    <br />
+                    ここでは、参加者の日程を知りたい日付の範囲と時間帯の範囲を設定してください。
+                    <br />
+                    詳しくは、
+                    <a
+                      href={EXTERNAL_LINKS.GUIDE}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="font-medium text-primary underline hover:text-primary/80"
+                    >
+                      使い方ページ
+                    </a>
+                    をご覧ください。
+                  </p>
+                </div>
               </div>
 
               {/* 参加形態 */}
@@ -613,7 +615,8 @@ export default function ProjectPage() {
                     }}
                     className="btn btn-outline btn-sm sm:btn-md mt-4"
                   >
-                    + 参加形態を追加
+                    <LuPlus className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span>参加形態を追加</span>
                   </button>
                 </div>
               </div>
@@ -622,7 +625,9 @@ export default function ProjectPage() {
               {project && (
                 <div className="rounded-2xl border border-red-200 bg-red-50/50 p-6 shadow-sm">
                   <h2 className="mb-2 font-bold text-base text-slate-900 sm:text-lg">イベントの削除</h2>
-                  <p className="mb-4 text-slate-600 text-sm">この操作は取り消せません。慎重に行ってください。</p>
+                  <p className="mb-4 text-slate-600 text-sm">
+                    イベントを削除すると復元できません。慎重に行ってください。
+                  </p>
                   <button
                     type="button"
                     id="delete-button"
@@ -667,7 +672,7 @@ export default function ProjectPage() {
             </form>
 
             {/* 固定フッター */}
-            <div className="fixed right-0 bottom-0 left-0 z-10 border-slate-200 border-t bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm sm:py-4">
+            <div className="fixed right-0 bottom-0 left-0 z-10 border-slate-200 border-t bg-white px-4 py-3 shadow-lg sm:py-4">
               <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-4">
                 {eventId ? (
                   <NavLink to={`/e/${eventId}`} className="btn btn-outline gap-1.5 sm:gap-2">
