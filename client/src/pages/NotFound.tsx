@@ -6,8 +6,8 @@ export default function NotFoundPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <Header />
-      <main className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-        <div className="fade-in zoom-in-95 flex min-h-[500px] animate-in flex-col items-center justify-center rounded-3xl border border-slate-300 border-dashed bg-white/50 p-8 text-center duration-500">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+        <div className="flex min-h-[500px] flex-col items-center justify-center rounded-3xl border border-slate-300 border-dashed bg-white/50 p-8 text-center">
           <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 shadow-sm ring-1 ring-slate-200">
             <LuCircleAlert className="h-12 w-12 text-slate-400" />
           </div>
