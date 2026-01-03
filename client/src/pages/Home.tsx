@@ -136,7 +136,7 @@ function ProjectSection({ title, icon, projects }: { title: string; icon: React.
           {projects.length}
         </span>
       </div>
-      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         {projects.map((project, index) => (
           <ProjectRow key={project.id} project={project} isLast={index === projects.length - 1} />
         ))}
@@ -175,7 +175,7 @@ function ProjectRow({ project, isLast }: { project: BriefProject; isLast: boolea
 
 function EmptyState() {
   return (
-    <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+    <div className="flex min-h-[300px] flex-col items-center justify-center rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
       <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
         <LuLayoutList className="h-8 w-8 text-slate-400" />
       </div>
@@ -194,7 +194,7 @@ function ProjectsSkeleton() {
             <div className="h-5 w-5 animate-pulse rounded bg-slate-200" />
             <div className="h-5 w-40 animate-pulse rounded bg-slate-200" />
           </div>
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             {[1, 2, 3].map((row, index) => (
               <div
                 key={`row-${section}-${row}`}

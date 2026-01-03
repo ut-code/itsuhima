@@ -34,7 +34,7 @@ export default function Header() {
         <div className="flex items-center md:hidden">
           <button
             type="button"
-            className="rounded-md p-2 text-slate-600 hover:bg-slate-100"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? <LuX className="h-6 w-6" /> : <LuMenu className="h-6 w-6" />}
@@ -47,7 +47,7 @@ export default function Header() {
           <div className="flex flex-col gap-1 px-4 pt-2 pb-4">
             <NavLink
               to="/home"
-              className="block rounded-md px-3 py-2 font-medium text-base text-slate-600 hover:bg-slate-50 hover:text-primary"
+              className="block rounded-lg px-3 py-2 font-medium text-base text-slate-600 hover:bg-slate-50 hover:text-primary"
               onClick={() => setIsMenuOpen(false)}
             >
               ホーム
@@ -56,7 +56,7 @@ export default function Header() {
               href={EXTERNAL_LINKS.GUIDE}
               target="_blank"
               rel="noreferrer noopener"
-              className="block rounded-md px-3 py-2 font-medium text-base text-slate-600 hover:bg-slate-50 hover:text-primary"
+              className="block rounded-lg px-3 py-2 font-medium text-base text-slate-600 hover:bg-slate-50 hover:text-primary"
             >
               使い方ページ
             </a>
@@ -64,7 +64,7 @@ export default function Header() {
               href={EXTERNAL_LINKS.FEEDBACK}
               target="_blank"
               rel="noreferrer noopener"
-              className="block rounded-md px-3 py-2 font-medium text-base text-slate-600 hover:bg-slate-50 hover:text-primary"
+              className="block rounded-lg px-3 py-2 font-medium text-base text-slate-600 hover:bg-slate-50 hover:text-primary"
             >
               ご意見・バグ報告
             </a>

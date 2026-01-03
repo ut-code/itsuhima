@@ -277,7 +277,7 @@ export default function SubmissionPage() {
           </div>
         ) : !project ? (
           <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-4 px-4 py-16 sm:px-6 lg:px-8">
-            <div className="flex min-h-[400px] w-full flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <div className="flex min-h-[400px] w-full flex-col items-center justify-center gap-4 rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
               <p className="text-slate-600 text-xl">イベントが見つかりませんでした。</p>
               <NavLink to="/" className="btn btn-primary">
                 ホームに戻る
@@ -456,7 +456,7 @@ export default function SubmissionPage() {
       {toast && (
         <div className="fixed top-20 right-4 z-50">
           {toast.variant === "success" ? (
-            <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-lg">
+            <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-lg">
               <LuCircleCheck className="h-6 w-6 shrink-0 text-emerald-600" />
               <span className="font-medium text-emerald-900 text-sm">{toast.message}</span>
               <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">
@@ -464,7 +464,7 @@ export default function SubmissionPage() {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
+            <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
               <LuCircleAlert className="h-6 w-6 shrink-0 text-red-600" />
               <span className="font-medium text-red-900 text-sm">{toast.message}</span>
               <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">

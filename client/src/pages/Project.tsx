@@ -284,7 +284,7 @@ export default function ProjectPage() {
           </div>
         ) : eventId !== undefined && !project ? (
           <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-            <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
               <p className="text-base text-slate-600 sm:text-xl">イベントが見つかりませんでした。</p>
               <NavLink to="/" className="btn btn-primary">
                 ホームに戻る
@@ -299,7 +299,7 @@ export default function ProjectPage() {
 
             <form id="project-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* 基本情報 */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="mb-4 font-bold text-base text-slate-900 sm:text-lg">基本情報</h2>
                 <div className="space-y-4">
                   <div>
@@ -332,7 +332,7 @@ export default function ProjectPage() {
               </div>
 
               {/* 日程の範囲 */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="mb-4 font-bold text-base text-slate-900 sm:text-lg">日程の範囲</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div
@@ -381,7 +381,7 @@ export default function ProjectPage() {
               </div>
 
               {/* 時間帯 */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="mb-4 font-bold text-base text-slate-900 sm:text-lg">時間帯</h2>
                 <div
                   className={project && project.guests.length > 0 ? "tooltip tooltip-top w-full" : "w-full"}
@@ -501,7 +501,7 @@ export default function ProjectPage() {
               </div>
 
               {/* 情報ボックス */}
-              <div className="collapse-arrow collapse rounded-2xl border border-blue-200 bg-blue-50/50 p-1 text-primary shadow-sm">
+              <div className="collapse-arrow collapse rounded-lg border border-blue-200 bg-blue-50/50 p-1 text-primary shadow-sm">
                 <input type="checkbox" checked={isInfoExpanded} onChange={(e) => setIsInfoExpanded(e.target.checked)} />
                 <div className="collapse-title flex items-center gap-2 font-medium text-sm">
                   <LuInfo className="h-5 w-5" />
@@ -528,7 +528,7 @@ export default function ProjectPage() {
               </div>
 
               {/* 参加形態 */}
-              <div className="collapse-arrow collapse rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="collapse-arrow collapse rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                 <input
                   type="checkbox"
                   checked={isParticipationExpanded}
@@ -623,7 +623,7 @@ export default function ProjectPage() {
 
               {/* イベントの削除 */}
               {project && (
-                <div className="rounded-2xl border border-red-200 bg-red-50/50 p-6 shadow-sm">
+                <div className="rounded-lg border border-red-200 bg-red-50/50 p-6 shadow-sm">
                   <h2 className="mb-2 font-bold text-base text-slate-900 sm:text-lg">イベントの削除</h2>
                   <p className="mb-4 text-slate-600 text-sm">
                     イベントを削除すると復元できません。慎重に行ってください。
@@ -696,7 +696,7 @@ export default function ProjectPage() {
       {/* 作成完了ダイアログ */}
       {dialogStatus !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
+          <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
             <h3 className="mb-1.5 font-bold text-lg text-slate-900 sm:mb-2 sm:text-2xl">
               {dialogStatus.projectName}を作成しました
             </h3>
@@ -740,7 +740,7 @@ export default function ProjectPage() {
       {toast && (
         <div className="fixed top-20 right-4 z-50">
           {toast.variant === "success" ? (
-            <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-lg">
+            <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-lg">
               <LuCircleCheck className="h-6 w-6 shrink-0 text-emerald-600" />
               <span className="font-medium text-emerald-900 text-sm">{toast.message}</span>
               <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">
@@ -748,7 +748,7 @@ export default function ProjectPage() {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
+            <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
               <LuCircleAlert className="h-6 w-6 shrink-0 text-red-600" />
               <span className="font-medium text-red-900 text-sm">{toast.message}</span>
               <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">

@@ -68,9 +68,9 @@ function FeaturesSection() {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="flex flex-col rounded-2xl border border-slate-100 bg-white p-8 shadow-sm"
+                className="flex flex-col rounded-lg border border-slate-100 bg-white p-8 shadow-sm"
               >
-                <div className={`inline-flex h-14 w-14 items-center justify-center rounded-xl ${feature.color}`}>
+                <div className={`inline-flex h-14 w-14 items-center justify-center rounded-lg ${feature.color}`}>
                   {feature.icon}
                 </div>
                 <h3 className="mt-6 font-bold text-slate-900 text-xl">{feature.title}</h3>
