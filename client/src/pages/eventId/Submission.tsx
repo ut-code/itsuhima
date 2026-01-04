@@ -1,12 +1,16 @@
 import { hc } from "hono/client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  HiOutlineCheckCircle,
-  HiOutlineCog,
-  HiOutlineExclamationCircle,
-  HiOutlineHome,
-  HiPencil,
-} from "react-icons/hi";
+  LuChevronDown,
+  LuChevronLeft,
+  LuChevronUp,
+  LuCircleAlert,
+  LuCircleCheck,
+  LuPencil,
+  LuSend,
+  LuSettings2,
+  LuX,
+} from "react-icons/lu";
 import { NavLink, useParams } from "react-router";
 import type { AppType } from "../../../../server/src/main";
 import { Calendar } from "../../components/Calendar";
@@ -18,6 +22,41 @@ import { API_ENDPOINT } from "../../utils";
 const client = hc<AppType>(API_ENDPOINT);
 
 export type EditingSlot = Pick<Slot, "from" | "to" | "participationOptionId">;
+
+/**
+ * テキストを簡易的に切り詰める。
+ * - ASCII なら 1, 非 ASCII なら 2。
+ * - 改行コード数も考慮。
+ */
+const truncateText = (text: string, maxWidth = 80, maxLines = 3): { text: string; truncated: boolean } => {
+  const lines = text.split("\n");
+  let width = 0;
+  let result = "";
+  let lineCount = 0;
+
+  for (const line of lines) {
+    if (lineCount >= maxLines) {
+      return { text: `${result.trimEnd()}…`, truncated: true };
+    }
+
+    if (lineCount > 0) {
+      result += "\n";
+    }
+
+    for (const char of line) {
+      const charWidth = char.charCodeAt(0) < 128 ? 1 : 2;
+      if (width + charWidth > maxWidth) {
+        return { text: `${result.trimEnd()}…`, truncated: true };
+      }
+      width += charWidth;
+      result += char;
+    }
+
+    lineCount++;
+  }
+
+  return { text: result, truncated: false };
+};
 
 const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -101,6 +140,8 @@ export default function SubmissionPage() {
   const [editingSlots, setEditingSlots] = useState<EditingSlot[]>([]);
 
   const [selectedParticipationOptionId, setSelectedParticipationOptionId] = useState<string | null>(null);
+
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   const [toast, setToast] = useState<{
     message: string;
@@ -228,42 +269,74 @@ export default function SubmissionPage() {
 
   return (
     <>
-      <div className="flex h-[100dvh] flex-col">
+      <div className="flex h-[100dvh] flex-col bg-slate-50">
         <Header />
         {loading ? (
           <div className="flex w-full flex-1 items-center justify-center">
-            <span className="loading loading-dots loading-md text-gray-400" />
+            <span className="loading loading-dots loading-md text-slate-400" />
           </div>
         ) : !project ? (
-          <div className="flex flex-col items-center justify-center gap-4 py-4">
-            <p className="text-gray-600 text-xl">イベントが見つかりませんでした。</p>
-            <NavLink to={"/"} className="link">
-              ホームに戻る
-            </NavLink>
+          <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-4 px-4 py-16 sm:px-6 lg:px-8">
+            <div className="flex min-h-[400px] w-full flex-col items-center justify-center gap-4 rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
+              <p className="text-slate-600 text-xl">イベントが見つかりませんでした。</p>
+              <NavLink to="/" className="btn btn-primary">
+                ホームに戻る
+              </NavLink>
+            </div>
           </div>
         ) : !selectedParticipationOptionId ? (
           <div className="flex w-full flex-1 items-center justify-center">
-            <span className="loading loading-dots loading-md text-gray-400" />
+            <span className="loading loading-dots loading-md text-slate-400" />
           </div>
         ) : (
-          <div className="flex h-full flex-1 flex-col overflow-y-auto p-4">
-            <div className="flex items-center justify-between">
-              <h1 className="mb-2 font-bold text-2xl text-gray-800">{project.name} の日程調整</h1>
-              {isHost && (
-                <NavLink to={`/e/${projectId}/edit`} className="btn btn-sm font-normal text-gray-600">
-                  <HiOutlineCog />
-                  イベント設定
-                </NavLink>
-              )}
-            </div>
-            {project.description && (
-              <p className="mb-4 whitespace-pre-wrap text-gray-600 text-sm">{project.description}</p>
-            )}
+          <div className="flex flex-1 flex-col overflow-y-auto">
+            <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
+              {/* プロジェクト情報 */}
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <h1 className="truncate font-bold text-base text-slate-900 sm:text-lg">{project.name}</h1>
+                  {isHost && (
+                    <NavLink to={`/e/${projectId}/edit`} className="btn btn-sm btn-outline shrink-0 gap-1.5">
+                      <LuSettings2 className="h-4 w-4" />
+                      <span>編集</span>
+                    </NavLink>
+                  )}
+                </div>
+                {project.description &&
+                  (() => {
+                    const { text: truncatedText, truncated } = truncateText(project.description);
+                    return (
+                      <div className="mt-2 sm:mt-3">
+                        <p className="whitespace-pre-wrap text-slate-600 text-sm">
+                          {descriptionExpanded ? project.description : truncatedText}
+                        </p>
+                        {truncated && (
+                          <button
+                            type="button"
+                            onClick={() => setDescriptionExpanded(!descriptionExpanded)}
+                            className="mt-1 inline-flex items-center gap-0.5 text-primary text-sm hover:underline"
+                          >
+                            {descriptionExpanded ? (
+                              <>
+                                閉じる
+                                <LuChevronUp className="h-4 w-4" />
+                              </>
+                            ) : (
+                              <>
+                                もっと見る
+                                <LuChevronDown className="h-4 w-4" />
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
+              </div>
 
-            {editMode && project.participationOptions.length > 1 && selectedParticipationOptionId !== null && (
-              <div className="mb-4">
-                <span className="label-text mb-2 block text-gray-400">参加形態を選択</span>
-                <div className="flex flex-wrap gap-2">
+              {/* 参加形態選択ボタン */}
+              {editMode && project.participationOptions.length > 1 && selectedParticipationOptionId !== null && (
+                <div className="mt-3 mb-2 flex flex-wrap items-center gap-1.5">
                   {project.participationOptions.map((opt) => {
                     const rgb = hexToRgb(opt.color);
                     const lightBg = rgb
@@ -274,52 +347,54 @@ export default function SubmissionPage() {
                       <button
                         key={opt.id}
                         type="button"
-                        className="btn btn-sm md:btn-md gap-1 px-2 sm:gap-2 sm:px-4"
+                        className="btn btn-sm gap-1.5"
                         onClick={() => setSelectedParticipationOptionId(opt.id)}
                         style={
                           selectedParticipationOptionId === opt.id
-                            ? { backgroundColor: lightBg, borderColor: opt.color }
-                            : undefined
+                            ? { backgroundColor: lightBg, borderWidth: "2px", borderColor: opt.color }
+                            : { backgroundColor: "white", borderWidth: "2px", borderColor: "#e2e8f0" }
                         }
                       >
                         <span
-                          className="inline-block h-3 w-3 shrink-0 rounded-full sm:h-4 sm:w-4"
+                          className="inline-block h-2.5 w-2.5 shrink-0 rounded-full sm:h-3 sm:w-3"
                           style={{ backgroundColor: opt.color }}
                         />
-                        <span className="text-xs sm:text-sm">{opt.label}</span>
+                        <span>{opt.label}</span>
                       </button>
                     );
                   })}
                 </div>
-              </div>
-            )}
-            <Calendar
-              startDate={project.startDate}
-              endDate={project.endDate}
-              allowedRanges={project.allowedRanges}
-              editingSlots={editMode ? editingSlots : []}
-              viewingSlots={viewingSlots}
-              guestIdToName={guestIdToName}
-              participationOptions={project.participationOptions}
-              currentParticipationOptionId={selectedParticipationOptionId}
-              editMode={editMode}
-              onChangeEditingSlots={setEditingSlots}
-            />
-            <div className="flex w-full items-center justify-between gap-2 p-2">
-              {editMode ? (
-                <>
-                  <input
-                    type="text"
-                    placeholder="あなたの名前"
-                    value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
-                    className="input flex-1 text-base"
-                  />
-                  <div className="flex flex-row gap-2">
+              )}
+
+              <Calendar
+                startDate={project.startDate}
+                endDate={project.endDate}
+                allowedRanges={project.allowedRanges}
+                editingSlots={editMode ? editingSlots : []}
+                viewingSlots={viewingSlots}
+                guestIdToName={guestIdToName}
+                participationOptions={project.participationOptions}
+                currentParticipationOptionId={selectedParticipationOptionId}
+                editMode={editMode}
+                onChangeEditingSlots={setEditingSlots}
+              />
+            </div>
+
+            <div className="sticky bottom-0 z-10 border-slate-200 border-t bg-white">
+              <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 sm:py-3 lg:px-8">
+                {editMode ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="名前"
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5"
+                    />
                     {!!myGuestId && (
                       <button
                         type="button"
-                        className="btn text-gray-500"
+                        className="btn btn-outline shrink-0"
                         disabled={loading}
                         onClick={async () => {
                           if (confirm("更新をキャンセルします。よろしいですか？")) {
@@ -328,12 +403,12 @@ export default function SubmissionPage() {
                           }
                         }}
                       >
-                        キャンセル
+                        <span>キャンセル</span>
                       </button>
                     )}
                     <button
                       type="button"
-                      className="btn btn-primary"
+                      className="btn btn-primary inline-flex shrink-0 gap-1.5 sm:gap-2"
                       disabled={loading || !guestName}
                       onClick={() => {
                         if (!guestName) return;
@@ -347,44 +422,54 @@ export default function SubmissionPage() {
                         );
                       }}
                     >
-                      {meAsGuest ? "更新" : "提出"}
+                      <LuSend className="sm:h-5 sm:w-5" />
+                      <span>{meAsGuest ? "更新" : "提出"}</span>
                     </button>
                   </div>
-                </>
-              ) : (
-                <>
-                  <NavLink to={"/home"} className="btn btn-outline btn-primary">
-                    <HiOutlineHome size={20} />
-                    ホームに戻る
-                  </NavLink>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={loading}
-                    onClick={() => {
-                      setEditMode(true);
-                    }}
-                  >
-                    <HiPencil size={20} />
-                    日程を更新する
-                  </button>
-                </>
-              )}
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <NavLink to="/home" className="btn btn-outline gap-1.5 sm:gap-2">
+                      <LuChevronLeft className="sm:h-5 sm:w-5" />
+                      <span className="hidden sm:inline">ホームに戻る</span>
+                      <span className="sm:hidden">ホーム</span>
+                    </NavLink>
+                    <button
+                      type="button"
+                      className="btn btn-primary gap-1.5 sm:gap-2"
+                      disabled={loading}
+                      onClick={() => {
+                        setEditMode(true);
+                      }}
+                    >
+                      <LuPencil className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <span className="hidden sm:inline">日程を更新する</span>
+                      <span className="sm:hidden">日程更新</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
       </div>
+
       {toast && (
-        <div className="toast toast-top toast-end z-50 mt-18">
+        <div className="fixed top-20 right-4 z-50">
           {toast.variant === "success" ? (
-            <div className="alert border-0 bg-gray-200">
-              <HiOutlineCheckCircle size={20} className="text-green-500" />
-              <span>{toast.message}</span>
+            <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-lg">
+              <LuCircleCheck className="h-6 w-6 shrink-0 text-emerald-600" />
+              <span className="font-medium text-emerald-900 text-sm">{toast.message}</span>
+              <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">
+                <LuX className="h-4 w-4" />
+              </button>
             </div>
           ) : (
-            <div className="alert border-0 bg-gray-200">
-              <HiOutlineExclamationCircle size={20} className="text-red-500" />
-              <span>{toast.message}</span>
+            <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
+              <LuCircleAlert className="h-6 w-6 shrink-0 text-red-600" />
+              <span className="font-medium text-red-900 text-sm">{toast.message}</span>
+              <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">
+                <LuX className="h-4 w-4" />
+              </button>
             </div>
           )}
         </div>
