@@ -41,6 +41,8 @@ export const browserIdMiddleware: MiddlewareHandler = async (c: Context, next) =
   // 新形式 （Hono） を試す
   const browserIdHono = (await getSignedCookie(c, cookieSecret, COOKIE_NAME)) || undefined;
   if (browserIdHono) {
+    // Cookie を更新
+    await setSignedCookie(c, COOKIE_NAME, browserIdHono, cookieSecret, cookieOptions);
     c.set("browserId", browserIdHono);
     return next();
   }
