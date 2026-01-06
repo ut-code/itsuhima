@@ -119,6 +119,7 @@ export const Calendar = ({
 
   // FullCalendar の state
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [tooltipKey, setTooltipKey] = useState<number>(0);
 
   // editingSlots/viewingSlots → matrix → events
   useEffect(() => {
@@ -460,6 +461,13 @@ export const Calendar = ({
     }
   }, []);
 
+  /**
+   * カレンダーで表示される日付範囲が変更されると呼ばれる。 https://fullcalendar.io/docs/datesSet
+   */
+  const handleDatesSet = useCallback(() => {
+    setTooltipKey((prev) => prev + 1);
+  }, []);
+
   return (
     <div className="my-2 flex-1" id="ih-cal-wrapper">
       <FullCalendar
@@ -481,8 +489,10 @@ export const Calendar = ({
         select={handleSelect}
         eventDidMount={handleEventDidMount}
         eventContent={handleEventContent}
+        datesSet={handleDatesSet}
       />
       <Tooltip
+        key={tooltipKey}
         id="member-info"
         style={{
           backgroundColor: "#fff",
