@@ -294,7 +294,17 @@ export default function SubmissionPage() {
               {/* プロジェクト情報 */}
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <h1 className="truncate font-bold text-base text-slate-900 sm:text-lg">{project.name}</h1>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <h1 className="truncate font-bold text-base text-slate-900 sm:text-lg">{project.name}</h1>
+                    <div
+                      className="tooltip tooltip-bottom shrink-0"
+                      data-tip="現在はタイムゾーンを変更できません。将来的に選択可能になる予定です。"
+                    >
+                      <div className="flex cursor-not-allowed items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-slate-400 text-sm opacity-80">
+                        <span>日本標準時 (JST)</span>
+                      </div>
+                    </div>
+                  </div>
                   {isHost && (
                     <NavLink to={`/e/${projectId}/edit`} className="btn btn-sm btn-outline shrink-0 gap-1.5">
                       <LuSettings2 className="h-4 w-4" />

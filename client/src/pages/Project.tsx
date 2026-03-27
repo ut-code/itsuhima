@@ -393,7 +393,17 @@ export default function ProjectPage() {
 
               {/* 時間帯 */}
               <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="mb-4 font-bold text-base text-slate-900 sm:text-lg">時間帯</h2>
+                <div className="mb-4 flex items-center gap-3">
+                  <h2 className="font-bold text-base text-slate-900 sm:text-lg">時間帯</h2>
+                  <div
+                    className="tooltip tooltip-top"
+                    data-tip="現在はタイムゾーンを変更できません。将来的に選択可能になる予定です。"
+                  >
+                    <div className="flex cursor-not-allowed items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-slate-400 text-sm opacity-80">
+                      <span>日本標準時 (JST)</span>
+                    </div>
+                  </div>
+                </div>
                 <div
                   className={project && project.guests.length > 0 ? "tooltip tooltip-top w-full" : "w-full"}
                   data-tip={
