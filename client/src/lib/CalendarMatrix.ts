@@ -1,17 +1,14 @@
-import dayjs, { type Dayjs } from "dayjs";
-import "dayjs/locale/ja";
-
-dayjs.locale("ja");
+import type { Dayjs } from "../lib/dayjs";
 
 export type EditingMatrixSlot = {
-  from: Date;
-  to: Date;
+  from: Dayjs;
+  to: Dayjs;
   optionId: string;
 };
 
 export type ViewingMatrixSlot = {
-  from: Date;
-  to: Date;
+  from: Dayjs;
+  to: Dayjs;
   guestIdToOptionId: Record<string, string>;
 };
 
@@ -24,27 +21,27 @@ abstract class CalendarMatrixBase<T> {
    * 15 分を 1 セルとしたセルの数 (96 = 24 * 4)
    */
   protected readonly quarterCount = 96;
-  protected initialDate: Dayjs;
+  protected initialDatetime: Dayjs;
 
-  constructor(dayCount: number, initialDate: Date) {
+  constructor(dayCount: number, initialDate: Dayjs) {
     this.matrix = Array.from({ length: dayCount }, () => Array.from({ length: this.quarterCount }, () => null));
-    this.initialDate = dayjs(initialDate).startOf("day");
+    this.initialDatetime = initialDate.startOf("day");
   }
 
-  protected getIndex(date: Date): [number, number] {
-    const totalMinutes = date.getHours() * 60 + date.getMinutes();
-    const dayDiff = dayjs(date).startOf("day").diff(this.initialDate, "day");
+  protected getIndex(dt: Dayjs): [number, number] {
+    const totalMinutes = dt.hour() * 60 + dt.minute();
+    const dayDiff = dt.startOf("day").diff(this.initialDatetime, "day");
     return [dayDiff, Math.floor(totalMinutes / 15)];
   }
 
-  getIsSlotExist(date: Date): boolean {
-    const [row, col] = this.getIndex(date);
+  getIsSlotExist(dt: Dayjs): boolean {
+    const [row, col] = this.getIndex(dt);
     return this.matrix[row][col] !== null;
   }
 
-  setRange(from: Date, to: Date, newValue: T | null): void {
+  setRange(from: Dayjs, to: Dayjs, newValue: T | null): void {
     const [startRow, startCol] = this.getIndex(from);
-    const [endRow, endCol] = this.getIndex(dayjs(to).subtract(1, "minute").toDate());
+    const [endRow, endCol] = this.getIndex(to.subtract(1, "minute"));
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
         this.matrix[r][c] = newValue;
@@ -75,14 +72,8 @@ export class EditingMatrix extends CalendarMatrixBase<string> {
 
   private convertRunsToSlots(runs: { start: number; end: number; value: string }[], day: number): EditingMatrixSlot[] {
     return runs.map((run) => {
-      const from = this.initialDate
-        .add(day, "day")
-        .add(run.start * 15, "minute")
-        .toDate();
-      const to = this.initialDate
-        .add(day, "day")
-        .add(run.end * 15, "minute")
-        .toDate();
+      const from = this.initialDatetime.add(day, "day").add(run.start * 15, "minute");
+      const to = this.initialDatetime.add(day, "day").add(run.end * 15, "minute");
       const optionId = run.value;
       return { from, to, optionId };
     });
@@ -93,9 +84,9 @@ export class EditingMatrix extends CalendarMatrixBase<string> {
  * 閲覧中イベントの {@link CalendarMatrixBase}
  */
 export class ViewingMatrix extends CalendarMatrixBase<Record<string, string>> {
-  setGuestRange(from: Date, to: Date, guestId: string, optionId: string): void {
+  setGuestRange(from: Dayjs, to: Dayjs, guestId: string, optionId: string): void {
     const [startRow, startCol] = this.getIndex(from);
-    const [endRow, endCol] = this.getIndex(dayjs(to).subtract(1, "minute").toDate());
+    const [endRow, endCol] = this.getIndex(to.subtract(1, "minute"));
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
         if (this.matrix[r][c] === null) {
@@ -120,14 +111,8 @@ export class ViewingMatrix extends CalendarMatrixBase<Record<string, string>> {
     day: number,
   ): ViewingMatrixSlot[] {
     return runs.map((run) => {
-      const from = this.initialDate
-        .add(day, "day")
-        .add(run.start * 15, "minute")
-        .toDate();
-      const to = this.initialDate
-        .add(day, "day")
-        .add(run.end * 15, "minute")
-        .toDate();
+      const from = this.initialDatetime.add(day, "day").add(run.start * 15, "minute");
+      const to = this.initialDatetime.add(day, "day").add(run.end * 15, "minute");
       const guestIdToOptionId = run.value;
       return { from, to, guestIdToOptionId };
     });
