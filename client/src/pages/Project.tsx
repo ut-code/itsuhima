@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import dayjs from "dayjs";
 import { hc } from "hono/client";
 import { useCallback, useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -22,6 +21,7 @@ import { editReqSchema, projectReqSchema } from "../../../common/validators";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
 import { EXTERNAL_LINKS } from "../constants/links";
+import dayjs from "../lib/dayjs";
 import { projectReviver } from "../revivers";
 import type { Project } from "../types";
 import { API_ENDPOINT, FRONTEND_ORIGIN } from "../utils";
@@ -121,8 +121,8 @@ export default function ProjectPage() {
     defaultValues: {
       name: "",
       description: "",
-      startDate: eventId ? "" : dayjs().format("YYYY-MM-DD"),
-      endDate: eventId ? "" : dayjs().add(6, "day").format("YYYY-MM-DD"),
+      startDate: eventId ? "" : dayjs.tz().format("YYYY-MM-DD"),
+      endDate: eventId ? "" : dayjs.tz().add(6, "day").format("YYYY-MM-DD"),
       allowedRanges: [{ startTime: "08:00", endTime: "23:00" }],
       participationOptions: eventId
         ? []
@@ -160,12 +160,12 @@ export default function ProjectPage() {
     reset({
       name: project.name,
       description: project.description,
-      startDate: dayjs(project.startDate).format("YYYY-MM-DD"),
-      endDate: dayjs(project.endDate).format("YYYY-MM-DD"),
+      startDate: project.startDate.tz().format("YYYY-MM-DD"),
+      endDate: project.endDate.tz().format("YYYY-MM-DD"),
       allowedRanges: [
         {
-          startTime: dayjs(project.allowedRanges[0].startTime).format("HH:mm"),
-          endTime: dayjs(project.allowedRanges[0].endTime).format("HH:mm"),
+          startTime: project.allowedRanges[0].startTime.tz().format("HH:mm"),
+          endTime: project.allowedRanges[0].endTime.tz().format("HH:mm"),
         },
       ],
       participationOptions: project.participationOptions.map((opt) => ({
@@ -180,21 +180,32 @@ export default function ProjectPage() {
   const onSubmit = async (data: FormSchemaType) => {
     setSubmitLoading(true);
 
-    // 日付をISO形式に変換
-    const startDateTime = new Date(`${data.startDate}T00:00:00.000`).toISOString();
-    const endDateTime = new Date(`${data.endDate}T23:59:59.999`).toISOString();
+    const startDtISO = dayjs.tz(data.startDate).startOf("day").toISOString();
+    const endDtISO = dayjs.tz(data.endDate).endOf("day").toISOString();
 
-    // range もISO形式に変換
-    const rangeWithDateTime = data.allowedRanges?.map((range) => ({
-      startTime: new Date(`${data.startDate}T${range.startTime}:00`).toISOString(),
-      endTime: new Date(`${data.startDate}T${range.endTime}:00`).toISOString(),
-    }));
+    const rangeWithDateTime = data.allowedRanges?.map((range) => {
+      // 注: 現在のところ日付部分は使用していない。
+      const startTime = dayjs
+        .tz(data.startDate)
+        .hour(Number(range.startTime.split(":")[0]))
+        .minute(Number(range.startTime.split(":")[1]))
+        .second(0);
+      const endTime = dayjs
+        .tz(data.endDate)
+        .hour(Number(range.endTime.split(":")[0]))
+        .minute(Number(range.endTime.split(":")[1]))
+        .second(0);
+      return {
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      };
+    });
 
     const eventData = {
       name: data.name ?? "",
       description: data.description ?? "",
-      startDate: startDateTime,
-      endDate: endDateTime,
+      startDate: startDtISO,
+      endDate: endDtISO,
       allowedRanges: rangeWithDateTime ?? [],
       participationOptions: (data.participationOptions ?? []).map((opt) => ({
         id: opt.id,

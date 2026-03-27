@@ -11,12 +11,12 @@ import type { BriefProject, ISOStringBriefProject, ISOStringProject, Project } f
 export function projectReviver(project: ISOStringProject): Project {
   return {
     ...project,
-    startDate: dayjs.tz(project.startDate),
-    endDate: dayjs.tz(project.endDate),
+    startDate: dayjs.utc(project.startDate).tz(),
+    endDate: dayjs.utc(project.endDate).tz(),
     allowedRanges: project.allowedRanges.map((range) => ({
       ...range,
-      startTime: dayjs.tz(range.startTime),
-      endTime: dayjs.tz(range.endTime),
+      startTime: dayjs.utc(range.startTime).tz(),
+      endTime: dayjs.utc(range.endTime).tz(),
     })),
     participationOptions: project.participationOptions.map((opt) => ({ ...opt })),
     hosts: project.hosts.map((host) => ({ ...host })),
@@ -24,8 +24,8 @@ export function projectReviver(project: ISOStringProject): Project {
       ...guest,
       slots: guest.slots.map((slot) => ({
         ...slot,
-        from: dayjs.tz(slot.from),
-        to: dayjs.tz(slot.to),
+        from: dayjs.utc(slot.from).tz(),
+        to: dayjs.utc(slot.to).tz(),
       })),
     })),
     meAsGuest: project.meAsGuest
@@ -33,8 +33,8 @@ export function projectReviver(project: ISOStringProject): Project {
           ...project.meAsGuest,
           slots: project.meAsGuest.slots.map((slot) => ({
             ...slot,
-            from: dayjs.tz(slot.from),
-            to: dayjs.tz(slot.to),
+            from: dayjs.utc(slot.from).tz(),
+            to: dayjs.utc(slot.to).tz(),
           })),
         }
       : null,
@@ -49,7 +49,7 @@ export function projectReviver(project: ISOStringProject): Project {
 export function briefProjectReviver(project: ISOStringBriefProject): BriefProject {
   return {
     ...project,
-    startDate: dayjs.tz(project.startDate),
-    endDate: dayjs.tz(project.endDate),
+    startDate: dayjs.utc(project.startDate).tz(),
+    endDate: dayjs.utc(project.endDate).tz(),
   };
 }

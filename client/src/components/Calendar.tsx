@@ -1,8 +1,3 @@
-import interactionPlugin from "@fullcalendar/interaction";
-import FullCalendar from "@fullcalendar/react";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import dayjs from "dayjs";
-import "dayjs/locale/ja";
 import type {
   DateSelectArg,
   DateSpanApi,
@@ -12,23 +7,26 @@ import type {
   EventMountArg,
   SlotLabelContentArg,
 } from "@fullcalendar/core/index.js";
+import interactionPlugin from "@fullcalendar/interaction";
+import momentTimezonePlugin from "@fullcalendar/moment-timezone";
+import FullCalendar from "@fullcalendar/react";
+import timeGridPlugin from "@fullcalendar/timegrid";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Tooltip } from "react-tooltip";
 import useCalendarScrollBlock from "../hooks/useCalendarScrollBlock";
 import { EditingMatrix, ViewingMatrix } from "../lib/CalendarMatrix";
+import dayjs, { type Dayjs } from "../lib/dayjs";
 import type { EditingSlot } from "../pages/eventId/Submission";
 
-dayjs.locale("ja");
-
 type AllowedRange = {
-  startTime: Date;
-  endTime: Date;
+  startTime: Dayjs;
+  endTime: Dayjs;
 };
 
 type ViewingSlot = {
-  from: Date;
-  to: Date;
+  from: Dayjs;
+  to: Dayjs;
   guestId: string;
   optionId: string;
 };
@@ -55,8 +53,8 @@ type CalendarEvent = Pick<EventInput, "id" | "className" | "start" | "end" | "te
 };
 
 type Props = {
-  startDate: Date;
-  endDate: Date;
+  startDate: Dayjs;
+  endDate: Dayjs;
   allowedRanges: AllowedRange[];
   editingSlots: EditingSlot[];
   viewingSlots: ViewingSlot[];
@@ -103,15 +101,15 @@ export const Calendar = ({
   editMode,
   onChangeEditingSlots,
 }: Props) => {
-  const countDays = dayjs(endDate).startOf("day").diff(dayjs(startDate).startOf("day"), "day") + 1;
+  const countDays = endDate.startOf("day").diff(startDate.startOf("day"), "day") + 1;
   // TODO: +1 は不要かも
   const editingMatrixRef = useRef<EditingMatrix>(new EditingMatrix(countDays + 1, startDate));
   const viewingMatrixRef = useRef<ViewingMatrix>(new ViewingMatrix(countDays + 1, startDate));
 
   // TODO: 現在は最初の選択範囲のみ。FullCalendar の制約により、複数の allowedRanges には対応できないため、のちに selectAllow などで独自実装が必要
   const tmpAllowedRange = allowedRanges[0] ?? {
-    startTime: dayjs(new Date()).set("hour", 0).set("minute", 0).toDate(),
-    endTime: dayjs(new Date()).set("hour", 23).set("minute", 59).toDate(),
+    startTime: dayjs.utc().tz().set("hour", 0).set("minute", 0).toDate(),
+    endTime: dayjs.utc().tz().set("hour", 23).set("minute", 59).toDate(),
   };
 
   const calendarRef = useRef<FullCalendar | null>(null);
@@ -126,14 +124,14 @@ export const Calendar = ({
     // editingSlots → editingMatrix
     editingMatrixRef.current.clear();
     editingSlots.forEach((slot) => {
-      const { from, to } = getVertexes(slot.from, slot.to);
+      const { from, to } = normalizeVertexes(slot.from, slot.to);
       editingMatrixRef.current.setRange(from, to, slot.participationOptionId);
     });
 
     viewingMatrixRef.current.clear();
 
     viewingSlots.forEach((slot) => {
-      const { from, to } = getVertexes(slot.from, slot.to);
+      const { from, to } = normalizeVertexes(slot.from, slot.to);
       viewingMatrixRef.current.setGuestRange(from, to, slot.guestId, slot.optionId);
     });
 
@@ -147,8 +145,8 @@ export const Calendar = ({
       return {
         id: `${EDITING_EVENT}-${index}`,
         className: EDITING_EVENT,
-        start: slot.from,
-        end: slot.to,
+        start: slot.from.format(),
+        end: slot.to.format(),
         textColor: "white",
         backgroundColor,
         borderColor: baseColor,
@@ -218,8 +216,8 @@ export const Calendar = ({
       viewingEvents.push({
         id: `${VIEWING_EVENT}-${index}`,
         className: `${VIEWING_EVENT} ${VIEWING_EVENT}-${index}`,
-        start: slot.from,
-        end: slot.to,
+        start: slot.from.format(),
+        end: slot.to.format(),
         color: defaultColor,
         display: "background" as const,
         extendedProps: {
@@ -316,18 +314,18 @@ export const Calendar = ({
         dayHeaderContent: (args: DayHeaderContentArg) => {
           return (
             <div className="font-normal text-gray-600">
-              <div>{dayjs(args.date).format("M/D")}</div>
-              <div>{dayjs(args.date).format("(ddd)")}</div>
+              <div>{dayjs.utc(args.date).tz().format("M/D")}</div>
+              <div>{dayjs.utc(args.date).tz().format("(ddd)")}</div>
             </div>
           );
         },
         slotLabelContent: (args: SlotLabelContentArg) => {
-          return <div className="text-gray-600">{dayjs(args.date).format("HH:mm")}</div>;
+          return <div className="text-gray-600">{dayjs.utc(args.date).tz().format("HH:mm")}</div>;
         },
         slotLabelInterval: "00:30:00",
         validRange: {
-          start: startDate,
-          end: endDate,
+          start: startDate.format(),
+          end: endDate.format(),
         },
         expandRows: true,
       },
@@ -356,7 +354,7 @@ export const Calendar = ({
     (info: DateSelectArg) => {
       if (!editMode) return;
 
-      const { from, to } = getVertexes(info.start, info.end);
+      const { from, to } = normalizeVertexes(dayjs.utc(info.start).tz(), dayjs.utc(info.end).tz());
 
       if (isSelectionDeleting.current === null) return;
       const isDeletion = isSelectionDeleting.current;
@@ -456,7 +454,7 @@ export const Calendar = ({
     }
     if (info.event.classNames.includes(EDITING_EVENT)) {
       return (
-        <div className="h-full w-full overflow-hidden text-gray-600">{`${dayjs(info.event.start).format("HH:mm")} - ${dayjs(info.event.end).format("HH:mm")}`}</div>
+        <div className="h-full w-full overflow-hidden text-gray-600">{`${dayjs.utc(info.event.start).tz().format("HH:mm")} - ${dayjs.utc(info.event.end).tz().format("HH:mm")}`}</div>
       );
     }
   }, []);
@@ -472,14 +470,14 @@ export const Calendar = ({
     <div className="my-2 flex-1" id="ih-cal-wrapper">
       <FullCalendar
         ref={calendarRef}
-        plugins={[timeGridPlugin, interactionPlugin]}
+        plugins={[timeGridPlugin, interactionPlugin, momentTimezonePlugin]}
         height={"100%"}
         longPressDelay={LONG_PRESS_DELAY}
         slotDuration={"00:15:00"}
         allDaySlot={false}
-        initialDate={startDate}
-        slotMinTime={dayjs(tmpAllowedRange.startTime).format("HH:mm:ss")}
-        slotMaxTime={dayjs(tmpAllowedRange.endTime).format("HH:mm:ss")}
+        initialDate={startDate.startOf("day").toDate()}
+        slotMinTime={tmpAllowedRange.startTime.format("HH:mm:ss")}
+        slotMaxTime={tmpAllowedRange.endTime.format("HH:mm:ss")}
         headerToolbar={headerToolbar}
         views={views}
         initialView="timeGrid"
@@ -490,6 +488,7 @@ export const Calendar = ({
         eventDidMount={handleEventDidMount}
         eventContent={handleEventContent}
         datesSet={handleDatesSet}
+        timeZone="Asia/Tokyo"
       />
       <Tooltip
         key={tooltipKey}
@@ -516,10 +515,12 @@ function displaySelection(
   // 通常の selection では矩形選択ができないため、イベントを作成することで選択範囲を表現している。
   // https://github.com/fullcalendar/fullcalendar/issues/4119
 
+  const { from, to } = normalizeVertexes(dayjs.utc(info.start).tz(), dayjs.utc(info.end).tz());
+
   if (isSelectionDeleting.current === null) {
     // ドラッグ開始地点が既存の自分のイベントなら削除モード、そうでなければ追加モードとする。
     // isSelectionDeleting は select の発火時 (つまり、ドラッグが終了した際) に null にリセットされる。
-    isSelectionDeleting.current = myMatrixRef.current.getIsSlotExist(info.start);
+    isSelectionDeleting.current = myMatrixRef.current.getIsSlotExist(from);
   }
 
   if (!calendarRef.current) return false;
@@ -529,23 +530,6 @@ function displaySelection(
   const existingSelection = calendarApi.getEventById(SELECT_EVENT);
   if (existingSelection) {
     existingSelection.remove();
-  }
-
-  // start と end が逆転している場合は入れ替える (TODO: refactor)
-  let startTime = info.start.toLocaleTimeString("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  let endTime = info.end.toLocaleTimeString("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  if (
-    info.start.getHours() > info.end.getHours() ||
-    (info.start.getHours() === info.end.getHours() && info.start.getMinutes() > info.end.getMinutes())
-  ) {
-    [startTime, endTime] = [endTime, startTime];
   }
 
   // 現在選択されている参加形態の色を取得
@@ -561,10 +545,10 @@ function displaySelection(
   calendarApi.addEvent({
     id: SELECT_EVENT,
     className: isSelectionDeleting.current ? DELETE_SELECT_EVENT : CREATE_SELECT_EVENT,
-    startTime: startTime,
-    endTime: endTime,
-    startRecur: info.start,
-    endRecur: info.end,
+    startTime: from.format("HH:mm"),
+    endTime: to.format("HH:mm"),
+    startRecur: from.startOf("day").format("YYYY-MM-DD"),
+    endRecur: to.startOf("day").add(1, "day").format("YYYY-MM-DD"),
     display: "background",
     backgroundColor: backgroundColor,
     borderColor: borderColor,
@@ -573,22 +557,21 @@ function displaySelection(
 }
 
 /**
- * 矩形選択した際の左上と右下の頂点を返す。from < to が前提
+ * 矩形選択の始点・終点を、左上（=日付も時刻も早い）・右下（=日付も時刻も遅い）に正規化して返す。なお from <= to が前提。
  */
-function getVertexes(from: Date, to: Date) {
-  if (from > to) {
-    throw new Error("from < to is required");
+function normalizeVertexes(from: Dayjs, to: Dayjs) {
+  if (from.isAfter(to)) {
+    throw new Error("from <= to is required");
   }
-  const needSwap = dayjs(from).format("HH:mm") > dayjs(to).format("HH:mm");
-  if (!needSwap) {
+  const fromTime = from.hour() * 60 + from.minute();
+  const toTime = to.hour() * 60 + to.minute();
+
+  if (fromTime <= toTime) {
+    // from の時刻 <= to の時刻なら、そのまま返す
     return { from, to };
   }
-
-  const fromMinute = dayjs(from).hour() * 60 + dayjs(from).minute();
-  const toMinute = dayjs(to).hour() * 60 + dayjs(to).minute();
-
-  return {
-    from: dayjs(from).startOf("day").add(toMinute, "minute").toDate(),
-    to: dayjs(to).startOf("day").add(fromMinute, "minute").toDate(),
-  };
+  // from の時刻 > to の時刻の場合、矩形選択の左上と右上の点を算出しそれを新たな from, to として返す
+  const newFrom = from.startOf("day").add(toTime, "minute");
+  const newTo = to.startOf("day").add(fromTime, "minute");
+  return { from: newFrom, to: newTo };
 }

@@ -414,8 +414,8 @@ export default function SubmissionPage() {
                         if (!guestName) return;
                         postSubmissions(
                           editingSlots.map((slot) => ({
-                            start: slot.from,
-                            end: slot.to,
+                            start: slot.from.toDate(),
+                            end: slot.to.toDate(),
                             participationOptionId: slot.participationOptionId,
                           })),
                           myGuestId ?? "",
