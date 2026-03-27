@@ -1,3 +1,5 @@
+import type { Dayjs } from "./lib/dayjs";
+
 type ParticipationOption = {
   id: string;
   label: string;
@@ -9,16 +11,16 @@ export type Slot = {
   id: string;
   projectId: string;
   guestId: string;
-  from: Date;
-  to: Date;
+  from: Dayjs;
+  to: Dayjs;
   participationOptionId: string;
 };
 
 type AllowedRange = {
   id: string;
   projectId: string;
-  startTime: Date;
-  endTime: Date;
+  startTime: Dayjs;
+  endTime: Dayjs;
 };
 
 type Host = {
@@ -37,8 +39,8 @@ export type Project = {
   id: string;
   name: string;
   description: string;
-  startDate: Date;
-  endDate: Date;
+  startDate: Dayjs;
+  endDate: Dayjs;
   allowedRanges: AllowedRange[];
   participationOptions: ParticipationOption[];
   hosts: Host[];

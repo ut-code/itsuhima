@@ -1,4 +1,6 @@
 // レスポンスの ISO 8601 文字列を Date に変換
+
+import dayjs from "./lib/dayjs";
 import type { BriefProject, ISOStringBriefProject, ISOStringProject, Project } from "./types";
 
 /**
@@ -9,12 +11,12 @@ import type { BriefProject, ISOStringBriefProject, ISOStringProject, Project } f
 export function projectReviver(project: ISOStringProject): Project {
   return {
     ...project,
-    startDate: new Date(project.startDate),
-    endDate: new Date(project.endDate),
+    startDate: dayjs.tz(project.startDate),
+    endDate: dayjs.tz(project.endDate),
     allowedRanges: project.allowedRanges.map((range) => ({
       ...range,
-      startTime: new Date(range.startTime),
-      endTime: new Date(range.endTime),
+      startTime: dayjs.tz(range.startTime),
+      endTime: dayjs.tz(range.endTime),
     })),
     participationOptions: project.participationOptions.map((opt) => ({ ...opt })),
     hosts: project.hosts.map((host) => ({ ...host })),
@@ -22,8 +24,8 @@ export function projectReviver(project: ISOStringProject): Project {
       ...guest,
       slots: guest.slots.map((slot) => ({
         ...slot,
-        from: new Date(slot.from),
-        to: new Date(slot.to),
+        from: dayjs.tz(slot.from),
+        to: dayjs.tz(slot.to),
       })),
     })),
     meAsGuest: project.meAsGuest
@@ -31,8 +33,8 @@ export function projectReviver(project: ISOStringProject): Project {
           ...project.meAsGuest,
           slots: project.meAsGuest.slots.map((slot) => ({
             ...slot,
-            from: new Date(slot.from),
-            to: new Date(slot.to),
+            from: dayjs.tz(slot.from),
+            to: dayjs.tz(slot.to),
           })),
         }
       : null,
@@ -47,7 +49,7 @@ export function projectReviver(project: ISOStringProject): Project {
 export function briefProjectReviver(project: ISOStringBriefProject): BriefProject {
   return {
     ...project,
-    startDate: new Date(project.startDate),
-    endDate: new Date(project.endDate),
+    startDate: dayjs.tz(project.startDate),
+    endDate: dayjs.tz(project.endDate),
   };
 }
