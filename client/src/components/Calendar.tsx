@@ -557,21 +557,24 @@ function displaySelection(
 }
 
 /**
- * 矩形選択の始点・終点を、左上（=日付も時刻も早い）・右下（=日付も時刻も遅い）に正規化して返す。なお from <= to が前提。
+ * 矩形選択の始点・終点を、左上（=日付も時刻も早い）・右下（=日付も時刻も遅い）に正規化して返す。
+ * FullCalendar の返す selection を矩形選択に利用するために使用。
+ * なお FullCalendar は逆向きに選択した場合、時間順に入れ替えて from, to を渡してくるので from < to は常に満たされる
  */
 function normalizeVertexes(from: Dayjs, to: Dayjs) {
-  if (from.isAfter(to)) {
-    throw new Error("from <= to is required");
+  if (!from.isBefore(to)) {
+    throw new Error("from < to is required");
   }
   const fromTime = from.hour() * 60 + from.minute();
   const toTime = to.hour() * 60 + to.minute();
 
-  if (fromTime <= toTime) {
-    // from の時刻 <= to の時刻なら、そのまま返す
+  if (fromTime < toTime) {
+    // from の時刻 < to の時刻なら、そのまま返す
     return { from, to };
   }
-  // from の時刻 > to の時刻の場合、矩形選択の左上と右上の点を算出しそれを新たな from, to として返す
-  const newFrom = from.startOf("day").add(toTime, "minute");
-  const newTo = to.startOf("day").add(fromTime, "minute");
+  // from の時刻 >= to の時刻の場合、矩形選択の左上と右上の点を算出しそれを新たな from, to として返す。
+  // fullcalendar は [from, to) で返してくるので、swap 時はそれぞれ 1 セル (=15分) ずらすことが必要。
+  const newFrom = from.startOf("day").add(toTime, "minute").subtract(15, "minute");
+  const newTo = to.startOf("day").add(fromTime, "minute").add(15, "minute");
   return { from: newFrom, to: newTo };
 }
