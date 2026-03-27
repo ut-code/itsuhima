@@ -33,7 +33,15 @@
         "noUnusedTemplateLiteral": "error",
         "useNumberNamespace": "error",
         "noInferrableTypes": "error",
-        "noUselessElse": "error"
+        "noUselessElse": "error",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "dayjs": "dayjs は lib/dayjs を使用する"
+            }
+          }
+        }
       },
       "nursery": {
         "useSortedClasses": "warn"

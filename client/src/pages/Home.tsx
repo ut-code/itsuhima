@@ -103,11 +103,11 @@ export default function HomePage() {
 function ProjectDashboard({ involvedProjects }: { involvedProjects: BriefProject[] }) {
   const hostedProjects = involvedProjects
     .filter((p) => p.isHost)
-    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+    .sort((a, b) => b.startDate.valueOf() - a.startDate.valueOf());
 
   const participatingProjects = involvedProjects
     .filter((p) => !p.isHost)
-    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+    .sort((a, b) => b.startDate.valueOf() - a.startDate.valueOf());
 
   return (
     <div className="space-y-8">
@@ -146,10 +146,6 @@ function ProjectSection({ title, icon, projects }: { title: string; icon: React.
 }
 
 function ProjectRow({ project, isLast }: { project: BriefProject; isLast: boolean }) {
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("ja-JP", { year: "numeric", month: "short", day: "numeric" });
-  };
-
   return (
     <NavLink
       to={`/e/${project.id}`}
@@ -164,7 +160,7 @@ function ProjectRow({ project, isLast }: { project: BriefProject; isLast: boolea
         <div className="mt-1 flex items-center gap-1.5 text-slate-500 text-sm">
           <LuCalendar className="h-3.5 w-3.5 shrink-0" />
           <span>
-            {formatDate(project.startDate)} 〜 {formatDate(project.endDate)}
+            {project.startDate.format("YYYY年M月D日")} 〜 {project.endDate.format("YYYY年M月D日")}
           </span>
         </div>
       </div>
