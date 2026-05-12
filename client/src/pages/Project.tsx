@@ -320,6 +320,7 @@ export default function ProjectPage() {
                     <input
                       {...register("name")}
                       id="input-name"
+                      maxLength={100}
                       className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.name ? "border-red-500" : "border-slate-300"}`}
                       placeholder="例: 〇〇サークル 対面定例会議"
                       onBlur={() => trigger("name")}
@@ -333,6 +334,7 @@ export default function ProjectPage() {
                     <textarea
                       {...register("description")}
                       id="input-description"
+                      maxLength={1000}
                       className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.description ? "border-red-500" : "border-slate-300"}`}
                       placeholder="イベントの詳細や注意事項などを入力"
                       rows={3}
@@ -592,6 +594,7 @@ export default function ProjectPage() {
                               type="text"
                               {...register(`participationOptions.${index}.label`)}
                               defaultValue={field.label}
+                              maxLength={50}
                               placeholder="参加形態名（例：対面、オンライン）"
                               className={`flex-1 rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.participationOptions?.[index]?.label ? "border-red-500" : "border-slate-300"}`}
                               onBlur={() => {

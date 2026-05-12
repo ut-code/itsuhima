@@ -141,7 +141,10 @@ export default function SubmissionPage() {
 
   const [selectedParticipationOptionId, setSelectedParticipationOptionId] = useState<string | null>(null);
 
+  const [comment, setComment] = useState(meAsGuest?.comment ?? "");
+
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [guestListExpanded, setGuestListExpanded] = useState(true);
 
   const [toast, setToast] = useState<{
     message: string;
@@ -153,6 +156,7 @@ export default function SubmissionPage() {
       setPostLoading(true);
       const payload = {
         name: guestName,
+        comment: comment.trim() || null,
         projectId: projectId || "",
         slots: slots.map((slot) => ({
           start: slot.start.toISOString(),
@@ -210,12 +214,13 @@ export default function SubmissionPage() {
       await Promise.all([fetchProject()]);
       setPostLoading(false);
     },
-    [guestName, projectId, fetchProject],
+    [guestName, comment, projectId, fetchProject],
   );
 
   useEffect(() => {
     if (meAsGuest) {
       setGuestName(meAsGuest.name);
+      setComment(meAsGuest.comment ?? "");
       setEditMode(false);
     }
   }, [meAsGuest]);
@@ -230,6 +235,11 @@ export default function SubmissionPage() {
   const guestIdToName = useMemo(() => {
     if (!project) return {};
     return Object.fromEntries(project.guests.map((g) => [g.id, g.name]));
+  }, [project]);
+
+  const guestIdToComment = useMemo(() => {
+    if (!project) return {};
+    return Object.fromEntries(project.guests.filter((g) => g.comment).map((g) => [g.id, g.comment as string]));
   }, [project]);
 
   // init viewing slots
@@ -383,58 +393,103 @@ export default function SubmissionPage() {
                 editingSlots={editMode ? editingSlots : []}
                 viewingSlots={viewingSlots}
                 guestIdToName={guestIdToName}
+                guestIdToComment={guestIdToComment}
                 participationOptions={project.participationOptions}
                 currentParticipationOptionId={selectedParticipationOptionId}
                 editMode={editMode}
                 onChangeEditingSlots={setEditingSlots}
               />
+
+              {/* 参加者一覧 */}
+              {project.guests.length > 0 && (
+                <div className="mt-1 border-slate-200 border-t pt-3 pb-2">
+                  <button
+                    type="button"
+                    onClick={() => setGuestListExpanded((prev) => !prev)}
+                    className="flex items-center gap-1.5 font-medium text-slate-700 text-sm hover:text-slate-900"
+                  >
+                    参加者 ({project.guests.length}人)
+                    {guestListExpanded ? <LuChevronUp className="h-4 w-4" /> : <LuChevronDown className="h-4 w-4" />}
+                  </button>
+                  {guestListExpanded && (
+                    <ul className="mt-1 divide-y divide-slate-100">
+                      {project.guests.map((guest) => {
+                        const commentText = guestIdToComment[guest.id];
+                        return (
+                          <li key={guest.id} className="py-2.5">
+                            <div className="font-medium text-slate-800 text-sm">{guest.name}</div>
+                            {commentText && (
+                              <div className="mt-0.5 whitespace-pre-wrap break-words text-slate-500 text-sm">
+                                {commentText}
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="sticky bottom-0 z-10 border-slate-200 border-t bg-white">
               <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 sm:py-3 lg:px-8">
                 {editMode ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="名前"
-                      value={guestName}
-                      onChange={(e) => setGuestName(e.target.value)}
-                      className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5"
+                  <div className="flex flex-col gap-2">
+                    <textarea
+                      placeholder="コメント（任意）"
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      rows={2}
+                      maxLength={500}
+                      className="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4"
                     />
-                    {!!myGuestId && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="名前"
+                        value={guestName}
+                        onChange={(e) => setGuestName(e.target.value)}
+                        maxLength={50}
+                        className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5"
+                      />
+                      {!!myGuestId && (
+                        <button
+                          type="button"
+                          className="btn btn-outline shrink-0"
+                          disabled={loading}
+                          onClick={async () => {
+                            if (confirm("更新をキャンセルします。よろしいですか？")) {
+                              setEditingSlots([]);
+                              setGuestName(meAsGuest?.name ?? "");
+                              setComment(meAsGuest?.comment ?? "");
+                              setEditMode(false);
+                            }
+                          }}
+                        >
+                          <span>キャンセル</span>
+                        </button>
+                      )}
                       <button
                         type="button"
-                        className="btn btn-outline shrink-0"
-                        disabled={loading}
-                        onClick={async () => {
-                          if (confirm("更新をキャンセルします。よろしいですか？")) {
-                            setEditingSlots([]);
-                            setEditMode(false);
-                          }
+                        className="btn btn-primary inline-flex shrink-0 gap-1.5 sm:gap-2"
+                        disabled={loading || !guestName}
+                        onClick={() => {
+                          if (!guestName) return;
+                          postSubmissions(
+                            editingSlots.map((slot) => ({
+                              start: slot.from.toDate(),
+                              end: slot.to.toDate(),
+                              participationOptionId: slot.participationOptionId,
+                            })),
+                            myGuestId ?? "",
+                          );
                         }}
                       >
-                        <span>キャンセル</span>
+                        <LuSend className="sm:h-5 sm:w-5" />
+                        <span>{meAsGuest ? "更新" : "提出"}</span>
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      className="btn btn-primary inline-flex shrink-0 gap-1.5 sm:gap-2"
-                      disabled={loading || !guestName}
-                      onClick={() => {
-                        if (!guestName) return;
-                        postSubmissions(
-                          editingSlots.map((slot) => ({
-                            start: slot.from.toDate(),
-                            end: slot.to.toDate(),
-                            participationOptionId: slot.participationOptionId,
-                          })),
-                          myGuestId ?? "",
-                        );
-                      }}
-                    >
-                      <LuSend className="sm:h-5 sm:w-5" />
-                      <span>{meAsGuest ? "更新" : "提出"}</span>
-                    </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">

@@ -32,6 +32,7 @@ type Guest = {
   id: string;
   name: string;
   projectId: string;
+  comment?: string;
   slots: Slot[];
 };
 
@@ -73,6 +74,7 @@ export type ISOStringProject = {
     id: string;
     name: string;
     projectId: string;
+    comment: string | null;
     slots: {
       id: string;
       projectId: string;
@@ -87,6 +89,7 @@ export type ISOStringProject = {
     id: string;
     name: string;
     projectId: string;
+    comment: string | null;
     slots: {
       id: string;
       projectId: string;
