@@ -59,6 +59,7 @@ type Props = {
   editingSlots: EditingSlot[];
   viewingSlots: ViewingSlot[];
   guestIdToName: Record<string, string>;
+  guestIdToComment: Record<string, string>;
   participationOptions: ParticipationOption[];
   currentParticipationOptionId: string;
   editMode: boolean;
@@ -96,6 +97,7 @@ export const Calendar = ({
   editingSlots,
   viewingSlots,
   guestIdToName,
+  guestIdToComment,
   participationOptions,
   currentParticipationOptionId,
   editMode,
@@ -172,7 +174,10 @@ export const Calendar = ({
         .filter((option) => optionGroups.has(option.id))
         .map((option) => {
           const guestIds = optionGroups.get(option.id) || [];
-          const guestNames = guestIds.map((guestId) => guestIdToName[guestId] || guestId);
+          const guestNames = guestIds.map((guestId) => {
+            const name = guestIdToName[guestId] || guestId;
+            return guestIdToComment[guestId] ? `${name} 💬` : name;
+          });
           const optionOpacity = 1 - (1 - OPACITY) ** guestIds.length;
 
           return {
@@ -228,7 +233,7 @@ export const Calendar = ({
     });
 
     setEvents([...editingEvents, ...viewingEvents]);
-  }, [editingSlots, viewingSlots, guestIdToName, participationOptions]);
+  }, [editingSlots, viewingSlots, guestIdToName, guestIdToComment, participationOptions]);
 
   // viewing events の背景スタイルを動的に注入
   useEffect(() => {

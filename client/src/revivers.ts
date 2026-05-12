@@ -22,6 +22,7 @@ export function projectReviver(project: ISOStringProject): Project {
     hosts: project.hosts.map((host) => ({ ...host })),
     guests: project.guests.map((guest) => ({
       ...guest,
+      comment: guest.comment ?? undefined,
       slots: guest.slots.map((slot) => ({
         ...slot,
         from: dayjs.utc(slot.from).tz(),
@@ -31,6 +32,7 @@ export function projectReviver(project: ISOStringProject): Project {
     meAsGuest: project.meAsGuest
       ? {
           ...project.meAsGuest,
+          comment: project.meAsGuest.comment ?? undefined,
           slots: project.meAsGuest.slots.map((slot) => ({
             ...slot,
             from: dayjs.utc(slot.from).tz(),
