@@ -68,6 +68,7 @@ model Host {
 model Guest {
   id        String  @id @default(uuid())
   name      String
+  comment   String?
   browserId String  @default(uuid())
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

@@ -59,6 +59,7 @@ type Props = {
   editingSlots: EditingSlot[];
   viewingSlots: ViewingSlot[];
   guestIdToName: Record<string, string>;
+  guestIdToComment: Record<string, string>;
   participationOptions: ParticipationOption[];
   currentParticipationOptionId: string;
   editMode: boolean;
@@ -96,6 +97,7 @@ export const Calendar = ({
   editingSlots,
   viewingSlots,
   guestIdToName,
+  guestIdToComment,
   participationOptions,
   currentParticipationOptionId,
   editMode,
@@ -172,7 +174,10 @@ export const Calendar = ({
         .filter((option) => optionGroups.has(option.id))
         .map((option) => {
           const guestIds = optionGroups.get(option.id) || [];
-          const guestNames = guestIds.map((guestId) => guestIdToName[guestId] || guestId);
+          const guestNames = guestIds.map((guestId) => {
+            const name = guestIdToName[guestId] || guestId;
+            return guestIdToComment[guestId] ? `${name} 💬` : name;
+          });
           const optionOpacity = 1 - (1 - OPACITY) ** guestIds.length;
 
           return {
@@ -228,7 +233,7 @@ export const Calendar = ({
     });
 
     setEvents([...editingEvents, ...viewingEvents]);
-  }, [editingSlots, viewingSlots, guestIdToName, participationOptions]);
+  }, [editingSlots, viewingSlots, guestIdToName, guestIdToComment, participationOptions]);
 
   // viewing events の背景スタイルを動的に注入
   useEffect(() => {
@@ -313,14 +318,15 @@ export const Calendar = ({
         duration: { days: Math.min(countDays, 7) },
         dayHeaderContent: (args: DayHeaderContentArg) => {
           return (
-            <div className="font-normal text-gray-600">
+            <div className="font-normal text-[13px] text-gray-600">
               <div>{dayjs.utc(args.date).tz().format("M/D")}</div>
               <div>{dayjs.utc(args.date).tz().format("(ddd)")}</div>
             </div>
           );
         },
         slotLabelContent: (args: SlotLabelContentArg) => {
-          return <div className="text-gray-600">{dayjs.utc(args.date).tz().format("HH:mm")}</div>;
+          // -translate-y-1/2 で時刻ラベルをグリッド線上に中央揃えする
+          return <div className="-translate-y-1/2 text-gray-600">{dayjs.utc(args.date).tz().format("HH:mm")}</div>;
         },
         slotLabelInterval: "00:30:00",
         validRange: {
@@ -454,7 +460,7 @@ export const Calendar = ({
     }
     if (info.event.classNames.includes(EDITING_EVENT)) {
       return (
-        <div className="h-full w-full overflow-hidden text-gray-600">{`${dayjs.utc(info.event.start).tz().format("HH:mm")} - ${dayjs.utc(info.event.end).tz().format("HH:mm")}`}</div>
+        <div className="h-full w-full overflow-hidden text-[13px] text-gray-600">{`${dayjs.utc(info.event.start).tz().format("HH:mm")} - ${dayjs.utc(info.event.end).tz().format("HH:mm")}`}</div>
       );
     }
   }, []);

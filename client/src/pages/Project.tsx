@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { hc } from "hono/client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import {
   LuChevronLeft,
@@ -107,6 +107,7 @@ export default function ProjectPage() {
   const [copied, setCopied] = useState(false);
   const [isInfoExpanded, setIsInfoExpanded] = useState(!eventId); // 新規作成時は展開、編集時は折りたたみ
   const [isParticipationExpanded, setIsParticipationExpanded] = useState(!!eventId); // 新規作成時は折りたたみ、編集時は展開
+  const deleteDialogRef = useRef<HTMLDialogElement>(null);
 
   const {
     register,
@@ -287,16 +288,16 @@ export default function ProjectPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="min-h-screen bg-base-200 text-base-content">
         <Header />
         {loading ? (
           <div className="flex min-h-[60vh] items-center justify-center">
-            <span className="loading loading-dots loading-md text-slate-400" />
+            <span className="loading loading-dots loading-md text-base-content/40" />
           </div>
         ) : eventId !== undefined && !project ? (
           <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-            <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-              <p className="text-base text-slate-600 sm:text-xl">イベントが見つかりませんでした。</p>
+            <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
+              <p className="text-base text-base-content/70 sm:text-xl">イベントが見つかりませんでした。</p>
               <NavLink to="/" className="btn btn-primary">
                 ホームに戻る
               </NavLink>
@@ -305,46 +306,50 @@ export default function ProjectPage() {
         ) : (
           <main className="mx-auto max-w-7xl px-4 py-8 pb-24 sm:px-6 lg:px-8">
             <div className="mb-6">
-              <h1 className="font-bold text-2xl text-slate-900">{project ? `${project.name} の編集` : "新規作成"}</h1>
+              <h1 className="font-bold text-2xl text-base-content">
+                {project ? `${project.name} の編集` : "新規作成"}
+              </h1>
             </div>
 
             <form id="project-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* 基本情報 */}
-              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="mb-4 font-bold text-base text-slate-900 sm:text-lg">基本情報</h2>
+              <div className="rounded-xl border border-base-300 bg-base-100 p-6 shadow-sm">
+                <h2 className="mb-4 font-bold text-base text-base-content sm:text-lg">基本情報</h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-2 block font-medium text-slate-700 text-sm" htmlFor="input-name">
-                      イベント名 <span className="text-red-500">*</span>
+                    <label className="mb-2 block font-medium text-base-content/80 text-sm" htmlFor="input-name">
+                      イベント名 <span className="text-error">*</span>
                     </label>
                     <input
                       {...register("name")}
                       id="input-name"
-                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.name ? "border-red-500" : "border-slate-300"}`}
+                      maxLength={100}
+                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.name ? "border-red-500" : "border-base-300"}`}
                       placeholder="例: 〇〇サークル 対面定例会議"
                       onBlur={() => trigger("name")}
                     />
-                    {errors.name && <p className="mt-1.5 text-red-600 text-sm">{errors.name.message}</p>}
+                    {errors.name && <p className="mt-1.5 text-error text-sm">{errors.name.message}</p>}
                   </div>
                   <div>
-                    <label className="mb-2 block font-medium text-slate-700 text-sm" htmlFor="input-description">
+                    <label className="mb-2 block font-medium text-base-content/80 text-sm" htmlFor="input-description">
                       イベントの説明（任意）
                     </label>
                     <textarea
                       {...register("description")}
                       id="input-description"
-                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.description ? "border-red-500" : "border-slate-300"}`}
+                      maxLength={1000}
+                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.description ? "border-red-500" : "border-base-300"}`}
                       placeholder="イベントの詳細や注意事項などを入力"
                       rows={3}
                     />
-                    {errors.description && <p className="mt-1.5 text-red-600 text-sm">{errors.description.message}</p>}
+                    {errors.description && <p className="mt-1.5 text-error text-sm">{errors.description.message}</p>}
                   </div>
                 </div>
               </div>
 
               {/* 日程の範囲 */}
-              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="mb-4 font-bold text-base text-slate-900 sm:text-lg">日程の範囲</h2>
+              <div className="rounded-xl border border-base-300 bg-base-100 p-6 shadow-sm">
+                <h2 className="mb-4 font-bold text-base text-base-content sm:text-lg">日程の範囲</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div
                     className={project && project.guests.length > 0 ? "tooltip tooltip-top" : ""}
@@ -354,18 +359,18 @@ export default function ProjectPage() {
                         : ""
                     }
                   >
-                    <label htmlFor="input-start" className="mb-2 block font-medium text-slate-700 text-sm">
-                      開始日 <span className="text-red-500">*</span>
+                    <label htmlFor="input-start" className="mb-2 block font-medium text-base-content/80 text-sm">
+                      開始日 <span className="text-error">*</span>
                     </label>
                     <input
                       type="date"
                       {...register("startDate")}
                       id="input-start"
-                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.startDate ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
+                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.startDate ? "border-red-500" : "border-base-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                       onFocus={handleFieldFocus}
                       disabled={!!(project && project.guests.length > 0)}
                     />
-                    {errors.startDate && <p className="mt-1.5 text-red-600 text-sm">{errors.startDate.message}</p>}
+                    {errors.startDate && <p className="mt-1.5 text-error text-sm">{errors.startDate.message}</p>}
                   </div>
                   <div
                     className={project && project.guests.length > 0 ? "tooltip tooltip-top" : ""}
@@ -375,31 +380,31 @@ export default function ProjectPage() {
                         : ""
                     }
                   >
-                    <label htmlFor="input-end" className="mb-2 block font-medium text-slate-700 text-sm">
-                      終了日 <span className="text-red-500">*</span>
+                    <label htmlFor="input-end" className="mb-2 block font-medium text-base-content/80 text-sm">
+                      終了日 <span className="text-error">*</span>
                     </label>
                     <input
                       type="date"
                       {...register("endDate")}
                       id="input-end"
-                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.endDate ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
+                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.endDate ? "border-red-500" : "border-base-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                       onFocus={handleFieldFocus}
                       disabled={!!(project && project.guests.length > 0)}
                     />
-                    {errors.endDate && <p className="mt-1.5 text-red-600 text-sm">{errors.endDate.message}</p>}
+                    {errors.endDate && <p className="mt-1.5 text-error text-sm">{errors.endDate.message}</p>}
                   </div>
                 </div>
               </div>
 
               {/* 時間帯 */}
-              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="rounded-xl border border-base-300 bg-base-100 p-6 shadow-sm">
                 <div className="mb-4 flex items-center gap-3">
-                  <h2 className="font-bold text-base text-slate-900 sm:text-lg">時間帯</h2>
+                  <h2 className="font-bold text-base text-base-content sm:text-lg">時間帯</h2>
                   <div
                     className="tooltip tooltip-top"
                     data-tip="現在はタイムゾーンを変更できません。将来的に選択可能になる予定です。"
                   >
-                    <div className="flex cursor-not-allowed items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-slate-400 text-sm opacity-80">
+                    <div className="flex cursor-not-allowed items-center gap-1 rounded-md border border-base-300 bg-base-200 px-2 py-1 text-base-content/40 text-sm opacity-80">
                       <span>日本標準時 (JST)</span>
                     </div>
                   </div>
@@ -416,7 +421,8 @@ export default function ProjectPage() {
                     {/* from */}
                     <div className="flex flex-1 items-center gap-1.5 sm:gap-2">
                       <select
-                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
+                        aria-label="開始時刻（時）"
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                         value={allowedRangeFields[0].startTime.split(":")[0]}
                         onChange={(e) => {
                           replace([
@@ -438,9 +444,10 @@ export default function ProjectPage() {
                           </option>
                         ))}
                       </select>
-                      <span className="font-medium text-slate-600 text-sm sm:text-base">:</span>
+                      <span className="font-medium text-base-content/70 text-sm sm:text-base">:</span>
                       <select
-                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
+                        aria-label="開始時刻（分）"
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                         value={allowedRangeFields[0].startTime.split(":")[1]}
                         onChange={(e) => {
                           replace([
@@ -463,11 +470,12 @@ export default function ProjectPage() {
                         ))}
                       </select>
                     </div>
-                    <span className="font-medium text-slate-600 text-sm sm:text-base">〜</span>
+                    <span className="font-medium text-base-content/70 text-sm sm:text-base">〜</span>
                     {/* to */}
                     <div className="flex flex-1 items-center gap-1.5 sm:gap-2">
                       <select
-                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
+                        aria-label="終了時刻（時）"
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                         value={allowedRangeFields[0].endTime.split(":")[0]}
                         onChange={(e) => {
                           replace([
@@ -489,9 +497,10 @@ export default function ProjectPage() {
                           </option>
                         ))}
                       </select>
-                      <span className="font-medium text-slate-600 text-sm sm:text-base">:</span>
+                      <span className="font-medium text-base-content/70 text-sm sm:text-base">:</span>
                       <select
-                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-slate-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-slate-50 opacity-60" : ""}`}
+                        aria-label="終了時刻（分）"
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                         value={allowedRangeFields[0].endTime.split(":")[1]}
                         onChange={(e) => {
                           replace([
@@ -517,12 +526,12 @@ export default function ProjectPage() {
                   </div>
                 </div>
                 {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
-                  <p className="mt-2 text-red-600 text-sm">{errors.allowedRanges.message}</p>
+                  <p className="mt-2 text-error text-sm">{errors.allowedRanges.message}</p>
                 )}
               </div>
 
               {/* 情報ボックス */}
-              <div className="collapse-arrow collapse rounded-lg border border-blue-200 bg-blue-50/50 p-1 text-primary shadow-sm">
+              <div className="collapse-arrow collapse rounded-lg border border-info/30 bg-info/10 p-1 text-primary shadow-sm">
                 <input type="checkbox" checked={isInfoExpanded} onChange={(e) => setIsInfoExpanded(e.target.checked)} />
                 <div className="collapse-title flex items-center gap-2 font-medium text-sm">
                   <LuInfo className="h-5 w-5" />
@@ -549,17 +558,17 @@ export default function ProjectPage() {
               </div>
 
               {/* 参加形態 */}
-              <div className="collapse-arrow collapse rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="collapse-arrow collapse rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
                 <input
                   type="checkbox"
                   checked={isParticipationExpanded}
                   onChange={(e) => setIsParticipationExpanded(e.target.checked)}
                 />
-                <div className="collapse-title font-bold text-base text-slate-900 sm:text-lg">
+                <div className="collapse-title font-bold text-base text-base-content sm:text-lg">
                   参加形態の設定 (任意)
                 </div>
                 <div className="collapse-content px-4">
-                  <p className="mb-4 text-slate-600 text-sm">
+                  <p className="mb-4 text-base-content/70 text-sm">
                     参加形態を設定すると、参加者は「対面」「オンライン」などの形態を選んで日程を登録できます。
                   </p>
 
@@ -585,15 +594,16 @@ export default function ProjectPage() {
                                 {...register(`participationOptions.${index}.color`)}
                                 defaultValue={field.color}
                                 // カラーピッカーのスタイルはブラウザに依存した調整が必要
-                                className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-lg border-0 shadow-[0_0_0_2px_rgb(226_232_240),0_1px_2px_0_rgb(0_0_0/0.05)] [&::-moz-color-swatch]:rounded-lg [&::-moz-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-lg [&::-webkit-color-swatch]:border-0"
+                                className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-lg border-0 shadow-[0_0_0_2px_var(--color-base-300),0_1px_2px_0_rgb(0_0_0/0.05)] [&::-moz-color-swatch]:rounded-lg [&::-moz-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-lg [&::-webkit-color-swatch]:border-0"
                               />
                             </div>
                             <input
                               type="text"
                               {...register(`participationOptions.${index}.label`)}
                               defaultValue={field.label}
+                              maxLength={50}
                               placeholder="参加形態名（例：対面、オンライン）"
-                              className={`flex-1 rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.participationOptions?.[index]?.label ? "border-red-500" : "border-slate-300"}`}
+                              className={`flex-1 rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.participationOptions?.[index]?.label ? "border-red-500" : "border-base-300"}`}
                               onBlur={() => {
                                 trigger(`participationOptions.${index}.label` as const);
                               }}
@@ -602,7 +612,7 @@ export default function ProjectPage() {
                               <button
                                 type="button"
                                 onClick={() => removeParticipation(index)}
-                                className={`rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 sm:p-2.5 ${cannotDelete ? "cursor-not-allowed opacity-40" : ""}`}
+                                className={`rounded-lg p-2 text-error transition-colors hover:bg-error/10 sm:p-2.5 ${cannotDelete ? "cursor-not-allowed opacity-40" : ""}`}
                                 disabled={cannotDelete}
                               >
                                 <LuTrash2 className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -610,12 +620,12 @@ export default function ProjectPage() {
                             </div>
                           </div>
                           {errors.participationOptions?.[index]?.label && (
-                            <p className="mt-1.5 text-red-600 text-sm">
+                            <p className="mt-1.5 text-error text-sm">
                               {errors.participationOptions[index]?.label?.message as string}
                             </p>
                           )}
                           {errors.participationOptions?.[index]?.color && (
-                            <p className="mt-1.5 text-red-600 text-sm">
+                            <p className="mt-1.5 text-error text-sm">
                               {errors.participationOptions[index]?.color?.message as string}
                             </p>
                           )}
@@ -644,46 +654,16 @@ export default function ProjectPage() {
 
               {/* イベントの削除 */}
               {project && (
-                <div className="rounded-lg border border-red-200 bg-red-50/50 p-6 shadow-sm">
-                  <h2 className="mb-2 font-bold text-base text-slate-900 sm:text-lg">イベントの削除</h2>
-                  <p className="mb-4 text-slate-600 text-sm">
+                <div className="rounded-lg border border-error/30 bg-error/10 p-6 shadow-sm">
+                  <h2 className="mb-2 font-bold text-base text-base-content sm:text-lg">イベントの削除</h2>
+                  <p className="mb-4 text-base-content/70 text-sm">
                     イベントを削除すると復元できません。慎重に行ってください。
                   </p>
                   <button
                     type="button"
                     id="delete-button"
-                    className="btn btn-sm sm:btn-md gap-1.5 bg-red-600 text-white hover:bg-red-700 sm:gap-2"
-                    onClick={async () => {
-                      if (confirm("本当にこのイベントを削除しますか？")) {
-                        try {
-                          const res = await client.projects[":projectId"].$delete(
-                            { param: { projectId: project.id } },
-                            { init: { credentials: "include" } },
-                          );
-                          if (!res.ok) {
-                            throw new Error("削除に失敗しました。");
-                          }
-                          // TODO: トーストをグローバルにする
-                          navigate("/home");
-                          setToast({
-                            message: "イベントを削除しました。",
-                            variant: "success",
-                          });
-                          setTimeout(() => {
-                            setToast(null);
-                          }, 3000);
-                        } catch (error) {
-                          console.error(error);
-                          setToast({
-                            message: "エラーが発生しました。もう一度お試しください。",
-                            variant: "error",
-                          });
-                          setTimeout(() => {
-                            setToast(null);
-                          }, 3000);
-                        }
-                      }
-                    }}
+                    className="btn btn-sm sm:btn-md gap-1.5 bg-error text-white hover:bg-error/90 sm:gap-2"
+                    onClick={() => deleteDialogRef.current?.showModal()}
                   >
                     <LuTrash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                     イベントを削除する
@@ -693,7 +673,7 @@ export default function ProjectPage() {
             </form>
 
             {/* 固定フッター */}
-            <div className="fixed right-0 bottom-0 left-0 z-10 border-slate-200 border-t bg-white px-4 py-3 shadow-lg sm:py-4">
+            <div className="fixed right-0 bottom-0 left-0 z-10 border-base-300 border-t bg-base-100 px-4 py-3 shadow-lg sm:py-4">
               <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-4">
                 {eventId ? (
                   <NavLink to={`/e/${eventId}`} className="btn btn-outline gap-1.5 sm:gap-2">
@@ -716,17 +696,17 @@ export default function ProjectPage() {
 
       {/* 作成完了ダイアログ */}
       {dialogStatus !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
-            <h3 className="mb-1.5 font-bold text-lg text-slate-900 sm:mb-2 sm:text-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-lg border border-base-300 bg-base-100 p-5 shadow-2xl sm:p-6">
+            <h3 className="mb-1.5 font-bold text-base-content text-lg sm:mb-2 sm:text-2xl">
               {dialogStatus.projectName}を作成しました
             </h3>
-            <p className="mb-4 text-slate-600 text-xs sm:mb-6 sm:text-sm">URL をコピーして共有しましょう！</p>
+            <p className="mb-4 text-base-content/70 text-xs sm:mb-6 sm:text-sm">URL をコピーして共有しましょう！</p>
             <div className="mb-4 flex gap-2 sm:mb-6">
               <input
                 type="text"
                 disabled
-                className="flex-1 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-base text-slate-700 sm:px-4 sm:py-2.5"
+                className="flex-1 rounded-lg border border-base-300 bg-base-200 px-3 py-2 text-base text-base-content/80 sm:px-4 sm:py-2.5"
                 value={`${FRONTEND_ORIGIN}/e/${dialogStatus.projectId}`}
               />
               <button
@@ -757,22 +737,76 @@ export default function ProjectPage() {
         </div>
       )}
 
+      {/* 削除確認ダイアログ */}
+      {project && (
+        <dialog ref={deleteDialogRef} className="modal">
+          <div className="modal-box">
+            <h3 className="mb-2 font-bold text-base-content text-lg">イベントを削除しますか？</h3>
+            <p className="mb-6 text-base-content/70 text-sm">削除すると元に戻せません。</p>
+            <div className="modal-action">
+              <button type="button" className="btn btn-outline" onClick={() => deleteDialogRef.current?.close()}>
+                キャンセル
+              </button>
+              <button
+                type="button"
+                className="btn gap-1.5 bg-error text-white hover:bg-error/90"
+                onClick={async () => {
+                  deleteDialogRef.current?.close();
+                  try {
+                    const res = await client.projects[":projectId"].$delete(
+                      { param: { projectId: project.id } },
+                      { init: { credentials: "include" } },
+                    );
+                    if (!res.ok) {
+                      throw new Error("削除に失敗しました。");
+                    }
+                    navigate("/home");
+                    setToast({ message: "イベントを削除しました。", variant: "success" });
+                    setTimeout(() => setToast(null), 3000);
+                  } catch (error) {
+                    console.error(error);
+                    setToast({ message: "エラーが発生しました。もう一度お試しください。", variant: "error" });
+                    setTimeout(() => setToast(null), 3000);
+                  }
+                }}
+              >
+                <LuTrash2 className="h-4 w-4" />
+                削除する
+              </button>
+            </div>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button type="submit">閉じる</button>
+          </form>
+        </dialog>
+      )}
+
       {/* トースト */}
       {toast && (
-        <div className="fixed top-20 right-4 z-50">
+        <div className="fixed top-20 right-4 z-50" aria-live="polite" aria-atomic="true">
           {toast.variant === "success" ? (
-            <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-lg">
-              <LuCircleCheck className="h-6 w-6 shrink-0 text-emerald-600" />
-              <span className="font-medium text-emerald-900 text-sm">{toast.message}</span>
-              <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">
+            <div className="flex items-center gap-3 rounded-lg border border-success/30 bg-base-100 px-4 py-3 shadow-lg">
+              <LuCircleCheck className="h-6 w-6 shrink-0 text-success" />
+              <span className="font-medium text-base-content text-sm">{toast.message}</span>
+              <button
+                type="button"
+                onClick={() => setToast(null)}
+                className="btn btn-circle btn-ghost btn-xs"
+                aria-label="閉じる"
+              >
                 <LuX className="h-4 w-4" />
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
-              <LuCircleAlert className="h-6 w-6 shrink-0 text-red-600" />
-              <span className="font-medium text-red-900 text-sm">{toast.message}</span>
-              <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">
+            <div className="flex items-center gap-3 rounded-lg border border-error/30 bg-base-100 px-4 py-3 shadow-lg">
+              <LuCircleAlert className="h-6 w-6 shrink-0 text-error" />
+              <span className="font-medium text-base-content text-sm">{toast.message}</span>
+              <button
+                type="button"
+                onClick={() => setToast(null)}
+                className="btn btn-circle btn-ghost btn-xs"
+                aria-label="閉じる"
+              >
                 <LuX className="h-4 w-4" />
               </button>
             </div>

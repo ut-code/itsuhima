@@ -254,7 +254,7 @@ const router = new Hono<{ Variables: AppVariables }>()
     async (c) => {
       const browserId = c.get("browserId");
       const { projectId } = c.req.valid("param");
-      const { name, slots } = c.req.valid("json");
+      const { name, comment, slots } = c.req.valid("json");
 
       const existingGuest = await prisma.guest.findUnique({
         where: {
@@ -271,6 +271,7 @@ const router = new Hono<{ Variables: AppVariables }>()
       await prisma.guest.create({
         data: {
           name,
+          comment: comment?.trim() || null,
           browserId,
           project: { connect: { id: projectId } },
           slots: {
@@ -296,7 +297,7 @@ const router = new Hono<{ Variables: AppVariables }>()
     async (c) => {
       const browserId = c.get("browserId");
       const { projectId } = c.req.valid("param");
-      const { name, slots } = c.req.valid("json");
+      const { name, comment, slots } = c.req.valid("json");
 
       const existingGuest = await prisma.guest.findUnique({
         where: { browserId_projectId: { browserId, projectId } },
@@ -320,6 +321,7 @@ const router = new Hono<{ Variables: AppVariables }>()
         data: {
           slots: { create: slotData },
           name,
+          comment: comment?.trim() || null,
         },
         include: { slots: true },
       });

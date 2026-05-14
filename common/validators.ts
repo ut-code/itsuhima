@@ -19,8 +19,9 @@ export const participationOptionCreateSchema = z.object({
 });
 
 export const submitReqSchema = z.object({
-  name: z.string(),
+  name: z.string().min(1, "名前を入力してください").max(50, "名前は50文字以内で入力してください"),
   projectId: z.string().length(21),
+  comment: z.string().max(500, "コメントは500文字以内で入力してください").nullable().optional(),
   slots: z.array(
     z.object({
       start: isoStrToDate,
@@ -36,8 +37,8 @@ const isQuarterHour = (time: string): boolean => {
 };
 
 const baseProjectReqSchema = z.object({
-  name: z.string().min(1, "イベント名を入力してください"),
-  description: z.string(),
+  name: z.string().min(1, "イベント名を入力してください").max(100, "イベント名は100文字以内で入力してください"),
+  description: z.string().max(1000, "説明は1000文字以内で入力してください"),
   startDate: z.string().min(1, "開始日を入力してください"),
   // TODO: 新規作成時のみ、過去日付を制限する必要
   // .refine(
