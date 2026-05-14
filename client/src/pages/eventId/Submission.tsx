@@ -147,7 +147,7 @@ export default function SubmissionPage() {
   const [comment, setComment] = useState(meAsGuest?.comment ?? "");
 
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
-  const [guestListExpanded, setGuestListExpanded] = useState(true);
+  const [guestListExpanded, setGuestListExpanded] = useState(false);
 
   const [toast, setToast] = useState<{
     message: string;
