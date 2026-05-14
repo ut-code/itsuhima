@@ -9,6 +9,7 @@ import {
   LuPencil,
   LuSend,
   LuSettings2,
+  LuUser,
   LuX,
 } from "react-icons/lu";
 import { NavLink, useParams } from "react-router";
@@ -311,7 +312,7 @@ export default function SubmissionPage() {
                       className="tooltip tooltip-bottom shrink-0"
                       data-tip="現在はタイムゾーンを変更できません。将来的に選択可能になる予定です。"
                     >
-                      <div className="flex cursor-not-allowed items-center gap-1 rounded-md border border-base-300 bg-base-200 px-2 py-1 text-base-content/40 text-sm opacity-80">
+                      <div className="flex cursor-not-allowed items-center gap-1 rounded-md border border-base-300 bg-base-200 px-1.5 py-0.5 text-base-content/40 text-xs opacity-80">
                         <span>日本標準時 (JST)</span>
                       </div>
                     </div>
@@ -407,7 +408,7 @@ export default function SubmissionPage() {
 
               {/* 参加者一覧 */}
               {project.guests.length > 0 && (
-                <div className="mt-1 border-base-300 border-t pt-3 pb-2">
+                <div className="mt-1 pb-2">
                   <button
                     type="button"
                     onClick={() => setGuestListExpanded((prev) => !prev)}
@@ -417,17 +418,22 @@ export default function SubmissionPage() {
                     {guestListExpanded ? <LuChevronUp className="h-4 w-4" /> : <LuChevronDown className="h-4 w-4" />}
                   </button>
                   {guestListExpanded && (
-                    <ul className="mt-1 divide-y divide-base-300">
+                    <ul className="mt-1 divide-y divide-base-200">
                       {project.guests.map((guest) => {
                         const commentText = guestIdToComment[guest.id];
                         return (
-                          <li key={guest.id} className="py-2.5">
-                            <div className="font-medium text-base-content text-sm">{guest.name}</div>
-                            {commentText && (
-                              <div className="mt-0.5 whitespace-pre-wrap break-words text-base-content/50 text-sm">
-                                {commentText}
-                              </div>
-                            )}
+                          <li key={guest.id} className="flex items-start gap-3 py-2">
+                            <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-base-300">
+                              <LuUser className="h-4 w-4 text-base-content/40" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="pt-1 font-medium text-base-content text-sm">{guest.name}</p>
+                              {commentText && (
+                                <div className="mt-1.5 w-fit max-w-full rounded-2xl rounded-tl-none bg-base-300 px-3 py-2 text-base-content text-sm">
+                                  <span className="whitespace-pre-wrap break-words">{commentText}</span>
+                                </div>
+                              )}
+                            </div>
                           </li>
                         );
                       })}
