@@ -63,13 +63,13 @@ export default function HomePage() {
 
   return (
     <>
-      <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+      <div className="flex min-h-screen flex-col bg-base-200 text-base-content">
         <Header />
         <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="font-bold text-2xl text-slate-900 tracking-tight sm:text-3xl">ホーム</h1>
-              <p className="mt-1 text-slate-500 text-sm">日程調整イベントの管理</p>
+              <h1 className="font-bold text-2xl text-base-content tracking-tight sm:text-3xl">ホーム</h1>
+              <p className="mt-1 text-base-content/50 text-sm">日程調整イベントの管理</p>
             </div>
             <NavLink to="/new" className="btn btn-primary w-full gap-2 sm:w-auto">
               <LuPlus className="h-4 w-4" />
@@ -87,10 +87,15 @@ export default function HomePage() {
         <Footer />
       </div>
       {toast && (
-        <div className="toast toast-top toast-center z-50">
-          <div className={`alert ${toast.variant === "success" ? "alert-success" : "alert-error"}`}>
+        <div className="toast toast-top toast-center z-50" aria-live="polite" aria-atomic="true">
+          <div className={`alert ${toast.variant === "success" ? "alert-success" : "alert-error"} text-sm`}>
             <span>{toast.message}</span>
-            <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              className="btn btn-circle btn-ghost btn-xs"
+              aria-label="閉じる"
+            >
               <LuX className="h-4 w-4" />
             </button>
           </div>
@@ -129,14 +134,14 @@ function ProjectDashboard({ involvedProjects }: { involvedProjects: BriefProject
 function ProjectSection({ title, icon, projects }: { title: string; icon: React.ReactNode; projects: BriefProject[] }) {
   return (
     <section>
-      <div className="flex items-center gap-2 text-slate-700">
+      <div className="flex items-center gap-2 text-base-content/80">
         {icon}
         <h2 className="font-bold text-lg">{title}</h2>
-        <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 font-medium text-slate-600 text-xs">
+        <span className="ml-1 rounded-full bg-base-300 px-2 py-0.5 font-medium text-base-content/70 text-xs">
           {projects.length}
         </span>
       </div>
-      <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="mt-4 overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm">
         {projects.map((project, index) => (
           <ProjectRow key={project.id} project={project} isLast={index === projects.length - 1} />
         ))}
@@ -149,34 +154,34 @@ function ProjectRow({ project, isLast }: { project: BriefProject; isLast: boolea
   return (
     <NavLink
       to={`/e/${project.id}`}
-      className={`group flex items-center justify-between gap-4 p-4 transition-colors hover:bg-slate-50 ${
-        !isLast ? "border-slate-100 border-b" : ""
+      className={`group flex items-center justify-between gap-4 p-4 transition-colors hover:bg-base-200 ${
+        !isLast ? "border-base-300 border-b" : ""
       }`}
     >
       <div className="min-w-0 flex-1">
-        <h3 className="truncate font-medium text-slate-900 transition-colors group-hover:text-primary">
+        <h3 className="truncate font-medium text-base-content transition-colors group-hover:text-primary">
           {project.name}
         </h3>
-        <div className="mt-1 flex items-center gap-1.5 text-slate-500 text-sm">
+        <div className="mt-1 flex items-center gap-1.5 text-base-content/50 text-sm">
           <LuCalendar className="h-3.5 w-3.5 shrink-0" />
           <span>
             {project.startDate.format("YYYY年M月D日")} 〜 {project.endDate.format("YYYY年M月D日")}
           </span>
         </div>
       </div>
-      <LuChevronRight className="h-5 w-5 shrink-0 text-slate-400 transition-colors group-hover:text-primary" />
+      <LuChevronRight className="h-5 w-5 shrink-0 text-base-content/40 transition-colors group-hover:text-primary" />
     </NavLink>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="flex min-h-[300px] flex-col items-center justify-center rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-      <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-        <LuLayoutList className="h-8 w-8 text-slate-400" />
+    <div className="flex min-h-[300px] flex-col items-center justify-center rounded-xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
+      <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-base-200">
+        <LuLayoutList className="h-8 w-8 text-base-content/40" />
       </div>
-      <h3 className="mb-2 font-bold text-lg text-slate-900">まだイベントがありません</h3>
-      <p className="max-w-sm text-slate-500 text-sm">「新規作成」ボタンから、新しい日程調整を始めましょう。</p>
+      <h3 className="mb-2 font-bold text-base-content text-lg">まだイベントがありません</h3>
+      <p className="max-w-sm text-base-content/50 text-sm">「新規作成」ボタンから、新しい日程調整を始めましょう。</p>
     </div>
   );
 }
@@ -187,20 +192,20 @@ function ProjectsSkeleton() {
       {[1, 2].map((section) => (
         <div key={`section-${section}`}>
           <div className="mb-4 flex items-center gap-2">
-            <div className="h-5 w-5 animate-pulse rounded bg-slate-200" />
-            <div className="h-5 w-40 animate-pulse rounded bg-slate-200" />
+            <div className="h-5 w-5 animate-pulse rounded bg-base-300" />
+            <div className="h-5 w-40 animate-pulse rounded bg-base-300" />
           </div>
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm">
             {[1, 2, 3].map((row, index) => (
               <div
                 key={`row-${section}-${row}`}
-                className={`flex items-center justify-between gap-4 px-4 py-4 ${index < 2 ? "border-slate-100 border-b" : ""}`}
+                className={`flex items-center justify-between gap-4 px-4 py-4 ${index < 2 ? "border-base-300 border-b" : ""}`}
               >
                 <div className="min-w-0 flex-1 space-y-2">
-                  <div className="h-5 w-3/4 animate-pulse rounded bg-slate-100" />
-                  <div className="h-4 w-32 animate-pulse rounded bg-slate-100" />
+                  <div className="h-5 w-3/4 animate-pulse rounded bg-base-200" />
+                  <div className="h-4 w-32 animate-pulse rounded bg-base-200" />
                 </div>
-                <div className="h-5 w-5 animate-pulse rounded bg-slate-100" />
+                <div className="h-5 w-5 animate-pulse rounded bg-base-200" />
               </div>
             ))}
           </div>

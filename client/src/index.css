@@ -1,17 +1,50 @@
 @import url("https://fonts.googleapis.com/css2?family=M+PLUS+1:wght@100..900&display=swap");
 @import "tailwindcss";
+
 @theme {
   --font-mplus: "M PLUS 1", sans-serif;
 }
+
 @plugin "daisyui";
+
 @plugin "daisyui/theme" {
-  name: "light";
+  name: "itsuhima";
   default: true;
-  prefersdark: true; /* TODO: ダークモード対応 */
+  prefersdark: false; /* TODO: ダークモード対応時に専用テーマを定義する */
+
   --color-primary: #0f82b1;
   --color-primary-content: #ffffff;
+
   --color-secondary: #a6e3d8;
   --color-secondary-content: #065f52;
+
+  --color-accent: #f59e0b;
+  --color-accent-content: #ffffff;
+
+  --color-neutral: #1e293b;
+  --color-neutral-content: #f8fafc;
+
+  --color-base-100: #ffffff;
+  --color-base-200: #f8fafc;
+  --color-base-300: #e2e8f0;
+  --color-base-content: #0f172a;
+
+  --color-info: #3b82f6;
+  --color-info-content: #ffffff;
+
+  --color-success: #10b981;
+  --color-success-content: #ffffff;
+
+  --color-warning: #f59e0b;
+  --color-warning-content: #ffffff;
+
+  --color-error: #ef4444;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --radius-badge: 9999px;
 }
 
 .btn {
@@ -24,7 +57,7 @@
 }
 
 .btn-primary:disabled {
-  @apply bg-slate-300 text-slate-500 cursor-not-allowed opacity-60 hover:bg-slate-300 hover:shadow-sm;
+  @apply bg-base-300 text-base-content/50 cursor-not-allowed opacity-60 hover:bg-base-300 hover:shadow-sm;
 }
 
 .btn-primary:focus-visible {
@@ -36,40 +69,46 @@
 }
 
 .btn-outline {
-  @apply border-2 border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50;
+  @apply border-2 border-base-300 bg-base-100 text-base-content hover:border-base-content/20 hover:bg-base-200;
 }
 
 .btn-outline:disabled {
-  @apply border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed opacity-60 hover:border-slate-200 hover:bg-slate-50;
+  @apply border-base-300 bg-base-200 text-base-content/40 cursor-not-allowed opacity-60 hover:border-base-300 hover:bg-base-200;
 }
 
 .btn-outline:focus-visible {
-  @apply outline-none ring-2 ring-slate-400 ring-offset-2;
+  @apply outline-none ring-2 ring-base-content/30 ring-offset-2;
 }
 
 .btn-outline:active:not(:disabled) {
-  @apply scale-95 bg-slate-100;
+  @apply scale-95 bg-base-300;
 }
 
 .btn-ghost {
-  @apply bg-transparent hover:bg-slate-50;
+  @apply bg-transparent hover:bg-base-200;
 }
 
 .btn-ghost:disabled {
-  @apply text-slate-400 cursor-not-allowed opacity-60 hover:bg-transparent;
+  @apply text-base-content/40 cursor-not-allowed opacity-60 hover:bg-transparent;
 }
 
 .btn-ghost:focus-visible {
-  @apply outline-none ring-2 ring-slate-300 ring-offset-2;
+  @apply outline-none ring-2 ring-base-content/20 ring-offset-2;
 }
 
 .btn-ghost:active:not(:disabled) {
-  @apply scale-95 bg-slate-100;
+  @apply scale-95 bg-base-300;
+}
+
+body {
+  font-family: var(--font-mplus);
 }
 
 :root {
   --fc-today-bg-color: inherit; /* 今日の日付のハイライトを削除する https://github.com/fullcalendar/fullcalendar/issues/7150 */
-  --ih-color-primary-transparent: rgb(15, 130, 177, 0.2);
+
+  /* カレンダーイベントの半透明背景（primary の 20% opacity） */
+  --ih-color-primary-transparent: rgb(15 130 177 / 0.2);
 
   overscroll-behavior: none; /* 引っ張って更新を無効化 */
 }
@@ -87,14 +126,12 @@
   opacity: 1 !important; /* デフォルトで透明度を付与されるのを防止 */
 }
 
-/* 作成の選択範囲 */
 .ih-create-select-event {
   z-index: 100 !important;
   border-width: 1px !important;
   border-style: dashed !important;
 }
 
-/* 削除の選択範囲 */
 .ih-delete-select-event {
   z-index: 100 !important;
   border-width: 1px !important;
@@ -102,15 +139,13 @@
   border-color: red !important;
 }
 
-/* 編集中のイベント */
 .ih-editing-event {
   border-width: 1px !important;
   border-style: solid !important;
 }
 
-/* 閲覧中のイベント */
 .ih-viewing-event {
-  border: 3px solid var(--color-gray-200) !important;
+  border: 3px solid var(--color-base-300) !important;
   /* background-color は重ね合わせ個数分 JS で計算*/
 }
 
@@ -118,7 +153,6 @@
   z-index: 50;
 }
 
-/* ツールバー */
 .fc-header-toolbar {
   margin-bottom: 8px !important;
 }
@@ -133,10 +167,10 @@
 
 .fc-next-button:disabled,
 .fc-prev-button:disabled {
-  color: var(--color-gray-200) !important;
-  border: 1px solid var(--color-gray-200) !important;
+  color: var(--color-base-300) !important;
+  border: 1px solid var(--color-base-300) !important;
 }
 
 #root {
-  background-color: white;
+  background-color: var(--color-base-100);
 }

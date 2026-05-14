@@ -318,14 +318,15 @@ export const Calendar = ({
         duration: { days: Math.min(countDays, 7) },
         dayHeaderContent: (args: DayHeaderContentArg) => {
           return (
-            <div className="font-normal text-gray-600">
+            <div className="font-normal text-[13px] text-gray-600">
               <div>{dayjs.utc(args.date).tz().format("M/D")}</div>
               <div>{dayjs.utc(args.date).tz().format("(ddd)")}</div>
             </div>
           );
         },
         slotLabelContent: (args: SlotLabelContentArg) => {
-          return <div className="text-gray-600">{dayjs.utc(args.date).tz().format("HH:mm")}</div>;
+          // -translate-y-1/2 で時刻ラベルをグリッド線上に中央揃えする
+          return <div className="-translate-y-1/2 text-gray-600">{dayjs.utc(args.date).tz().format("HH:mm")}</div>;
         },
         slotLabelInterval: "00:30:00",
         validRange: {
@@ -459,7 +460,7 @@ export const Calendar = ({
     }
     if (info.event.classNames.includes(EDITING_EVENT)) {
       return (
-        <div className="h-full w-full overflow-hidden text-gray-600">{`${dayjs.utc(info.event.start).tz().format("HH:mm")} - ${dayjs.utc(info.event.end).tz().format("HH:mm")}`}</div>
+        <div className="h-full w-full overflow-hidden text-[13px] text-gray-600">{`${dayjs.utc(info.event.start).tz().format("HH:mm")} - ${dayjs.utc(info.event.end).tz().format("HH:mm")}`}</div>
       );
     }
   }, []);

@@ -1,5 +1,5 @@
 import { hc } from "hono/client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LuChevronDown,
   LuChevronLeft,
@@ -145,6 +145,7 @@ export default function SubmissionPage() {
 
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [guestListExpanded, setGuestListExpanded] = useState(true);
+  const submitDialogRef = useRef<HTMLDialogElement>(null);
 
   const [toast, setToast] = useState<{
     message: string;
@@ -279,16 +280,16 @@ export default function SubmissionPage() {
 
   return (
     <>
-      <div className="flex h-[100dvh] flex-col bg-slate-50">
+      <div className="flex h-[100dvh] flex-col bg-base-200">
         <Header />
         {loading ? (
           <div className="flex w-full flex-1 items-center justify-center">
-            <span className="loading loading-dots loading-md text-slate-400" />
+            <span className="loading loading-dots loading-md text-base-content/40" />
           </div>
         ) : !project ? (
           <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-4 px-4 py-16 sm:px-6 lg:px-8">
-            <div className="flex min-h-[400px] w-full flex-col items-center justify-center gap-4 rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-              <p className="text-slate-600 text-xl">イベントが見つかりませんでした。</p>
+            <div className="flex min-h-[400px] w-full flex-col items-center justify-center gap-4 rounded-xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
+              <p className="text-base-content/70 text-xl">イベントが見つかりませんでした。</p>
               <NavLink to="/" className="btn btn-primary">
                 ホームに戻る
               </NavLink>
@@ -296,7 +297,7 @@ export default function SubmissionPage() {
           </div>
         ) : !selectedParticipationOptionId ? (
           <div className="flex w-full flex-1 items-center justify-center">
-            <span className="loading loading-dots loading-md text-slate-400" />
+            <span className="loading loading-dots loading-md text-base-content/40" />
           </div>
         ) : (
           <div className="flex flex-1 flex-col overflow-y-auto">
@@ -305,12 +306,12 @@ export default function SubmissionPage() {
               <div>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-3">
-                    <h1 className="truncate font-bold text-base text-slate-900 sm:text-lg">{project.name}</h1>
+                    <h1 className="truncate font-bold text-base text-base-content sm:text-lg">{project.name}</h1>
                     <div
                       className="tooltip tooltip-bottom shrink-0"
                       data-tip="現在はタイムゾーンを変更できません。将来的に選択可能になる予定です。"
                     >
-                      <div className="flex cursor-not-allowed items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-slate-400 text-sm opacity-80">
+                      <div className="flex cursor-not-allowed items-center gap-1 rounded-md border border-base-300 bg-base-200 px-2 py-1 text-base-content/40 text-sm opacity-80">
                         <span>日本標準時 (JST)</span>
                       </div>
                     </div>
@@ -327,7 +328,7 @@ export default function SubmissionPage() {
                     const { text: truncatedText, truncated } = truncateText(project.description);
                     return (
                       <div className="mt-2 sm:mt-3">
-                        <p className="whitespace-pre-wrap text-slate-600 text-sm">
+                        <p className="whitespace-pre-wrap text-base-content/70 text-sm">
                           {descriptionExpanded ? project.description : truncatedText}
                         </p>
                         {truncated && (
@@ -372,7 +373,11 @@ export default function SubmissionPage() {
                         style={
                           selectedParticipationOptionId === opt.id
                             ? { backgroundColor: lightBg, borderWidth: "2px", borderColor: opt.color }
-                            : { backgroundColor: "white", borderWidth: "2px", borderColor: "#e2e8f0" }
+                            : {
+                                backgroundColor: "var(--color-base-100)",
+                                borderWidth: "2px",
+                                borderColor: "var(--color-base-300)",
+                              }
                         }
                       >
                         <span
@@ -402,24 +407,24 @@ export default function SubmissionPage() {
 
               {/* 参加者一覧 */}
               {project.guests.length > 0 && (
-                <div className="mt-1 border-slate-200 border-t pt-3 pb-2">
+                <div className="mt-1 border-base-300 border-t pt-3 pb-2">
                   <button
                     type="button"
                     onClick={() => setGuestListExpanded((prev) => !prev)}
-                    className="flex items-center gap-1.5 font-medium text-slate-700 text-sm hover:text-slate-900"
+                    className="flex items-center gap-1.5 font-medium text-base-content/80 text-sm hover:text-base-content"
                   >
                     参加者 ({project.guests.length}人)
                     {guestListExpanded ? <LuChevronUp className="h-4 w-4" /> : <LuChevronDown className="h-4 w-4" />}
                   </button>
                   {guestListExpanded && (
-                    <ul className="mt-1 divide-y divide-slate-100">
+                    <ul className="mt-1 divide-y divide-base-300">
                       {project.guests.map((guest) => {
                         const commentText = guestIdToComment[guest.id];
                         return (
                           <li key={guest.id} className="py-2.5">
-                            <div className="font-medium text-slate-800 text-sm">{guest.name}</div>
+                            <div className="font-medium text-base-content text-sm">{guest.name}</div>
                             {commentText && (
-                              <div className="mt-0.5 whitespace-pre-wrap break-words text-slate-500 text-sm">
+                              <div className="mt-0.5 whitespace-pre-wrap break-words text-base-content/50 text-sm">
                                 {commentText}
                               </div>
                             )}
@@ -432,64 +437,34 @@ export default function SubmissionPage() {
               )}
             </div>
 
-            <div className="sticky bottom-0 z-10 border-slate-200 border-t bg-white">
+            <div className="sticky bottom-0 z-10 border-base-300 border-t bg-base-100">
               <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 sm:py-3 lg:px-8">
                 {editMode ? (
-                  <div className="flex flex-col gap-2">
-                    <textarea
-                      placeholder="コメント（任意）"
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                      rows={2}
-                      maxLength={500}
-                      className="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4"
-                    />
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="名前"
-                        value={guestName}
-                        onChange={(e) => setGuestName(e.target.value)}
-                        maxLength={50}
-                        className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5"
-                      />
-                      {!!myGuestId && (
-                        <button
-                          type="button"
-                          className="btn btn-outline shrink-0"
-                          disabled={loading}
-                          onClick={async () => {
-                            if (confirm("更新をキャンセルします。よろしいですか？")) {
-                              setEditingSlots([]);
-                              setGuestName(meAsGuest?.name ?? "");
-                              setComment(meAsGuest?.comment ?? "");
-                              setEditMode(false);
-                            }
-                          }}
-                        >
-                          <span>キャンセル</span>
-                        </button>
-                      )}
+                  <div className="flex items-center justify-between gap-2">
+                    {!!myGuestId && (
                       <button
                         type="button"
-                        className="btn btn-primary inline-flex shrink-0 gap-1.5 sm:gap-2"
-                        disabled={loading || !guestName}
+                        className="btn btn-outline shrink-0"
+                        disabled={loading}
                         onClick={() => {
-                          if (!guestName) return;
-                          postSubmissions(
-                            editingSlots.map((slot) => ({
-                              start: slot.from.toDate(),
-                              end: slot.to.toDate(),
-                              participationOptionId: slot.participationOptionId,
-                            })),
-                            myGuestId ?? "",
-                          );
+                          setEditingSlots([]);
+                          setGuestName(meAsGuest?.name ?? "");
+                          setComment(meAsGuest?.comment ?? "");
+                          setEditMode(false);
                         }}
                       >
-                        <LuSend className="sm:h-5 sm:w-5" />
-                        <span>{meAsGuest ? "更新" : "提出"}</span>
+                        <span>キャンセル</span>
                       </button>
-                    </div>
+                    )}
+                    <button
+                      type="button"
+                      className="btn btn-primary ml-auto inline-flex shrink-0 gap-1.5 sm:gap-2"
+                      disabled={loading}
+                      onClick={() => submitDialogRef.current?.showModal()}
+                    >
+                      <LuSend className="sm:h-5 sm:w-5" />
+                      <span>{meAsGuest ? "日程を更新する" : "日程を提出する"}</span>
+                    </button>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">
@@ -518,21 +493,98 @@ export default function SubmissionPage() {
         )}
       </div>
 
+      {/* 提出モーダル */}
+      <dialog ref={submitDialogRef} className="modal">
+        <div className="modal-box">
+          <h3 className="mb-4 font-bold text-base-content text-lg">
+            {meAsGuest ? "日程を更新する" : "日程を提出する"}
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="submit-name" className="mb-1.5 block font-medium text-base-content/80 text-sm">
+                名前 <span className="text-error">*</span>
+              </label>
+              <input
+                id="submit-name"
+                type="text"
+                placeholder="例：山田太郎"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                maxLength={50}
+                className="w-full rounded-lg border border-base-300 px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5"
+              />
+            </div>
+            <div>
+              <label htmlFor="submit-comment" className="mb-1.5 block font-medium text-base-content/80 text-sm">
+                コメント（任意）
+              </label>
+              <textarea
+                id="submit-comment"
+                placeholder="一言メモなど"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={3}
+                maxLength={500}
+                className="w-full resize-none rounded-lg border border-base-300 px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4"
+              />
+            </div>
+          </div>
+          <div className="modal-action">
+            <button type="button" className="btn btn-outline" onClick={() => submitDialogRef.current?.close()}>
+              キャンセル
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary gap-1.5"
+              disabled={loading || !guestName}
+              onClick={() => {
+                if (!guestName) return;
+                submitDialogRef.current?.close();
+                postSubmissions(
+                  editingSlots.map((slot) => ({
+                    start: slot.from.toDate(),
+                    end: slot.to.toDate(),
+                    participationOptionId: slot.participationOptionId,
+                  })),
+                  myGuestId ?? "",
+                );
+              }}
+            >
+              <LuSend className="h-4 w-4" />
+              <span>{meAsGuest ? "更新する" : "提出する"}</span>
+            </button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button type="submit">閉じる</button>
+        </form>
+      </dialog>
+
       {toast && (
-        <div className="fixed top-20 right-4 z-50">
+        <div className="fixed top-20 right-4 z-50" aria-live="polite" aria-atomic="true">
           {toast.variant === "success" ? (
-            <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-lg">
-              <LuCircleCheck className="h-6 w-6 shrink-0 text-emerald-600" />
-              <span className="font-medium text-emerald-900 text-sm">{toast.message}</span>
-              <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">
+            <div className="flex items-center gap-3 rounded-lg border border-success/30 bg-success/10 px-4 py-3 shadow-lg">
+              <LuCircleCheck className="h-6 w-6 shrink-0 text-success" />
+              <span className="font-medium text-base-content text-sm">{toast.message}</span>
+              <button
+                type="button"
+                onClick={() => setToast(null)}
+                className="btn btn-circle btn-ghost btn-xs"
+                aria-label="閉じる"
+              >
                 <LuX className="h-4 w-4" />
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
-              <LuCircleAlert className="h-6 w-6 shrink-0 text-red-600" />
-              <span className="font-medium text-red-900 text-sm">{toast.message}</span>
-              <button type="button" onClick={() => setToast(null)} className="btn btn-circle btn-ghost btn-xs">
+            <div className="flex items-center gap-3 rounded-lg border border-error/30 bg-error/10 px-4 py-3 shadow-lg">
+              <LuCircleAlert className="h-6 w-6 shrink-0 text-error" />
+              <span className="font-medium text-base-content text-sm">{toast.message}</span>
+              <button
+                type="button"
+                onClick={() => setToast(null)}
+                className="btn btn-circle btn-ghost btn-xs"
+                aria-label="閉じる"
+              >
                 <LuX className="h-4 w-4" />
               </button>
             </div>
