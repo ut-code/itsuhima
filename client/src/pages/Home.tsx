@@ -69,7 +69,6 @@ export default function HomePage() {
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="font-bold text-2xl text-base-content tracking-tight sm:text-3xl">ホーム</h1>
-              <p className="mt-1 text-base-content/50 text-sm">日程調整イベントの管理</p>
             </div>
             <NavLink to="/new" className="btn btn-primary w-full gap-2 sm:w-auto">
               <LuPlus className="h-4 w-4" />

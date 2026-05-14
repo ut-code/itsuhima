@@ -13,7 +13,7 @@ export default function Header() {
           <img src="/logo.svg" alt="イツヒマ" className="h-6 w-6" />
           <span className="font-bold font-mplus text-base-content text-xl tracking-tight">イツヒマ</span>
           <span className="rounded-full bg-base-200 px-2 py-0.5 font-medium text-[10px] text-base-content/50">
-            アルファ版
+            (アルファ版)
           </span>
         </NavLink>
 
