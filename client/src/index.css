@@ -102,6 +102,8 @@
 
 body {
   font-family: var(--font-mplus);
+  /* Windows で M PLUS にジャギーが発生する問題の回避策 */
+  transform: rotate(0.05deg);
 }
 
 :root {
