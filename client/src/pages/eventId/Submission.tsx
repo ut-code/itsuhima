@@ -594,7 +594,7 @@ export default function SubmissionPage() {
       {toast && (
         <div className="fixed top-20 right-4 z-50" aria-live="polite" aria-atomic="true">
           {toast.variant === "success" ? (
-            <div className="flex items-center gap-3 rounded-lg border border-success/30 bg-success/10 px-4 py-3 shadow-lg">
+            <div className="flex items-center gap-3 rounded-lg border border-success/30 bg-base-100 px-4 py-3 shadow-lg">
               <LuCircleCheck className="h-6 w-6 shrink-0 text-success" />
               <span className="font-medium text-base-content text-sm">{toast.message}</span>
               <button
@@ -607,7 +607,7 @@ export default function SubmissionPage() {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3 rounded-lg border border-error/30 bg-error/10 px-4 py-3 shadow-lg">
+            <div className="flex items-center gap-3 rounded-lg border border-error/30 bg-base-100 px-4 py-3 shadow-lg">
               <LuCircleAlert className="h-6 w-6 shrink-0 text-error" />
               <span className="font-medium text-base-content text-sm">{toast.message}</span>
               <button
