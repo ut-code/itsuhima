@@ -108,70 +108,11 @@ body {
 }
 
 :root {
-  --fc-today-bg-color: inherit; /* 今日の日付のハイライトを削除する https://github.com/fullcalendar/fullcalendar/issues/7150 */
-
-  /* カレンダーイベントの半透明背景（primary の 20% opacity） */
-  --ih-color-primary-transparent: rgb(15 130 177 / 0.2);
-
   overscroll-behavior: none; /* 引っ張って更新を無効化 */
-}
-
-.fc-event {
-  box-shadow: none !important;
-}
-
-.fc-highlight {
-  /* 日を跨ぐ選択が矩形選択にならないため、デフォルトの選択範囲を隠す */
-  display: none;
-}
-
-.fc-bg-event {
-  opacity: 1 !important; /* デフォルトで透明度を付与されるのを防止 */
-}
-
-.ih-create-select-event {
-  z-index: 100 !important;
-  border-width: 1px !important;
-  border-style: dashed !important;
-}
-
-.ih-delete-select-event {
-  z-index: 100 !important;
-  border-width: 1px !important;
-  border-style: dashed !important;
-  border-color: red !important;
-}
-
-.ih-editing-event {
-  border-width: 1px !important;
-  border-style: solid !important;
-}
-
-.ih-viewing-event {
-  border: 3px solid var(--color-base-300) !important;
-  /* background-color は重ね合わせ個数分 JS で計算*/
 }
 
 #member-info {
   z-index: 50;
-}
-
-.fc-header-toolbar {
-  margin-bottom: 8px !important;
-}
-
-.fc-next-button,
-.fc-prev-button {
-  padding: 1px !important;
-  background-color: transparent !important;
-  color: var(--color-primary) !important;
-  border: 1px solid var(--color-primary) !important;
-}
-
-.fc-next-button:disabled,
-.fc-prev-button:disabled {
-  color: var(--color-base-300) !important;
-  border: 1px solid var(--color-base-300) !important;
 }
 
 #root {

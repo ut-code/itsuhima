@@ -275,8 +275,8 @@ export const Calendar = ({
   const halfHourCount = Math.floor((slotEndMinutes - slotStartMinutes) / 30) + 1;
 
   return (
-    <div className="my-2 min-h-0 flex-1 overflow-auto overscroll-none" ref={scrollRef}>
-      <div style={{ width: `${innerWidth}px` }}>
+    <div className="my-2 min-h-0 flex-1 overflow-auto overscroll-none bg-white" ref={scrollRef}>
+      <div style={{ minWidth: `${innerWidth}px`, width: "100%" }}>
         {/* コーナーオーバーレイ: 縦横どちらにスクロールしても左上に固定 */}
         <div
           className="sticky top-0 left-0 z-20 bg-white"
