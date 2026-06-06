@@ -4,6 +4,7 @@ import HomePage from "./pages/Home.tsx";
 import LandingPage from "./pages/Landing.tsx";
 import NotFoundPage from "./pages/NotFound.tsx";
 import ProjectPage from "./pages/Project.tsx";
+import SandboxPage from "./pages/Sandbox.tsx";
 
 /**
  * Nano ID 形式の正規表現。
@@ -40,6 +41,7 @@ export default function App() {
         <Route index element={<LandingPage />} />
         <Route path="home" element={<HomePage />} />
         <Route path="new" element={<ProjectPage />} />
+        <Route path="sandbox" element={<SandboxPage />} />
 
         <Route path="e">
           <Route path=":eventId" element={<Outlet />}>

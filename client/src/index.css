@@ -177,3 +177,11 @@ body {
 #root {
   background-color: var(--color-base-100);
 }
+
+/* ドラッグ中にスクロールコンテナのスクロールバーを隠す */
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hidden {
+  scrollbar-width: none;
+}
