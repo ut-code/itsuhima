@@ -3,18 +3,26 @@ import { LuMenu, LuX } from "react-icons/lu";
 import { NavLink } from "react-router";
 import { EXTERNAL_LINKS } from "../constants/links";
 
-export default function Header() {
+export default function Header({ compact = false }: { compact?: boolean }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full border-base-300 border-b bg-base-100">
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div
+        className={`mx-auto flex w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 ${compact ? "h-10" : "h-16"}`}
+      >
         <NavLink to="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
-          <img src="/logo.svg" alt="イツヒマ" className="h-6 w-6" />
-          <span className="font-bold font-mplus text-base-content text-xl tracking-tight">イツヒマ</span>
-          <span className="rounded-full bg-base-200 px-2 py-0.5 font-medium text-[10px] text-base-content/50">
-            (アルファ版)
+          <img src="/logo.svg" alt="イツヒマ" className={compact ? "h-5 w-5" : "h-6 w-6"} />
+          <span
+            className={`font-bold font-mplus text-base-content tracking-tight ${compact ? "text-base" : "text-xl"}`}
+          >
+            イツヒマ
           </span>
+          {!compact && (
+            <span className="rounded-full bg-base-200 px-2 py-0.5 font-medium text-[10px] text-base-content/50">
+              (アルファ版)
+            </span>
+          )}
         </NavLink>
 
         <nav className="hidden items-center gap-6 md:flex">
@@ -48,7 +56,7 @@ export default function Header() {
       {isMenuOpen && (
         <div
           id="mobile-menu"
-          className="absolute top-16 left-0 w-full border-base-300 border-b bg-base-100 shadow-lg md:hidden"
+          className={`absolute ${compact ? "top-10" : "top-16"} left-0 w-full border-base-300 border-b bg-base-100 shadow-lg md:hidden`}
         >
           <div className="flex flex-col gap-1 px-4 pt-2 pb-4">
             <NavLink

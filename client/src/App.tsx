@@ -40,7 +40,6 @@ export default function App() {
         <Route index element={<LandingPage />} />
         <Route path="home" element={<HomePage />} />
         <Route path="new" element={<ProjectPage />} />
-
         <Route path="e">
           <Route path=":eventId" element={<Outlet />}>
             <Route index element={<SubmissionPage />} />
