@@ -297,7 +297,7 @@ export default function SubmissionPage() {
           </div>
         ) : (
           <div className="flex flex-1 flex-col overflow-y-auto">
-            <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
+            <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
               {/* プロジェクト情報 */}
               <div>
                 <div className="flex items-center justify-between gap-2">
