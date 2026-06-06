@@ -296,7 +296,7 @@ export default function ProjectPage() {
           </div>
         ) : eventId !== undefined && !project ? (
           <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-            <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
+            <div className="flex min-h-100 flex-col items-center justify-center gap-4 rounded-xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
               <p className="text-base text-base-content/70 sm:text-xl">イベントが見つかりませんでした。</p>
               <NavLink to="/" className="btn btn-primary">
                 ホームに戻る
@@ -603,7 +603,7 @@ export default function ProjectPage() {
                               defaultValue={field.label}
                               maxLength={50}
                               placeholder="参加形態名（例：対面、オンライン）"
-                              className={`flex-1 rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.participationOptions?.[index]?.label ? "border-red-500" : "border-base-300"}`}
+                              className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.participationOptions?.[index]?.label ? "border-red-500" : "border-base-300"}`}
                               onBlur={() => {
                                 trigger(`participationOptions.${index}.label` as const);
                               }}
@@ -706,7 +706,7 @@ export default function ProjectPage() {
               <input
                 type="text"
                 disabled
-                className="flex-1 rounded-lg border border-base-300 bg-base-200 px-3 py-2 text-base text-base-content/80 sm:px-4 sm:py-2.5"
+                className="h-10 min-w-0 flex-1 rounded-lg border border-base-300 bg-base-200 px-3 text-base text-base-content/80"
                 value={`${FRONTEND_ORIGIN}/e/${dialogStatus.projectId}`}
               />
               <button
@@ -718,7 +718,7 @@ export default function ProjectPage() {
                     setCopied(false);
                   }, 2000);
                 }}
-                className="btn btn-outline btn-sm sm:btn-md gap-1.5"
+                className="btn btn-outline gap-1.5"
                 disabled={copied}
               >
                 {!copied ? (
