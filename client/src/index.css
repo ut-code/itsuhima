@@ -102,8 +102,9 @@
 
 body {
   font-family: var(--font-mplus);
-  /* Windows で M PLUS にジャギーが発生する問題の回避策 */
-  transform: rotate(0.05deg);
+  /* TODO: Windows で M PLUS にジャギーが発生する問題の回避策が必要。
+     transform: rotate(0.05deg) は fixed 要素の containing block になるため使用不可。
+     代替手段を検討すること。 */
 }
 
 :root {
