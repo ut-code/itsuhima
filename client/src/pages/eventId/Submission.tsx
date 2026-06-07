@@ -135,7 +135,7 @@ export default function SubmissionPage() {
   const myGuestId = meAsGuest?.id;
   const isHost = project?.isHost;
 
-  const [mode, setMode] = useState<"view" | "edit" | "confirm">("edit");
+  const [mode, setMode] = useState<"view" | "edit" | "confirm">("view");
 
   const [guestName, setGuestName] = useState(meAsGuest?.name ?? "");
 
@@ -449,27 +449,31 @@ export default function SubmissionPage() {
                         }}
                       >
                         <LuPencil className="h-4 w-4" />
-                        <span className="hidden sm:inline">日程を変更する</span>
-                        <span className="sm:hidden">日程変更</span>
+                        {meAsGuest ? (
+                          <>
+                            <span className="hidden sm:inline">日程を変更する</span>
+                            <span className="sm:hidden">日程変更</span>
+                          </>
+                        ) : (
+                          <span>提出する</span>
+                        )}
                       </button>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between gap-2">
-                      {!!myGuestId && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-outline shrink-0"
-                          disabled={loading}
-                          onClick={() => {
-                            setEditingSlots([]);
-                            setGuestName(meAsGuest?.name ?? "");
-                            setComment(meAsGuest?.comment ?? "");
-                            setMode("view");
-                          }}
-                        >
-                          <span>キャンセル</span>
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline shrink-0"
+                        disabled={loading}
+                        onClick={() => {
+                          setEditingSlots(meAsGuest?.slots ?? []);
+                          setGuestName(meAsGuest?.name ?? "");
+                          setComment(meAsGuest?.comment ?? "");
+                          setMode("view");
+                        }}
+                      >
+                        <span>キャンセル</span>
+                      </button>
                       <button
                         type="button"
                         className="btn btn-sm btn-primary ml-auto inline-flex shrink-0 gap-1.5"
