@@ -275,7 +275,7 @@ export default function SubmissionPage() {
 
   return (
     <>
-      <div className="flex h-[100dvh] flex-col bg-base-200">
+      <div className="flex h-dvh flex-col bg-base-200">
         <Header compact />
         {loading ? (
           <div className="flex w-full flex-1 items-center justify-center">
@@ -283,7 +283,7 @@ export default function SubmissionPage() {
           </div>
         ) : !project ? (
           <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-4 px-4 py-16 sm:px-6 lg:px-8">
-            <div className="flex min-h-[400px] w-full flex-col items-center justify-center gap-4 rounded-xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
+            <div className="flex min-h-100 w-full flex-col items-center justify-center gap-4 rounded-xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
               <p className="text-base-content/70 text-xl">イベントが見つかりませんでした。</p>
               <NavLink to="/" className="btn btn-primary">
                 ホームに戻る
@@ -414,7 +414,7 @@ export default function SubmissionPage() {
                               <p className="pt-1 font-medium text-base-content text-sm">{guest.name}</p>
                               {commentText && (
                                 <div className="mt-1.5 w-fit max-w-full rounded-2xl rounded-tl-none bg-base-300 px-3 py-2 text-base-content text-sm">
-                                  <span className="whitespace-pre-wrap break-words">{commentText}</span>
+                                  <span className="wrap-break-word whitespace-pre-wrap">{commentText}</span>
                                 </div>
                               )}
                             </div>
