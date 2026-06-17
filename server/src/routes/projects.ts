@@ -9,6 +9,20 @@ dotenv.config();
 
 const projectIdParamsSchema = z.object({ projectId: z.string().length(21) });
 
+/**
+ * 提出されたスロットがプロジェクトの日程範囲内に収まっているか検証する。
+ * startDate/endDate は日付部分のみ意味を持つため、endDate の翌日 0 時を終端（exclusive）として扱う。
+ */
+function areSlotsWithinProjectRange(
+  slots: { start: Date; end: Date }[] | undefined,
+  startDate: Date,
+  endDate: Date,
+): boolean {
+  if (!slots) return true;
+  const rangeEnd = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+  return slots.every((slot) => slot.start < slot.end && slot.start >= startDate && slot.end <= rangeEnd);
+}
+
 const router = new Hono<{ Variables: AppVariables }>()
   // プロジェクト作成
   .post("/", zValidator("json", projectReqSchema), async (c) => {
@@ -256,6 +270,17 @@ const router = new Hono<{ Variables: AppVariables }>()
       const { projectId } = c.req.valid("param");
       const { name, comment, slots } = c.req.valid("json");
 
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { startDate: true, endDate: true },
+      });
+      if (!project) {
+        return c.json({ message: "イベントが見つかりません。" }, 404);
+      }
+      if (!areSlotsWithinProjectRange(slots, project.startDate, project.endDate)) {
+        return c.json({ message: "日程がイベントの期間外です。" }, 400);
+      }
+
       const existingGuest = await prisma.guest.findUnique({
         where: {
           browserId_projectId: {
@@ -298,6 +323,17 @@ const router = new Hono<{ Variables: AppVariables }>()
       const browserId = c.get("browserId");
       const { projectId } = c.req.valid("param");
       const { name, comment, slots } = c.req.valid("json");
+
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { startDate: true, endDate: true },
+      });
+      if (!project) {
+        return c.json({ message: "イベントが見つかりません。" }, 404);
+      }
+      if (!areSlotsWithinProjectRange(slots, project.startDate, project.endDate)) {
+        return c.json({ message: "日程がイベントの期間外です。" }, 400);
+      }
 
       const existingGuest = await prisma.guest.findUnique({
         where: { browserId_projectId: { browserId, projectId } },

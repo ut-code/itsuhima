@@ -34,8 +34,13 @@ abstract class CalendarMatrixBase<T> {
     return [dayDiff, Math.floor(totalMinutes / 15)];
   }
 
+  protected isInBounds(row: number, col: number): boolean {
+    return row >= 0 && row < this.matrix.length && col >= 0 && col < this.quarterCount;
+  }
+
   getIsSlotExist(dt: Dayjs): boolean {
     const [row, col] = this.getIndex(dt);
+    if (!this.isInBounds(row, col)) return false;
     return this.matrix[row][col] !== null;
   }
 
@@ -44,6 +49,7 @@ abstract class CalendarMatrixBase<T> {
     const [endRow, endCol] = this.getIndex(to.subtract(1, "minute"));
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
+        if (!this.isInBounds(r, c)) continue;
         this.matrix[r][c] = newValue;
       }
     }
@@ -89,6 +95,7 @@ export class ViewingMatrix extends CalendarMatrixBase<Record<string, string>> {
     const [endRow, endCol] = this.getIndex(to.subtract(1, "minute"));
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
+        if (!this.isInBounds(r, c)) continue;
         if (this.matrix[r][c] === null) {
           this.matrix[r][c] = {};
         }
