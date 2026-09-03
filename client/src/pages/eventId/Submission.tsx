@@ -15,6 +15,7 @@ import {
 } from "react-icons/lu";
 import { NavLink, useParams } from "react-router";
 import type { AppType } from "../../../../server/src/main";
+import { AddToCalendar } from "../../components/AddToCalendar";
 import { Calendar } from "../../components/Calendar";
 import Header from "../../components/Header";
 import { projectReviver } from "../../revivers";
@@ -238,6 +239,11 @@ export default function SubmissionPage() {
     return Object.fromEntries(project.guests.filter((g) => g.comment).map((g) => [g.id, g.comment as string]));
   }, [project]);
 
+  const participationOptionIdToLabel = useMemo(() => {
+    if (!project) return {};
+    return Object.fromEntries(project.participationOptions.map((opt) => [opt.id, opt.label]));
+  }, [project]);
+
   const viewingSlots = useMemo(() => {
     if (!project) return [];
 
@@ -339,6 +345,16 @@ export default function SubmissionPage() {
                     );
                   })()}
               </div>
+
+              {/* 自分の日程をカレンダーアプリに追加 */}
+              {mode === "view" && meAsGuest && meAsGuest.slots.length > 0 && (
+                <AddToCalendar
+                  projectName={project.name}
+                  projectId={projectId ?? ""}
+                  slots={meAsGuest.slots}
+                  participationOptionIdToLabel={participationOptionIdToLabel}
+                />
+              )}
 
               {/* 参加形態選択ボタン */}
               {mode === "edit" && project.participationOptions.length > 1 && selectedParticipationOptionId !== null && (
