@@ -351,6 +351,7 @@ export default function SubmissionPage() {
                 <AddToCalendar
                   projectName={project.name}
                   projectId={projectId ?? ""}
+                  projectDescription={project.description}
                   slots={meAsGuest.slots}
                   participationOptionIdToLabel={participationOptionIdToLabel}
                   participationOptionCount={project.participationOptions.length}

@@ -12,10 +12,16 @@ function toUtcDateArray(date: Dayjs): DateArray {
   return [utcDate.year(), utcDate.month() + 1, utcDate.date(), utcDate.hour(), utcDate.minute()];
 }
 
-export function generateIcs(projectName: string, slots: SlotForIcs[], eventUrl?: string): string {
+export function generateIcs(
+  projectName: string,
+  slots: SlotForIcs[],
+  eventUrl?: string,
+  projectDescription?: string,
+): string {
   const description = [
     "イツヒマで提出した参加候補日程です。",
     eventUrl ? `イベントページ: ${eventUrl}` : null,
+    projectDescription ? `\n${projectDescription}` : null,
   ]
     .filter(Boolean)
     .join("\n");

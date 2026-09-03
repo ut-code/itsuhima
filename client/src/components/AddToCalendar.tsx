@@ -7,6 +7,7 @@ import type { Slot } from "../types";
 type Props = {
   projectName: string;
   projectId: string;
+  projectDescription?: string | null;
   slots: Pick<Slot, "from" | "to" | "participationOptionId">[];
   participationOptionIdToLabel: Record<string, string>;
   // 参加形態がデフォルト値のみ（＝実質未設定）かどうかの判定に使う
@@ -20,6 +21,7 @@ type Props = {
 export function AddToCalendar({
   projectName,
   projectId,
+  projectDescription,
   slots,
   participationOptionIdToLabel,
   participationOptionCount,
@@ -39,6 +41,7 @@ export function AddToCalendar({
         };
       }),
       eventUrl,
+      projectDescription ?? undefined,
     );
 
     const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
