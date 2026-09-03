@@ -22,7 +22,7 @@ export function generateIcs(projectName: string, slots: SlotForIcs[], eventUrl?:
 
   const { error, value } = createEvents(
     slots.map((slot) => ({
-      title: `【候補】${projectName}（${slot.label}）- イツヒマ`,
+      title: `【候補】${projectName}${slot.label ? `（${slot.label}）` : ""} - イツヒマ`,
       description,
       start: toUtcDateArray(slot.from),
       startInputType: "utc",

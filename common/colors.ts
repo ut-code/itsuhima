@@ -7,7 +7,7 @@ export const PREDEFINED_COLORS = [
 ];
 
 export const DEFAULT_PARTICIPATION_OPTION = {
-  label: "参加",
+  label: "通常",
   color: "#0F82B1", // PRIMARY_RGB と同じ色
 };
 

@@ -353,6 +353,7 @@ export default function SubmissionPage() {
                   projectId={projectId ?? ""}
                   slots={meAsGuest.slots}
                   participationOptionIdToLabel={participationOptionIdToLabel}
+                  participationOptionCount={project.participationOptions.length}
                 />
               )}
 

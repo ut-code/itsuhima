@@ -1,5 +1,6 @@
 import { LuCalendarPlus, LuCircleHelp } from "react-icons/lu";
 import { Tooltip } from "react-tooltip";
+import { DEFAULT_PARTICIPATION_OPTION } from "../../../common/colors";
 import { generateIcs } from "../lib/generateIcs";
 import type { Slot } from "../types";
 
@@ -8,22 +9,35 @@ type Props = {
   projectId: string;
   slots: Pick<Slot, "from" | "to" | "participationOptionId">[];
   participationOptionIdToLabel: Record<string, string>;
+  // 参加形態がデフォルト値のみ（＝実質未設定）かどうかの判定に使う
+  participationOptionCount: number;
 };
 
 /**
  * 自分の提出済み日程をカレンダーアプリに追加するボタン。
  * その場で ics を生成してダウンロードさせ、各カレンダーアプリのインポート機能で読み込んでもらう。
  */
-export function AddToCalendar({ projectName, projectId, slots, participationOptionIdToLabel }: Props) {
+export function AddToCalendar({
+  projectName,
+  projectId,
+  slots,
+  participationOptionIdToLabel,
+  participationOptionCount,
+}: Props) {
   const handleClick = () => {
     const eventUrl = `${window.location.origin}/e/${projectId}`;
     const icsContent = generateIcs(
       projectName,
-      slots.map((slot) => ({
-        from: slot.from,
-        to: slot.to,
-        label: participationOptionIdToLabel[slot.participationOptionId] ?? "",
-      })),
+      slots.map((slot) => {
+        const label = participationOptionIdToLabel[slot.participationOptionId] ?? "";
+        // 参加形態がデフォルト値のみで他に選択肢がない場合、タイトルには含めない
+        const isDefaultOnly = participationOptionCount <= 1 && label === DEFAULT_PARTICIPATION_OPTION.label;
+        return {
+          from: slot.from,
+          to: slot.to,
+          label: isDefaultOnly ? "" : label,
+        };
+      }),
       eventUrl,
     );
 
