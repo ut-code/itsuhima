@@ -455,7 +455,7 @@ export default function SubmissionPage() {
                             <span className="sm:hidden">日程変更</span>
                           </>
                         ) : (
-                          <span>提出する</span>
+                          <span>入力する</span>
                         )}
                       </button>
                     </div>
