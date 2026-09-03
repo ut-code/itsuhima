@@ -2,3 +2,4 @@ node_modules
 .direnv
 .wrangler
 CLAUDE.local.md
+.local
