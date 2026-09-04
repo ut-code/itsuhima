@@ -66,12 +66,14 @@ model Host {
 
 // 日程調整プロジェクトの参加者。
 model Guest {
-  id        String  @id @default(uuid())
+  id        String   @id @default(uuid())
   name      String
   comment   String?
-  browserId String  @default(uuid())
+  browserId String   @default(uuid())
+  /// 楽観ロック（MCP の update_availability の version）に使う
+  updatedAt DateTime @default(now()) @updatedAt
   projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   slots     Slot[]
 
   @@unique([browserId, projectId])

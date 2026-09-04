@@ -1,20 +1,16 @@
 import { serve } from "@hono/node-server";
-import { PrismaClient } from "@prisma/client";
 import dotenv from "dotenv";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { customAlphabet } from "nanoid";
 import { browserIdMiddleware } from "./middleware/browserId.js";
 import projectsRoutes from "./routes/projects.js";
+import { UseCaseError } from "./usecases/types.js";
 
 dotenv.config();
 
-/**
- * ハイフン・アンダースコアを含まない Nano ID 形式。
- */
-export const nanoid = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 21);
-
-export const prisma = new PrismaClient();
+export { cookieOptions } from "./config.js";
+export { prisma } from "./db.js";
+export { nanoid } from "./lib/id.js";
 
 const port = Number(process.env.PORT) || 3000;
 const allowedOrigins = process.env.CORS_ALLOW_ORIGINS?.split(",") || [];
@@ -37,6 +33,9 @@ const app = new Hono<{ Variables: AppVariables }>()
   })
   .route("/projects", projectsRoutes)
   .onError((err, c) => {
+    if (err instanceof UseCaseError) {
+      return c.json({ message: err.message }, err.status);
+    }
     console.error(err);
     return c.json({ message: "Internal Server Error" }, 500);
   });
@@ -51,16 +50,5 @@ serve(
     console.log(`Server listening on 0.0.0.0:${port}`);
   },
 );
-
-const isProduction = process.env.NODE_ENV === "prod";
-
-export const cookieOptions = {
-  path: "/",
-  domain: process.env.DOMAIN || "localhost", // /home へのリダイレクトのためフロントエンドにも送る
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: "lax",
-  maxAge: 60 * 60 * 24 * 365, // Express だとミリ秒だったが、Hono では秒らしい
-} as const;
 
 export type AppType = typeof app;
