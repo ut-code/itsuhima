@@ -24,17 +24,20 @@ const GUEST_PAGE_SIZE = 50;
 
 const eventIdSchema = z.string().length(21).describe("イベント ID（21 文字）。list_events で取得できる。");
 
-const isoDateTimeSchema = z
-  .string()
-  .datetime({ offset: true })
-  .describe(
-    "ISO 8601 形式の日時。タイムゾーンのオフセット必須（例: 2026-09-07T10:00:00+09:00）。" +
-      "「来週火曜」「明日」のような相対表現は受け付けない。get_event が返す現在日時を基準に絶対日時へ変換してから渡すこと。",
-  );
+const ISO_DATETIME_NOTE =
+  "ISO 8601 形式・タイムゾーンのオフセット必須（例: 2026-09-07T10:00:00+09:00）。" +
+  "「来週火曜」「明日」のような相対表現は受け付けない。get_event が返す現在日時を基準に絶対日時へ変換してから渡すこと。";
+
+/**
+ * start と end で説明文を分けているのは、JSON Schema 化のときに同一スキーマが
+ * $ref に畳まれるのを防ぐため。$ref を解決しない MCP クライアントがあるため。
+ */
+const isoDateTimeSchema = (role: string) =>
+  z.string().datetime({ offset: true }).describe(`${role}。${ISO_DATETIME_NOTE}`);
 
 const rangeSchema = z.object({
-  start: isoDateTimeSchema,
-  end: isoDateTimeSchema,
+  start: isoDateTimeSchema("参加できる時間帯の開始日時"),
+  end: isoDateTimeSchema("参加できる時間帯の終了日時"),
   participation_option_id: z
     .string()
     .uuid()
@@ -455,7 +458,7 @@ export function createMcpServer(actor: Actor): McpServer {
         [
           "イベントを作成しました。",
           `event_id: ${project.id}`,
-          `共有 URL: ${process.env.APP_ORIGIN ?? "https://itsuhima.com"}/e/${project.id}`,
+          `共有 URL: ${process.env.APP_ORIGIN ?? "https://itsuhima.utcode.net"}/e/${project.id}`,
           "",
           formatEvent(detail, actor, false, true),
         ].join("\n"),
