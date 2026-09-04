@@ -10,6 +10,9 @@ npm run dev:client      # Vite dev server → http://localhost:5173
 npm run dev:server      # tsx watch mode → http://localhost:3000
 npm run dev:functions   # Cloudflare Pages Functions ローカル実行
 
+# MCP ブリッジ（stdio）
+npm run build:mcp   # mcp/ をビルド
+
 # Lint / Format
 npm run check       # Biome でチェックのみ
 npm run fix:safe    # 安全な自動修正（pre-commit フックで自動実行）
@@ -78,6 +81,35 @@ import dayjs from "../lib/dayjs";
 - 作成時: フロントエンドで `crypto.randomUUID()` を生成して `id` を確定。サーバーは受け取った id をそのまま使用。
 - デフォルト: 参加形態が0件の場合は `common/colors.ts` の `DEFAULT_PARTICIPATION_OPTION` を使用してデフォルトを自動作成（label: "参加", color: "#0F82B1"）。
 - 削除制限: Slot が紐づいている参加形態は削除不可（サーバー側で検証）。
+
+### ユースケース層
+
+ドメインロジックは `server/src/usecases/` にあり、Hono のルートも MCP のツールも**この関数だけを呼ぶ**。HTTP を経由して自分の API を叩き直す構成は採らない。
+
+- 実行主体は `Actor`（`browserId` / `via: "web" | "mcp"` / `scopes`）に正規化する。権限判定はビュー層ではなくここに置く。
+- 業務エラーは `UseCaseError` を投げ、ルート層で HTTP に変換する。メッセージは LLM がそのまま読んで復旧できるよう、**どう直せばよいかまで自然文で書く**。
+- Slot の日程範囲・時間帯・15分グリッド・日跨ぎ・参加形態 ID は `usecases/projects.ts` で検証する。Web UI ではカレンダーの構造上踏まないが、MCP 経由では UI を通らないため必須（範囲外 Slot は描画クラッシュの原因になった実績がある）。
+
+### MCP サーバー
+
+`POST /mcp` として既存の Hono アプリに同居している（`server/src/routes/mcp.ts`）。ChatGPT / Claude から日程の提出や集計ができる。
+
+- **トランスポート**: `@hono/mcp` の `StreamableHTTPTransport` を **stateless**（`sessionIdGenerator: undefined`）で使う。fly.io の `auto_stop_machines` でマシンが停止してもセッションが壊れないようにするため。
+- **認証**: `Authorization: Bearer <token>` の `ApiToken`。アカウントが無いため、Web の Cookie で発行した 6 桁の `PairingCode` を MCP 側で引き換えてトークンを得る（`POST /mcp/pair`、使い捨て・TTL 10 分）。設定画面は `/settings/mcp`。
+- `/mcp` は `browserIdMiddleware` を通さない。通すとリクエストごとに孤立した `browserId` が発行されてしまう（`main.ts` の分岐）。
+- **ツール定義は `server/src/mcp/server.ts` に集約**し、ドメインロジックは `usecases/` を直接呼ぶ。`mcp/` ワークスペースの stdio ブリッジは JSON-RPC を中継するだけでツールを持たない。
+
+ツール設計上の約束:
+
+- 日時は ISO 8601 の**オフセット必須**。相対表現は Zod で弾く。`get_event` が現在日時とタイムゾーンを返すので、LLM はそれを基準に絶対日時へ変換する。
+- 参加形態は `get_event` が返す `id` をそのまま使わせる（ラベルからの推測を禁止）。
+- `update_availability` は全置換なので、`Guest.updatedAt` を version とする楽観ロック（`based_on_version`）を要求する。
+- `get_event` は非メンバーには参加に必要な情報のみを返す。他の参加者の名前・コメント・回答は自分が提出するまで見せない。
+- イベント名・説明・参加者名・コメントは他人が書いた自由文なので、`<untrusted_user_content>` で囲んでデータとして提示する（`mcp/format.ts`）。
+
+### 空き時間の集計
+
+`server/src/usecases/availability.ts` の `computeAvailability` が、全 Slot の境界点（`from` / `to`）を掃引して参加者集合が一定な区間に分割する。クライアントの `CalendarMatrix` は描画用なのでサーバー側では流用できない。
 
 ### Cloudflare Pages Functions
 

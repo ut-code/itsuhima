@@ -61,10 +61,10 @@ export default function McpSettingsPage() {
   const [issuing, setIssuing] = useState(false);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
 
-  const notify = (message: string, variant: "success" | "error") => {
+  const notify = useCallback((message: string, variant: "success" | "error") => {
     setToast({ message, variant });
     setTimeout(() => setToast(null), 5000);
-  };
+  }, []);
 
   const fetchTokens = useCallback(async () => {
     setLoading(true);
@@ -81,7 +81,7 @@ export default function McpSettingsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     fetchTokens();
@@ -249,7 +249,7 @@ export default function McpSettingsPage() {
               <p className="py-8 text-center text-base-content/50 text-sm">連携中のクライアントはありません。</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="table table-sm">
+                <table className="table-sm table">
                   <thead>
                     <tr>
                       <th>名前</th>

@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { DEFAULT_PARTICIPATION_OPTION, generateDistinctColor } from "../../../common/colors.js";
 import dayjs, { APP_TIMEZONE } from "../lib/dayjs.js";
@@ -464,6 +464,109 @@ export function createMcpServer(actor: Actor): McpServer {
         ].join("\n"),
       );
     },
+  );
+
+  // -------------------------------------------------------------------------
+  // Resources: ユーザーが「このイベントを見て」と手動で添付できるようにする
+  // -------------------------------------------------------------------------
+
+  server.registerResource(
+    "event",
+    new ResourceTemplate("itsuhima://event/{eventId}", {
+      list: async () => {
+        const projects = await listMyProjects(actor);
+        return {
+          resources: projects.map((p) => ({
+            uri: `itsuhima://event/${p.id}`,
+            name: sanitize(p.name) || p.id,
+            description: `${dayjs(p.startDate).tz(APP_TIMEZONE).format("YYYY-MM-DD")}〜${dayjs(p.endDate)
+              .tz(APP_TIMEZONE)
+              .format("YYYY-MM-DD")}（${p.isHost ? "主催者" : "参加者"}）`,
+            mimeType: "text/plain",
+          })),
+        };
+      },
+    }),
+    {
+      title: "イツヒマのイベント",
+      description: "イベントの日程範囲・参加形態・参加可能人数の集計。",
+      mimeType: "text/plain",
+    },
+    async (uri, { eventId }) => {
+      assertScope(actor, "read");
+      const project = await findProjectOrThrow(String(eventId));
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: "text/plain",
+            text: formatEvent(project, actor, false, isMember(project)),
+          },
+        ],
+      };
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Prompts: クライアントの UI からワンクリックで起動できるテンプレート
+  // -------------------------------------------------------------------------
+
+  server.registerPrompt(
+    "submit_availability",
+    {
+      title: "予定を提出する",
+      description: "イツヒマのイベントに自分の空いている時間帯を提出する。",
+      argsSchema: {
+        event_id: z.string().describe("イベント ID。省略した場合は list_events で候補を出す。").optional(),
+      },
+    },
+    ({ event_id }) => ({
+      messages: [
+        {
+          role: "user" as const,
+          content: {
+            type: "text" as const,
+            text: [
+              event_id
+                ? `イツヒマのイベント ${event_id} に私の予定を提出したい。`
+                : "イツヒマのイベントに私の予定を提出したい。まず list_events でイベントを一覧して、どれか聞いてほしい。",
+              "手順:",
+              "1. get_event でイベントの日程範囲・入力できる時間帯・参加形態 ID を確認する",
+              "2. 私に空いている日時を聞く",
+              "3. 相対表現は get_event が返す現在日時を基準に絶対日時（オフセット付き ISO 8601）へ変換する",
+              "4. 提出内容を私に確認してから submit_availability を呼ぶ",
+            ].join("\n"),
+          },
+        },
+      ],
+    }),
+  );
+
+  server.registerPrompt(
+    "find_best_slot",
+    {
+      title: "みんなが空いている時間を探す",
+      description: "参加者の回答を集計して、参加できる人数が多い時間帯を提案する。",
+      argsSchema: {
+        event_id: z.string().describe("イベント ID。").optional(),
+      },
+    },
+    ({ event_id }) => ({
+      messages: [
+        {
+          role: "user" as const,
+          content: {
+            type: "text" as const,
+            text: [
+              event_id
+                ? `イツヒマのイベント ${event_id} で、みんなが参加できる時間帯を探してほしい。`
+                : "イツヒマのイベントで、みんなが参加できる時間帯を探してほしい。まず list_events で一覧して、どれか聞いてほしい。",
+              "find_common_availability を使って候補を出し、参加できない人がいる場合は誰かも教えてほしい。",
+            ].join("\n"),
+          },
+        },
+      ],
+    }),
   );
 
   return server;
