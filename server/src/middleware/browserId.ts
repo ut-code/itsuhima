@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
-import { cookieOptions } from "../main.js";
+import { cookieOptions } from "../config.js";
 
 const COOKIE_NAME = "browserId";
 

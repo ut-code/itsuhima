@@ -29,6 +29,12 @@ export default function Header({ compact = false }: { compact?: boolean }) {
           <NavLink to="/home" className="font-medium text-base-content/70 text-sm transition-colors hover:text-primary">
             ホーム
           </NavLink>
+          <NavLink
+            to="/settings/mcp"
+            className="font-medium text-base-content/70 text-sm transition-colors hover:text-primary"
+          >
+            AI 連携
+          </NavLink>
           <a
             href={EXTERNAL_LINKS.GUIDE}
             target="_blank"
@@ -65,6 +71,13 @@ export default function Header({ compact = false }: { compact?: boolean }) {
               onClick={() => setIsMenuOpen(false)}
             >
               ホーム
+            </NavLink>
+            <NavLink
+              to="/settings/mcp"
+              className="block rounded-lg px-3 py-2 font-medium text-base text-base-content/70 hover:bg-base-200 hover:text-primary"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              AI 連携
             </NavLink>
             <a
               href={EXTERNAL_LINKS.GUIDE}
