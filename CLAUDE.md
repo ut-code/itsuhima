@@ -92,20 +92,16 @@ import dayjs from "../lib/dayjs";
 
 ### MCP サーバー
 
-`POST /mcp` として既存の Hono アプリに同居している（`server/src/routes/mcp.ts`）。ChatGPT / Claude から日程の提出や集計ができる。
+**仕様は [`docs/mcp.md`](./docs/mcp.md) が正本。** ツール・認証・エンドポイント・エラーの一覧はそちらを参照する。
 
-- **トランスポート**: `@hono/mcp` の `StreamableHTTPTransport` を **stateless**（`sessionIdGenerator: undefined`）で使う。fly.io の `auto_stop_machines` でマシンが停止してもセッションが壊れないようにするため。
-- **認証**: `Authorization: Bearer <token>` の `ApiToken`。アカウントが無いため、Web の Cookie で発行した 6 桁の `PairingCode` を MCP 側で引き換えてトークンを得る（`POST /mcp/pair`、使い捨て・TTL 10 分）。設定画面は `/settings/mcp`。
+コードを触るときに関係する点だけ挙げる。
+
+- `POST /mcp` として既存の Hono アプリに同居する（`server/src/routes/mcp.ts`）。別サービスに切らない。
+- **ツール定義は `server/src/mcp/server.ts` に集約**し、ドメインロジックは `usecases/` を直接呼ぶ。HTTP で自分の API を叩き直さない。
+- `mcp/` ワークスペースの stdio ブリッジは JSON-RPC を中継するだけでツールを持たない。**ツールを追加しても `mcp/` は変更不要**。
 - `/mcp` は `browserIdMiddleware` を通さない。通すとリクエストごとに孤立した `browserId` が発行されてしまう（`main.ts` の分岐）。
-- **ツール定義は `server/src/mcp/server.ts` に集約**し、ドメインロジックは `usecases/` を直接呼ぶ。`mcp/` ワークスペースの stdio ブリッジは JSON-RPC を中継するだけでツールを持たない。
-
-ツール設計上の約束:
-
-- 日時は ISO 8601 の**オフセット必須**。相対表現は Zod で弾く。`get_event` が現在日時とタイムゾーンを返すので、LLM はそれを基準に絶対日時へ変換する。
-- 参加形態は `get_event` が返す `id` をそのまま使わせる（ラベルからの推測を禁止）。
-- `update_availability` は全置換なので、`Guest.updatedAt` を version とする楽観ロック（`based_on_version`）を要求する。
-- `get_event` は非メンバーには参加に必要な情報のみを返す。他の参加者の名前・コメント・回答は自分が提出するまで見せない。
-- イベント名・説明・参加者名・コメントは他人が書いた自由文なので、`<untrusted_user_content>` で囲んでデータとして提示する（`mcp/format.ts`）。
+- トランスポートは **stateless** に保つこと。fly.io の `auto_stop_machines` でマシンが停止してもセッションが壊れないようにするため。
+- ツールの `description` と `annotations` はそのまま LLM への仕様書になる。`docs/mcp.md` の「共通の約束」と食い違わないようにする。
 
 ### 空き時間の集計
 

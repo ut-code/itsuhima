@@ -4,6 +4,7 @@ import { LuBot, LuCheck, LuCopy, LuKeyRound, LuRefreshCw, LuTrash2, LuTriangleAl
 import type { AppType } from "../../../../server/src/main";
 import Footer from "../../components/Footer";
 import Header from "../../components/Header";
+import { EXTERNAL_LINKS } from "../../constants/links";
 import dayjs from "../../lib/dayjs";
 import { API_ENDPOINT } from "../../utils";
 
@@ -223,6 +224,14 @@ export default function McpSettingsPage() {
               <code className="flex-1 break-all text-sm">{`${absoluteApiOrigin()}/mcp`}</code>
               <CopyButton text={`${absoluteApiOrigin()}/mcp`} label="URL をコピー" />
             </div>
+
+            <p className="mt-4 text-base-content/60 text-sm">
+              使えるツールや権限の詳しい仕様は{" "}
+              <a href={EXTERNAL_LINKS.MCP_DOC} target="_blank" rel="noreferrer noopener" className="link link-primary">
+                MCP サーバー仕様
+              </a>{" "}
+              を参照してください。
+            </p>
           </div>
         </section>
 
