@@ -60,6 +60,16 @@ const MAX_SCROLL_SPEED = 8;
 const OPACITY = 0.2;
 const PRIMARY_RGB: [number, number, number] = [15, 130, 177];
 
+/**
+ * 編集中に自分の予定と見分けられるよう、他ゲストの色を無彩色に落とす。
+ * 明度は帯域にクランプし、淡い参加形態色が薄すぎて見えなくならないようにする。
+ */
+function toGrayscale([r, g, b]: [number, number, number]): [number, number, number] {
+  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+  const y = Math.round(Math.min(Math.max(luminance, 90), 170));
+  return [y, y, y];
+}
+
 // TODO: colors.ts のものと共通化
 function hexToRgb(hex: string): [number, number, number] {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -419,18 +429,19 @@ export const Calendar = ({
                 .map((opt) => {
                   const guestIds = optionGroups.get(opt.id) ?? [];
                   const opacity = 1 - (1 - OPACITY) ** guestIds.length;
-                  return { ...opt, guestIds, opacity };
+                  const rgb = editMode ? toGrayscale(hexToRgb(opt.color)) : hexToRgb(opt.color);
+                  return { ...opt, guestIds, opacity, rgb, displayColor: `rgb(${rgb.join(",")})` };
                 });
 
               let background: string;
               if (breakdown.length === 1) {
-                const [r, g, b] = hexToRgb(breakdown[0].color);
+                const [r, g, b] = breakdown[0].rgb;
                 background = `rgba(${r},${g},${b},${breakdown[0].opacity.toFixed(3)})`;
               } else if (breakdown.length > 1) {
                 const w = 100 / breakdown.length;
                 const stops = breakdown
                   .map((bd, j) => {
-                    const [r, g, b] = hexToRgb(bd.color);
+                    const [r, g, b] = bd.rgb;
                     return `rgba(${r},${g},${b},${bd.opacity.toFixed(3)}) ${j * w}%, rgba(${r},${g},${b},${bd.opacity.toFixed(3)}) ${(j + 1) * w}%`;
                   })
                   .join(", ");
@@ -470,7 +481,7 @@ export const Calendar = ({
                         >
                           <span
                             className="badge sm:badge-sm h-4 min-h-0 border-0 bg-gray-200 px-1 py-0 font-bold text-[10px] sm:h-5 sm:px-2 sm:text-sm"
-                            style={{ color: bd.color }}
+                            style={{ color: bd.displayColor }}
                             data-tooltip-id="member-info"
                             data-tooltip-html={tooltipContent}
                             data-tooltip-place="top"
