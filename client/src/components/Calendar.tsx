@@ -23,6 +23,11 @@ type ParticipationOption = {
   color: string;
 };
 
+/**
+ * ハイライト条件。同時に有効なのは 1 つだけ。
+ */
+export type Highlight = { type: "maxCount" } | { type: "guest"; guestId: string };
+
 type Props = {
   startDate: Dayjs;
   endDate: Dayjs;
@@ -33,6 +38,7 @@ type Props = {
   guestIdToComment: Record<string, string>;
   participationOptions: ParticipationOption[];
   currentParticipationOptionId: string;
+  highlight: Highlight | null;
   editMode: boolean;
   onChangeEditingSlots: (slots: EditingSlot[]) => void;
 };
@@ -72,6 +78,7 @@ export const Calendar = ({
   guestIdToComment,
   participationOptions,
   currentParticipationOptionId,
+  highlight,
   editMode,
   onChangeEditingSlots,
 }: Props) => {
@@ -112,13 +119,27 @@ export const Calendar = ({
   }, [editingSlots]);
 
   // viewingSlots → ViewingMatrix → rendered slots
-  const computedViewingSlots = useMemo(() => {
+  const viewingMatrix = useMemo(() => {
     const matrix = new ViewingMatrix(countDays, startDate);
     for (const slot of viewingSlots) {
       matrix.setGuestRange(slot.from, slot.to, slot.guestId, slot.optionId);
     }
-    return matrix.getSlots();
+    return matrix;
   }, [viewingSlots, countDays, startDate]);
+
+  const computedViewingSlots = useMemo(() => viewingMatrix.getSlots(), [viewingMatrix]);
+
+  // ハイライト条件を満たすセルを求め、連続区間にまとめる
+  const highlightSlots = useMemo(() => {
+    if (!highlight) return [];
+    if (highlight.type === "guest") {
+      const { guestId } = highlight;
+      return viewingMatrix.buildHighlight((cell) => guestId in cell).getSlots();
+    }
+    const maxCount = viewingMatrix.getMaxGuestCount();
+    if (maxCount === 0) return [];
+    return viewingMatrix.buildHighlight((cell) => Object.keys(cell).length === maxCount).getSlots();
+  }, [viewingMatrix, highlight]);
 
   // セル座標変換ヘルパー（毎レンダーで最新クロージャを利用）
   const xyToCell = (x: number, y: number) => {
@@ -138,6 +159,39 @@ export const Calendar = ({
       .add(slotStartMinutes + slot * 15, "minute");
 
   const toSlotIdx = (dt: Dayjs) => (dt.hour() * 60 + dt.minute() - slotStartMinutes) / 15;
+
+  /**
+   * ハイライトの「補集合」を矩形として列挙する。ここを白ベールで覆うことで、
+   * 既存の（参加形態の色 × 人数の濃さ）表現を汚さずに該当区間だけを浮き上がらせる。
+   */
+  const veilRects = useMemo(() => {
+    if (highlightSlots.length === 0) return [];
+
+    const perDay: { from: number; to: number }[][] = Array.from({ length: countDays }, () => []);
+    for (const slot of highlightSlots) {
+      const dayIdx = slot.from.startOf("day").diff(startDate.startOf("day"), "day");
+      if (dayIdx < 0 || dayIdx >= countDays) continue;
+      const rawFrom = (slot.from.hour() * 60 + slot.from.minute() - slotStartMinutes) / 15;
+      // to は 24:00（翌日 0:00）になりうるので、from からの経過時間で求める
+      const rawTo = rawFrom + slot.to.diff(slot.from, "minute") / 15;
+      const from = Math.max(0, rawFrom);
+      const to = Math.min(slotCount, rawTo);
+      if (to <= from) continue;
+      perDay[dayIdx].push({ from, to });
+    }
+
+    const rects: { day: number; from: number; to: number }[] = [];
+    for (let day = 0; day < countDays; day++) {
+      const ranges = perDay[day].sort((a, b) => a.from - b.from);
+      let cursor = 0;
+      for (const range of ranges) {
+        if (range.from > cursor) rects.push({ day, from: cursor, to: range.from });
+        cursor = Math.max(cursor, range.to);
+      }
+      if (cursor < slotCount) rects.push({ day, from: cursor, to: slotCount });
+    }
+    return rects;
+  }, [highlightSlots, countDays, startDate, slotCount, slotStartMinutes]);
 
   updatePreviewRef.current = (x: number, y: number) => {
     const cell = xyToCell(x, y);
@@ -430,6 +484,15 @@ export const Calendar = ({
                 </div>
               );
             })}
+
+            {/* ハイライト: 非該当領域を白ベールで落とす（pointer-events-none で内訳ツールチップは維持） */}
+            {veilRects.map((rect) => (
+              <div
+                key={`hl-${rect.day}-${rect.from}`}
+                className="pointer-events-none absolute bg-white/65"
+                style={pct(rect.day, rect.from, 1, rect.to - rect.from)}
+              />
+            ))}
 
             {/* 編集中スロット（自分の登録済み時間） */}
             {slots.map((slot) => {

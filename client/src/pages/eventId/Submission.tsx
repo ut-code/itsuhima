@@ -11,12 +11,13 @@ import {
   LuSend,
   LuSettings2,
   LuUser,
+  LuUsers,
   LuX,
 } from "react-icons/lu";
 import { NavLink, useParams } from "react-router";
 import type { AppType } from "../../../../server/src/main";
 import { AddToCalendar } from "../../components/AddToCalendar";
-import { Calendar } from "../../components/Calendar";
+import { Calendar, type Highlight } from "../../components/Calendar";
 import Header from "../../components/Header";
 import { projectReviver } from "../../revivers";
 import type { Project, Slot } from "../../types";
@@ -146,6 +147,8 @@ export default function SubmissionPage() {
 
   const [comment, setComment] = useState(meAsGuest?.comment ?? "");
 
+  const [highlight, setHighlight] = useState<Highlight | null>(null);
+
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [guestListExpanded, setGuestListExpanded] = useState(false);
 
@@ -228,6 +231,11 @@ export default function SubmissionPage() {
       setMode("view");
     }
   }, [meAsGuest]);
+
+  // 編集・確認モードではベールがドラッグ入力の邪魔になるため解除する
+  useEffect(() => {
+    if (mode !== "view") setHighlight(null);
+  }, [mode]);
 
   const guestIdToName = useMemo(() => {
     if (!project) return {};
@@ -394,6 +402,27 @@ export default function SubmissionPage() {
                 </div>
               )}
 
+              {/* ハイライト操作バー */}
+              {mode === "view" && project.guests.length > 0 && (
+                <div className="mt-3 mb-2 flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    className={`btn btn-sm gap-1.5 ${highlight?.type === "maxCount" ? "btn-primary" : "btn-outline"}`}
+                    onClick={() => setHighlight((prev) => (prev?.type === "maxCount" ? null : { type: "maxCount" }))}
+                  >
+                    <LuUsers className="h-4 w-4" />
+                    最多人数
+                  </button>
+                  {highlight?.type === "guest" && (
+                    <button type="button" className="btn btn-sm btn-primary gap-1.5" onClick={() => setHighlight(null)}>
+                      <LuUser className="h-4 w-4" />
+                      {guestIdToName[highlight.guestId] ?? "参加者"}さんの日程
+                      <LuX className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+
               <Calendar
                 startDate={project.startDate}
                 endDate={project.endDate}
@@ -404,6 +433,7 @@ export default function SubmissionPage() {
                 guestIdToComment={guestIdToComment}
                 participationOptions={project.participationOptions}
                 currentParticipationOptionId={selectedParticipationOptionId}
+                highlight={mode === "view" ? highlight : null}
                 editMode={mode === "edit"}
                 onChangeEditingSlots={setEditingSlots}
               />
@@ -423,19 +453,29 @@ export default function SubmissionPage() {
                     <ul className="mt-1 divide-y divide-base-200">
                       {project.guests.map((guest) => {
                         const commentText = guestIdToComment[guest.id];
+                        const isHighlighted = highlight?.type === "guest" && highlight.guestId === guest.id;
                         return (
-                          <li key={guest.id} className="flex items-start gap-3 py-2">
-                            <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-base-300">
-                              <LuUser className="h-4 w-4 text-base-content/40" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="pt-1 font-medium text-base-content text-sm">{guest.name}</p>
-                              {commentText && (
-                                <div className="mt-1.5 w-fit max-w-full rounded-2xl rounded-tl-none bg-base-300 px-3 py-2 text-base-content text-sm">
-                                  <span className="wrap-break-word whitespace-pre-wrap">{commentText}</span>
-                                </div>
-                              )}
-                            </div>
+                          <li key={guest.id}>
+                            <button
+                              type="button"
+                              aria-pressed={isHighlighted}
+                              onClick={() => setHighlight(isHighlighted ? null : { type: "guest", guestId: guest.id })}
+                              className={`flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
+                                isHighlighted ? "bg-primary/10" : "hover:bg-base-200"
+                              }`}
+                            >
+                              <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-base-300">
+                                <LuUser className="h-4 w-4 text-base-content/40" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="pt-1 font-medium text-base-content text-sm">{guest.name}</p>
+                                {commentText && (
+                                  <div className="mt-1.5 w-fit max-w-full rounded-2xl rounded-tl-none bg-base-300 px-3 py-2 text-base-content text-sm">
+                                    <span className="wrap-break-word whitespace-pre-wrap">{commentText}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </button>
                           </li>
                         );
                       })}
