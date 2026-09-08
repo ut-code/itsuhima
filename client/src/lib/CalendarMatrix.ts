@@ -6,6 +6,11 @@ export type EditingMatrixSlot = {
   optionId: string;
 };
 
+export type HighlightMatrixSlot = {
+  from: Dayjs;
+  to: Dayjs;
+};
+
 export type ViewingMatrixSlot = {
   from: Dayjs;
   to: Dayjs;
@@ -60,7 +65,7 @@ abstract class CalendarMatrixBase<T> {
       Array.from({ length: this.quarterCount }, () => null),
     );
   }
-  abstract getSlots(): EditingMatrixSlot[] | ViewingMatrixSlot[];
+  abstract getSlots(): EditingMatrixSlot[] | ViewingMatrixSlot[] | HighlightMatrixSlot[];
 }
 
 /**
@@ -104,6 +109,38 @@ export class ViewingMatrix extends CalendarMatrixBase<Record<string, string>> {
     }
   }
 
+  /**
+   * いずれかのゲストが登録しているセルのうち、最も参加人数が多いセルの人数を返す。
+   * 誰も登録していない場合は 0。
+   */
+  getMaxGuestCount(): number {
+    let max = 0;
+    for (const row of this.matrix) {
+      for (const cell of row) {
+        if (cell === null) continue;
+        const count = Object.keys(cell).length;
+        if (count > max) max = count;
+      }
+    }
+    return max;
+  }
+
+  /**
+   * 各セルに述語を適用し、条件を満たすセルだけを立てた {@link HighlightMatrix} を返す。
+   * セル単位で判定してから run 化するため、連続区間が正しくまとまる。
+   */
+  buildHighlight(predicate: (cell: Record<string, string>) => boolean): HighlightMatrix {
+    const highlight = new HighlightMatrix(this.matrix.length, this.initialDatetime);
+    for (let day = 0; day < this.matrix.length; day++) {
+      for (let quarter = 0; quarter < this.quarterCount; quarter++) {
+        const cell = this.matrix[day][quarter];
+        if (cell === null || !predicate(cell)) continue;
+        highlight.mark(day, quarter);
+      }
+    }
+    return highlight;
+  }
+
   getSlots(): ViewingMatrixSlot[] {
     const slots: ViewingMatrixSlot[] = [];
     for (let day = 0; day < this.matrix.length; day++) {
@@ -123,6 +160,30 @@ export class ViewingMatrix extends CalendarMatrixBase<Record<string, string>> {
       const guestIdToOptionId = run.value;
       return { from, to, guestIdToOptionId };
     });
+  }
+}
+
+/**
+ * ハイライト対象セルの {@link CalendarMatrixBase}。セル値は「対象である」ことのみを表す。
+ */
+export class HighlightMatrix extends CalendarMatrixBase<true> {
+  mark(day: number, quarter: number): void {
+    if (!this.isInBounds(day, quarter)) return;
+    this.matrix[day][quarter] = true;
+  }
+
+  getSlots(): HighlightMatrixSlot[] {
+    const slots: HighlightMatrixSlot[] = [];
+    for (let day = 0; day < this.matrix.length; day++) {
+      const runs = findRuns(this.matrix[day], () => true);
+      for (const run of runs) {
+        slots.push({
+          from: this.initialDatetime.add(day, "day").add(run.start * 15, "minute"),
+          to: this.initialDatetime.add(day, "day").add(run.end * 15, "minute"),
+        });
+      }
+    }
+    return slots;
   }
 }
 
