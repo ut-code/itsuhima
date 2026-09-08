@@ -315,12 +315,25 @@ export default function SubmissionPage() {
               <div>
                 <div className="flex items-center justify-between gap-2">
                   <h1 className="min-w-0 truncate font-bold text-base text-base-content sm:text-lg">{project.name}</h1>
-                  {isHost && (
-                    <NavLink to={`/e/${projectId}/edit`} className="btn btn-sm btn-outline shrink-0 gap-1.5">
-                      <LuSettings2 className="h-4 w-4" />
-                      <span>編集</span>
-                    </NavLink>
-                  )}
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {/* 自分の日程をカレンダーアプリに追加 */}
+                    {mode === "view" && meAsGuest && meAsGuest.slots.length > 0 && (
+                      <AddToCalendar
+                        projectName={project.name}
+                        projectId={projectId ?? ""}
+                        projectDescription={project.description}
+                        slots={meAsGuest.slots}
+                        participationOptionIdToLabel={participationOptionIdToLabel}
+                        participationOptionCount={project.participationOptions.length}
+                      />
+                    )}
+                    {isHost && (
+                      <NavLink to={`/e/${projectId}/edit`} className="btn btn-sm btn-outline shrink-0 gap-1.5">
+                        <LuSettings2 className="h-4 w-4" />
+                        <span>編集</span>
+                      </NavLink>
+                    )}
+                  </div>
                 </div>
                 {project.description &&
                   (() => {
@@ -353,18 +366,6 @@ export default function SubmissionPage() {
                     );
                   })()}
               </div>
-
-              {/* 自分の日程をカレンダーアプリに追加 */}
-              {mode === "view" && meAsGuest && meAsGuest.slots.length > 0 && (
-                <AddToCalendar
-                  projectName={project.name}
-                  projectId={projectId ?? ""}
-                  projectDescription={project.description}
-                  slots={meAsGuest.slots}
-                  participationOptionIdToLabel={participationOptionIdToLabel}
-                  participationOptionCount={project.participationOptions.length}
-                />
-              )}
 
               {/* 参加形態選択ボタン */}
               {mode === "edit" && project.participationOptions.length > 1 && selectedParticipationOptionId !== null && (
@@ -402,27 +403,6 @@ export default function SubmissionPage() {
                 </div>
               )}
 
-              {/* ハイライト操作バー */}
-              {mode === "view" && project.guests.length > 0 && (
-                <div className="mt-3 mb-2 flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    className={`btn btn-sm gap-1.5 ${highlight?.type === "maxCount" ? "btn-primary" : "btn-outline"}`}
-                    onClick={() => setHighlight((prev) => (prev?.type === "maxCount" ? null : { type: "maxCount" }))}
-                  >
-                    <LuUsers className="h-4 w-4" />
-                    最多人数
-                  </button>
-                  {highlight?.type === "guest" && (
-                    <button type="button" className="btn btn-sm btn-primary gap-1.5" onClick={() => setHighlight(null)}>
-                      <LuUser className="h-4 w-4" />
-                      {guestIdToName[highlight.guestId] ?? "参加者"}さんの日程
-                      <LuX className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              )}
-
               <Calendar
                 startDate={project.startDate}
                 endDate={project.endDate}
@@ -441,14 +421,44 @@ export default function SubmissionPage() {
               {/* 参加者一覧 */}
               {project.guests.length > 0 && (
                 <div className="mt-1 pb-2">
-                  <button
-                    type="button"
-                    onClick={() => setGuestListExpanded((prev) => !prev)}
-                    className="flex items-center gap-1.5 font-medium text-base-content/80 text-sm hover:text-base-content"
-                  >
-                    参加者 ({project.guests.length}人)
-                    {guestListExpanded ? <LuChevronUp className="h-4 w-4" /> : <LuChevronDown className="h-4 w-4" />}
-                  </button>
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setGuestListExpanded((prev) => !prev)}
+                      className="flex min-w-0 items-center gap-1.5 font-medium text-base-content/80 text-sm hover:text-base-content"
+                    >
+                      参加者 ({project.guests.length}人)
+                      {guestListExpanded ? <LuChevronUp className="h-4 w-4" /> : <LuChevronDown className="h-4 w-4" />}
+                    </button>
+                    {/* ハイライト操作（カレンダーの縦幅を使わないようこの行に置く） */}
+                    {mode === "view" && (
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        {highlight?.type === "guest" && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-primary min-w-0 gap-1.5"
+                            onClick={() => setHighlight(null)}
+                          >
+                            <LuUser className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{guestIdToName[highlight.guestId] ?? "参加者"}</span>
+                            <LuX className="h-4 w-4 shrink-0" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className={`btn btn-sm shrink-0 gap-1.5 ${
+                            highlight?.type === "maxCount" ? "btn-primary" : "btn-outline"
+                          }`}
+                          onClick={() =>
+                            setHighlight((prev) => (prev?.type === "maxCount" ? null : { type: "maxCount" }))
+                          }
+                        >
+                          <LuUsers className="h-4 w-4" />
+                          最多人数
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   {guestListExpanded && (
                     <ul className="mt-1 divide-y divide-base-200">
                       {project.guests.map((guest) => {
