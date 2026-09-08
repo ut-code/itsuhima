@@ -24,7 +24,7 @@ import { EXTERNAL_LINKS } from "../constants/links";
 import dayjs from "../lib/dayjs";
 import { projectReviver } from "../revivers";
 import type { Project } from "../types";
-import { API_ENDPOINT, FRONTEND_ORIGIN } from "../utils";
+import { API_ENDPOINT, extractErrorMessage, FRONTEND_ORIGIN } from "../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
 
@@ -59,15 +59,7 @@ export default function ProjectPage() {
         const parsedData = projectReviver(data);
         setProject(parsedData);
       } else {
-        let errorMessage = "プロジェクトの取得に失敗しました。";
-        try {
-          const data = await res.json();
-          if (data && typeof data.message === "string" && data.message.trim()) {
-            errorMessage = data.message.trim();
-          }
-        } catch (_) {
-          // レスポンスがJSONでない場合は無視
-        }
+        const errorMessage = await extractErrorMessage(res, "プロジェクトの取得に失敗しました。");
         setToast({
           message: errorMessage,
           variant: "error",
@@ -254,17 +246,7 @@ export default function ProjectPage() {
         });
         setTimeout(() => setToast(null), 3000);
       } else {
-        let errorMessage = "更新に失敗しました。";
-        try {
-          const data = await res.json();
-          if (data && typeof data.message === "string" && data.message.trim()) {
-            errorMessage = data.message.trim();
-          } else if (res.status === 403) {
-            errorMessage = "権限がありません。";
-          }
-        } catch (_) {
-          if (res.status === 403) errorMessage = "権限がありません。";
-        }
+        const errorMessage = await extractErrorMessage(res, "更新に失敗しました。");
         setToast({
           message: errorMessage,
           variant: "error",

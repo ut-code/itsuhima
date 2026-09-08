@@ -6,6 +6,11 @@
 
 とりあえずみんなの空いている時間を訊いてから、何を何時間やるか決めたい。そんな仲間うちでの日程調整に最適なツールです。
 
+## AI 連携（MCP）
+
+ChatGPT / Claude / Claude Code からイベントの確認や日程の提出ができる。
+接続方法とツールの仕様は [`docs/mcp.md`](./docs/mcp.md) を参照。
+
 ## 開発
 
 ### 要件
@@ -66,6 +71,14 @@ npm run dev:functions
 http://localhost:5173 にアクセスします。
 
 
+
+### MCP サーバー
+
+ローカルで動かす場合、`/mcp` は `npm run dev:server` に同居している。
+連携コードは http://localhost:5173/settings/mcp から発行できる。
+stdio ブリッジをローカルの API に向けるには `ITSUHIMA_API=http://localhost:3000` を指定する。
+
+詳細は [`docs/mcp.md`](./docs/mcp.md) を参照。
 
 ### コードスタイル
 

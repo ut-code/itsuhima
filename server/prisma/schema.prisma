@@ -66,12 +66,14 @@ model Host {
 
 // 日程調整プロジェクトの参加者。
 model Guest {
-  id        String  @id @default(uuid())
+  id        String   @id @default(uuid())
   name      String
   comment   String?
-  browserId String  @default(uuid())
+  browserId String   @default(uuid())
+  /// 楽観ロック（MCP の update_availability の version）に使う
+  updatedAt DateTime @default(now()) @updatedAt
   projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   slots     Slot[]
 
   @@unique([browserId, projectId])
@@ -87,4 +89,37 @@ model ParticipationOption {
   slots     Slot[]
 
   @@unique([projectId, label])
+}
+
+/// MCP クライアント用の API トークン。browserId に紐づく。
+model ApiToken {
+  id         String    @id @default(uuid())
+  /// SHA-256 ハッシュのみ保存。平文は発行時に一度だけ返す。
+  tokenHash  String    @unique
+  /// 一覧表示用の先頭数文字（例: "ith_a1b2c3"）
+  prefix     String
+  /// ユーザーが識別するための名前（例: "Claude Code / MacBook"）
+  name       String
+  browserId  String
+  /// "read", "submit", "create" のカンマ区切り
+  scopes     String
+  expiresAt  DateTime?
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([browserId])
+}
+
+/// browserId と MCP クライアントを紐づけるための短命なペアリングコード。
+/// アカウントが無いため、Web UI で発行したコードを MCP 側で引き換えてトークンを得る。
+model PairingCode {
+  /// 6 桁の数字
+  code      String   @id
+  browserId String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
 }

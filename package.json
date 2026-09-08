@@ -4,7 +4,8 @@
   "workspaces": [
     "client",
     "server",
-    "common"
+    "common",
+    "mcp"
   ],
   "scripts": {
     "watch:client": "cd client && npm run build:local:watch",
@@ -16,7 +17,8 @@
     "start:server": "node server/dist/server/src/main.js",
     "check": "npx @biomejs/biome check",
     "fix": "npx @biomejs/biome check --fix --unsafe",
-    "fix:safe": "npx @biomejs/biome check --fix"
+    "fix:safe": "npx @biomejs/biome check --fix",
+    "build:mcp": "cd mcp && npm run build"
   },
   "devDependencies": {
     "@biomejs/biome": "2.0.6"

@@ -21,7 +21,7 @@ import { Calendar, type Highlight } from "../../components/Calendar";
 import Header from "../../components/Header";
 import { projectReviver } from "../../revivers";
 import type { Project, Slot } from "../../types";
-import { API_ENDPOINT } from "../../utils";
+import { API_ENDPOINT, extractErrorMessage } from "../../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
 
@@ -103,15 +103,7 @@ export default function SubmissionPage() {
         const parsedData = projectReviver(data);
         setProject(parsedData);
       } else {
-        let errorMessage = "プロジェクトの取得に失敗しました。";
-        try {
-          const data = await res.json();
-          if (data && typeof data.message === "string" && data.message.trim()) {
-            errorMessage = data.message.trim();
-          }
-        } catch (_) {
-          // レスポンスがJSONでない場合は無視
-        }
+        const errorMessage = await extractErrorMessage(res, "プロジェクトの取得に失敗しました。");
         setToast({
           message: errorMessage,
           variant: "error",
