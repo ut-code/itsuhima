@@ -67,7 +67,7 @@ REST fetch ではなく `client.events[":eventId"].$get(...)` 形式で呼び出
 - `event`: 日程調整のイベント。`startDate` / `endDate` は `"YYYY-MM-DD"`（`endDate` を含む）、`timezone` は IANA のタイムゾーン名（現在は全件 `Asia/Tokyo`）。
 - `allowedRange`: 入力できる時間帯（現在はイベントにつき 1 つ）。`startTime` / `endTime` は `"HH:mm"`。終わりは `"24:00"` もありうる。
 - `option`: 参加形態。
-- `participant`: 参加者。`role` でホストとゲストを区別する。`name` が null なら未回答（イベントを作っただけのホスト）。ホストが回答しても 1 行のまま。
+- `participant`: 参加者。`role` でホストとゲストを区別する。`name` が null なら未回答（イベントを作っただけのホスト）。ホストが回答しても 1 行のまま。`userId` はログインしている参加者のユーザー（ログインせずに回答した参加者は null）。
 - `slot`: 参加者が参加できる時間帯。`startAt` / `endAt` は UTC の ISO 8601 で、日をまたがない。
 
 日付と時間帯は、イベントの `timezone` の壁時計の値で持つ。Slot だけは実際の時刻なので UTC で持つ。API も同じ形式で受け取って返す。
@@ -76,9 +76,19 @@ API のレスポンスでは、参加者を `hosts`（ホスト）、`guests` �
 
 マイグレーションは `server/migrations/`。データの変換を伴うものは `drizzle-kit generate --custom` で作って SQL を手で書き、`server/test/migrations.test.ts` に移行のテストを足す。D1 は外部キーを常に強制し、`DROP TABLE` の暗黙の DELETE で `ON DELETE CASCADE` が発火するので、他のテーブルから参照されるテーブルは作り直さない（`RENAME` や `ADD COLUMN` で変える）。
 
-### 認証（browserId）
+### 本人の判定（browserId とログイン）
 
-ユーザーアカウントなし。サーバーの `browserIdMiddleware` が、初回アクセス時に UUID を生成して署名付き Cookie として保存し、以降のリクエストでは Cookie から `browserId` を復元して `c.set("browserId", ...)` に格納する。署名鍵は `COOKIE_SECRET`。ローテーション中は `COOKIE_SECRET_PREVIOUS` の鍵でも検証し、現行の鍵で署名し直す（`server/src/middleware/browserId.ts`）。
+ログインは任意。ログインしなくても、ブラウザごとの `browserId` で作成・回答できる。
+
+**browserId**: サーバーの `browserIdMiddleware` が、初回アクセス時に UUID を生成して署名付き Cookie として保存し、以降のリクエストでは Cookie から `browserId` を復元して `c.set("browserId", ...)` に格納する。署名鍵は `COOKIE_SECRET`。ローテーション中は `COOKIE_SECRET_PREVIOUS` の鍵でも検証し、現行の鍵で署名し直す（`server/src/middleware/browserId.ts`）。
+
+**ログイン (Google)**: Better Auth を `/api/auth/*` に載せている（`server/src/auth.ts`）。Workers では env がリクエストの中でしか取れないので、`createAuth(env, db)` をリクエストごとに呼ぶ。テーブル (`user`/`session`/`account`/`verification`) は `server/auth.config.ts` から `npx auth generate` で生成したもの。
+
+- `actorMiddleware` が、操作する本人 `Actor = { browserId, userId }` を `c.set("actor", ...)` に入れる。セッションの Cookie が無ければ Better Auth を作らない。
+- サービスは `Actor` を受け取る。参加者は、`userId` か `browserId` が一致すれば本人のもの（`services/actor.ts` の `ownedBy` / `pickMine`）。
+- ログインすると、そのブラウザの参加者に `userId` を付ける（`services/link.ts`）。別の端末でも同じユーザーとしてログインすれば、同じ参加者を操作できる。
+- client のログインのボタンは `VITE_LOGIN_ENABLED=true` のときだけ出る。
+- テストでは `createBrowser().login(...)` でログインできる（Google を呼ばず、署名なしの ID トークンを使う）。
 
 ### カレンダーの状態管理（CalendarMatrix）
 
