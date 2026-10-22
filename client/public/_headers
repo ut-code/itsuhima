@@ -2,3 +2,12 @@
 # ステージングは検索に載せない
 https://itsuhima-staging.utcode.net/*
   X-Robots-Tag: noindex
+
+# 同意画面とログイン画面は、他のサイトの iframe に入れさせない (クリックジャッキング対策)
+/oauth/consent
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Frame-Options: DENY
+
+/login
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Frame-Options: DENY
