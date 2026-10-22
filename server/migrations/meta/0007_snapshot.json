@@ -103,9 +103,7 @@
       "indexes": {
         "account_userId_idx": {
           "name": "account_userId_idx",
-          "columns": [
-            "userId"
-          ],
+          "columns": ["userId"],
           "isUnique": false
         }
       },
@@ -114,12 +112,8 @@
           "name": "account_userId_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -163,9 +157,7 @@
       "indexes": {
         "allowedRange_eventId_idx": {
           "name": "allowedRange_eventId_idx",
-          "columns": [
-            "eventId"
-          ],
+          "columns": ["eventId"],
           "isUnique": false
         }
       },
@@ -174,12 +166,8 @@
           "name": "allowedRange_eventId_event_id_fk",
           "tableFrom": "allowedRange",
           "tableTo": "event",
-          "columnsFrom": [
-            "eventId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["eventId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
@@ -283,10 +271,7 @@
       "indexes": {
         "option_eventId_label_key": {
           "name": "option_eventId_label_key",
-          "columns": [
-            "eventId",
-            "label"
-          ],
+          "columns": ["eventId", "label"],
           "isUnique": true
         }
       },
@@ -295,12 +280,8 @@
           "name": "option_eventId_event_id_fk",
           "tableFrom": "option",
           "tableTo": "event",
-          "columnsFrom": [
-            "eventId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["eventId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
@@ -365,10 +346,7 @@
       "indexes": {
         "participant_eventId_browserId_key": {
           "name": "participant_eventId_browserId_key",
-          "columns": [
-            "eventId",
-            "browserId"
-          ],
+          "columns": ["eventId", "browserId"],
           "isUnique": true
         }
       },
@@ -377,12 +355,8 @@
           "name": "participant_eventId_event_id_fk",
           "tableFrom": "participant",
           "tableTo": "event",
-          "columnsFrom": [
-            "eventId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["eventId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
@@ -460,16 +434,12 @@
       "indexes": {
         "session_token_unique": {
           "name": "session_token_unique",
-          "columns": [
-            "token"
-          ],
+          "columns": ["token"],
           "isUnique": true
         },
         "session_userId_idx": {
           "name": "session_userId_idx",
-          "columns": [
-            "userId"
-          ],
+          "columns": ["userId"],
           "isUnique": false
         }
       },
@@ -478,12 +448,8 @@
           "name": "session_userId_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -541,24 +507,17 @@
       "indexes": {
         "slot_eventId_startAt_idx": {
           "name": "slot_eventId_startAt_idx",
-          "columns": [
-            "eventId",
-            "startAt"
-          ],
+          "columns": ["eventId", "startAt"],
           "isUnique": false
         },
         "slot_participantId_idx": {
           "name": "slot_participantId_idx",
-          "columns": [
-            "participantId"
-          ],
+          "columns": ["participantId"],
           "isUnique": false
         },
         "slot_optionId_idx": {
           "name": "slot_optionId_idx",
-          "columns": [
-            "optionId"
-          ],
+          "columns": ["optionId"],
           "isUnique": false
         }
       },
@@ -567,12 +526,8 @@
           "name": "slot_eventId_event_id_fk",
           "tableFrom": "slot",
           "tableTo": "event",
-          "columnsFrom": [
-            "eventId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["eventId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         },
@@ -580,12 +535,8 @@
           "name": "slot_participantId_participant_id_fk",
           "tableFrom": "slot",
           "tableTo": "participant",
-          "columnsFrom": [
-            "participantId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["participantId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         },
@@ -593,12 +544,8 @@
           "name": "slot_optionId_option_id_fk",
           "tableFrom": "slot",
           "tableTo": "option",
-          "columnsFrom": [
-            "optionId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["optionId"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "cascade"
         }
@@ -666,9 +613,7 @@
       "indexes": {
         "user_email_unique": {
           "name": "user_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         }
       },
@@ -728,9 +673,7 @@
       "indexes": {
         "verification_identifier_idx": {
           "name": "verification_identifier_idx",
-          "columns": [
-            "identifier"
-          ],
+          "columns": ["identifier"],
           "isUnique": false
         }
       },

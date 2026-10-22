@@ -76,6 +76,8 @@ export const participant = sqliteTable(
     name: text(),
     comment: text(),
     browserId: text().notNull(),
+    /** ログインしている参加者のユーザー。ログインせずに回答した参加者は null */
+    userId: text().references(() => user.id, { onDelete: "set null" }),
     updatedAt: text()
       .notNull()
       .$defaultFn(() => new Date().toISOString())
@@ -83,6 +85,8 @@ export const participant = sqliteTable(
   },
   (t) => [
     uniqueIndex("participant_eventId_browserId_key").on(t.eventId, t.browserId),
+    // SQLite の UNIQUE は NULL 同士を重複とみなさないので、ログインしていない参加者は何人いてもよい
+    uniqueIndex("participant_eventId_userId_key").on(t.eventId, t.userId),
     check("participant_role_check", sql`${t.role} IN ('host', 'guest')`),
   ],
 );

@@ -57,6 +57,13 @@
       "when": 1792706589944,
       "tag": "0007_add_auth_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792706622649,
+      "tag": "0008_add_participant_user_id",
+      "breakpoints": true
     }
   ]
 }

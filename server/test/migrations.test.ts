@@ -258,3 +258,44 @@ describe("0006_merge_host_guest_into_participant", () => {
     expect(await db.prepare(`SELECT id FROM "slot"`).all()).toMatchObject({ results: [{ id: "s1" }] });
   });
 });
+
+describe("0008_add_participant_user_id", () => {
+  test("participant に userId を足しても、既存の参加者と slot は残る", async () => {
+    const { db, migrate } = await migrateUntil("0008_add_participant_user_id.sql");
+    await db.batch([
+      db.prepare(`INSERT INTO "event" (id, name, startDate, endDate) VALUES ('p', 'name', '2026-11-02', '2026-11-04')`),
+      db.prepare(`INSERT INTO "option" VALUES ('o', '参加', '#0F82B1', 'p')`),
+      db.prepare(`INSERT INTO "participant" VALUES ('g1', 'p', 'guest', 'ゲスト', NULL, 'b1', 'now')`),
+      db.prepare(
+        `INSERT INTO "slot" VALUES ('s1', '2026-11-02T00:00:00.000Z', '2026-11-02T01:00:00.000Z', 'p', 'g1', 'o')`,
+      ),
+    ]);
+
+    await migrate();
+
+    expect(await db.prepare(`SELECT id, browserId, userId FROM "participant"`).all()).toMatchObject({
+      results: [{ id: "g1", browserId: "b1", userId: null }],
+    });
+    expect(await db.prepare(`SELECT id FROM "slot"`).all()).toMatchObject({ results: [{ id: "s1" }] });
+  });
+
+  test("同じイベントに同じユーザーの参加者は 1 人だけ。ユーザーを消すと userId が null になる", async () => {
+    const { db, migrate } = await migrateUntil("0008_add_participant_user_id.sql");
+    await migrate();
+    await db.batch([
+      db.prepare(`INSERT INTO "event" (id, name, startDate, endDate) VALUES ('p', 'name', '2026-11-02', '2026-11-04')`),
+      db.prepare(`INSERT INTO "user" (id, name, email, updatedAt) VALUES ('u', 'A', 'a@example.com', 0)`),
+      db.prepare(`INSERT INTO "participant" VALUES ('g1', 'p', 'guest', 'ゲスト', NULL, 'b1', 'now', 'u')`),
+      // ログインしていない参加者 (userId が null) は何人いてもよい
+      db.prepare(`INSERT INTO "participant" VALUES ('g2', 'p', 'guest', 'ゲスト', NULL, 'b2', 'now', NULL)`),
+      db.prepare(`INSERT INTO "participant" VALUES ('g3', 'p', 'guest', 'ゲスト', NULL, 'b3', 'now', NULL)`),
+    ]);
+
+    await expect(
+      db.prepare(`INSERT INTO "participant" VALUES ('g4', 'p', 'guest', NULL, NULL, 'b4', 'now', 'u')`).run(),
+    ).rejects.toThrow(/UNIQUE/);
+
+    await db.prepare(`DELETE FROM "user" WHERE id = 'u'`).run();
+    expect(await db.prepare(`SELECT userId FROM "participant" WHERE id = 'g1'`).first()).toEqual({ userId: null });
+  });
+});
