@@ -1,10 +1,13 @@
-const isProduction = process.env.NODE_ENV === "production";
+import type { CookieOptions } from "hono/utils/cookie";
+import type { Bindings } from "./env.js";
 
-export const cookieOptions = {
-  path: "/",
-  domain: process.env.DOMAIN || "localhost", // /home へのリダイレクトのためフロントエンドにも送る
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: "lax",
-  maxAge: 60 * 60 * 24 * 365, // Express だとミリ秒だったが、Hono では秒らしい
-} as const;
+export function cookieOptions(env: Bindings) {
+  return {
+    path: "/",
+    domain: env.DOMAIN || "localhost", // /home へのリダイレクトのためフロントエンドにも送る
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 365, // Express だとミリ秒だったが、Hono では秒らしい
+  } as const satisfies CookieOptions;
+}

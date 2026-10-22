@@ -1,12 +1,11 @@
-import { afterAll, beforeEach } from "vitest";
-import { prisma } from "../src/db.js";
+import { applyD1Migrations } from "cloudflare:test";
+import { env } from "cloudflare:workers";
+import { beforeEach } from "vitest";
+
+// 外部キーで参照される側を後に消す
+const tables = ["Slot", "Guest", "Host", "AllowedRange", "ParticipationOption", "Project"];
 
 beforeEach(async () => {
-  await prisma.$executeRawUnsafe(
-    'TRUNCATE "Project", "AllowedRange", "Slot", "Host", "Guest", "ParticipationOption" CASCADE',
-  );
-});
-
-afterAll(async () => {
-  await prisma.$disconnect();
+  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+  await env.DB.batch(tables.map((table) => env.DB.prepare(`DELETE FROM "${table}"`)));
 });

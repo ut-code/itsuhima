@@ -1,12 +1,14 @@
-import { describe, expect, test, vi } from "vitest";
+import { env } from "cloudflare:workers";
+import { describe, expect, test } from "vitest";
 import { app } from "../src/app.js";
+import type { Bindings } from "../src/env.js";
 
 function browserIdCookie(res: Response) {
   return res.headers.get("Set-Cookie")?.split(";")[0];
 }
 
-function requestWithCookie(cookie?: string) {
-  return app.request("/", { headers: cookie ? { Cookie: cookie } : {} });
+function requestWithCookie(cookie?: string, vars: Partial<Bindings> = {}) {
+  return app.request("/", { headers: cookie ? { Cookie: cookie } : {} }, { ...env, ...vars });
 }
 
 describe("browserIdMiddleware", () => {
@@ -20,12 +22,12 @@ describe("browserIdMiddleware", () => {
   });
 
   test("前の鍵で署名された Cookie は、同じ browserId を現行の鍵で署名し直して発行する", async () => {
-    vi.stubEnv("COOKIE_SECRET", "old-secret");
-    const oldCookie = browserIdCookie(await requestWithCookie());
-    vi.stubEnv("COOKIE_SECRET", "new-secret");
-    vi.stubEnv("COOKIE_SECRET_PREVIOUS", "older-secret, old-secret");
+    const oldCookie = browserIdCookie(await requestWithCookie(undefined, { COOKIE_SECRET: "old-secret" }));
 
-    const res = await requestWithCookie(oldCookie);
+    const res = await requestWithCookie(oldCookie, {
+      COOKIE_SECRET: "new-secret",
+      COOKIE_SECRET_PREVIOUS: "older-secret, old-secret",
+    });
 
     expect(res.status).toBe(200);
     const newCookie = browserIdCookie(res);
@@ -33,7 +35,6 @@ describe("browserIdMiddleware", () => {
     expect(newCookie?.split(".")[0]).toBe(oldCookie?.split(".")[0]);
 
     // 署名し直した Cookie は、前の鍵を外しても通る
-    vi.stubEnv("COOKIE_SECRET_PREVIOUS", undefined);
-    expect((await requestWithCookie(newCookie)).status).toBe(200);
+    expect((await requestWithCookie(newCookie, { COOKIE_SECRET: "new-secret" })).status).toBe(200);
   });
 });

@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { serializeSigned } from "hono/utils/cookie";
 import { app } from "../src/app.js";
 
@@ -11,10 +12,10 @@ export function createBrowser() {
   let cookie: Promise<string> | undefined;
 
   const request = async (path: string, init: RequestInit = {}) => {
-    cookie ??= serializeSigned("browserId", browserId, process.env.COOKIE_SECRET as string);
+    cookie ??= serializeSigned("browserId", browserId, env.COOKIE_SECRET);
     const headers = new Headers(init.headers);
     headers.set("Cookie", await cookie);
-    return app.request(path, { ...init, headers });
+    return app.request(path, { ...init, headers }, env);
   };
   const send = (method: string, path: string, body?: unknown) =>
     request(path, {
