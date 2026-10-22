@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
-import { app } from "../src/main.js";
 import type { Bindings } from "../src/env.js";
+import { app } from "../src/main.js";
 
 function browserIdCookie(res: Response) {
   return res.headers.get("Set-Cookie")?.split(";")[0];
