@@ -492,6 +492,30 @@ describe("PUT /projects/:projectId/submissions/mine", () => {
     expect(meAsGuest.slots).toEqual([expect.objectContaining({ from: newSlot.start, to: newSlot.end })]);
   });
 
+  // D1 は 1 つの文のバインド変数が 100 個まで (Slot 1 行で 6 個)。ローカルの D1 はこの上限を強制しないので、
+  // ここで確かめられるのは、分割した INSERT で全件が入ることまで
+  test("1 つの文に収まらない数の Slot も保存できる", async () => {
+    const { id, optionId } = await createProject(createBrowser());
+    const guest = createBrowser();
+    await submit(guest, id, optionId);
+    // 11/02〜11/04 の 08:00〜23:00 を 1 時間ずつ、45 件
+    const slots = [1, 2, 3].flatMap((day) =>
+      Array.from({ length: 15 }, (_, hour) => {
+        const start = new Date(Date.UTC(2026, 10, day, 23 + hour));
+        return {
+          start: start.toISOString(),
+          end: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
+          participationOptionId: optionId,
+        };
+      }),
+    );
+
+    const res = await guest.put(`/projects/${id}/submissions/mine`, submissionInput(id, optionId, { slots }));
+
+    expect(res.status).toBe(200);
+    expect((await getProject(guest, id)).meAsGuest.slots).toHaveLength(45);
+  });
+
   test("他のゲストの回答は変えない", async () => {
     const { id, optionId } = await createProject(createBrowser());
     const guest = createBrowser();
