@@ -7,6 +7,8 @@ export default defineConfig(async () => ({
     cloudflareTest({
       wrangler: { configPath: "./wrangler.toml" },
       miniflare: {
+        // マイグレーションのテスト用。DB は全テストで共有し、beforeEach で最新のスキーマにするので、別に持つ
+        d1Databases: ["MIGRATION_TEST_DB"],
         bindings: {
           TEST_MIGRATIONS: await readD1Migrations("./migrations"),
           COOKIE_SECRET: "test-secret",
