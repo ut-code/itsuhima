@@ -117,7 +117,7 @@ export async function getEvent(db: Db, actor: Actor, eventId: string) {
     guests: event.participants.filter(hasAnswered).map(toGuest),
     // 自分の参加者が 2 人いる (紐づけなかった) とき、me がゲストでも、もう 1 人がホストならホストとして扱う (isHost() と同じ)
     isHost: event.participants.some((p) => isMine(actor, p) && p.role === "host"),
-    meAsGuest: me && hasAnswered(me) ? toGuest(me) : null,
+    meAsGuest: me && hasAnswered(me) ? toMyGuest(me) : null,
   };
 }
 
@@ -146,6 +146,14 @@ function toGuest(participant: ParticipantWithSlots & { name: string }) {
     eventId: participant.eventId,
     slots: participant.slots.map(({ participantId, ...slot }) => ({ ...slot, guestId: participantId })),
   };
+}
+
+/**
+ * 自分の回答。version (最後に回答を変えた日時) を付ける。
+ * 回答を更新するときに basedOnVersion として渡すと、その間に別の端末で変えられていないかを確かめられる。
+ */
+function toMyGuest(participant: ParticipantWithSlots & { name: string }) {
+  return { ...toGuest(participant), version: participant.updatedAt };
 }
 
 async function isHost(db: Db, actor: Actor, eventId: string) {
@@ -280,7 +288,7 @@ async function findMyParticipant(db: Db, actor: Actor, eventId: string) {
 /** 自分の回答。回答していなければ null */
 async function findMyGuest(db: Db, actor: Actor, eventId: string) {
   const me = await findMyParticipant(db, actor, eventId);
-  return me && hasAnswered(me) ? toGuest(me) : null;
+  return me && hasAnswered(me) ? toMyGuest(me) : null;
 }
 
 function slotRows(input: SubmissionInput, eventId: string, participantId: string) {
@@ -329,11 +337,25 @@ export async function submitAvailability(db: Db, actor: Actor, eventId: string, 
   return findMyGuest(db, actor, eventId);
 }
 
-export async function updateMyAvailability(db: Db, actor: Actor, eventId: string, input: SubmissionInput) {
+/**
+ * 自分の回答を置き換える。
+ * @param basedOnVersion 回答を読んだときの version。違っていれば (別の端末で変えられていれば) 更新しない。
+ *   省略すると確かめない (Web UI)。読んでから書くまでの間は確かめていないが、ぶつかるのは同じ人の別の端末どうしだけなので、これでよしとする。
+ */
+export async function updateMyAvailability(
+  db: Db,
+  actor: Actor,
+  eventId: string,
+  input: SubmissionInput,
+  basedOnVersion?: string,
+) {
   const myGuest = await findMyGuest(db, actor, eventId);
 
   if (!myGuest) {
     throw new ServiceError("submission_not_found", "既存の日程が見つかりません。");
+  }
+  if (basedOnVersion !== undefined && basedOnVersion !== myGuest.version) {
+    throw new ServiceError("version_conflict", "別の端末で日程が更新されています。読み込み直してください。");
   }
 
   validateSlots(await findEventForSlots(db, eventId), input.slots);

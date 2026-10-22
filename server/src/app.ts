@@ -11,6 +11,7 @@ const serviceErrorStatus = {
   submission_not_found: 404,
   not_host: 403,
   already_submitted: 409,
+  version_conflict: 409,
   options_empty: 400,
   option_in_use: 400,
   invalid_slot: 400,

@@ -1,4 +1,9 @@
+import { env } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
+import { createDb } from "../src/db/index.js";
+import * as schema from "../src/db/schema.js";
+import { updateMyAvailability } from "../src/services/events.js";
 import { type Browser, createBrowser, createEvent, eventInput, slotOnNov2, submissionInput } from "./helpers.js";
 
 const missingEventId = "a".repeat(21);
@@ -207,7 +212,8 @@ describe("GET /events/:eventId", () => {
       ],
     };
     expect(event.isHost).toBe(false);
-    expect(event.meAsGuest).toEqual(expectedGuest);
+    // 自分の回答にだけ version が付く
+    expect(event.meAsGuest).toEqual({ ...expectedGuest, version: expect.any(String) });
     expect(event.guests).toEqual([expectedGuest]);
     expect(event.meAsGuest.slots[0].guestId).toBe(event.meAsGuest.id);
   });
@@ -500,7 +506,8 @@ describe("POST /events/:eventId/submissions", () => {
     expect(event.meAsGuest).not.toBeNull();
     // ホストとゲストを別々の人として数えない
     expect(event.hosts).toEqual([{ id: event.meAsGuest.id, eventId: id }]);
-    expect(event.guests).toEqual([event.meAsGuest]);
+    const { version: _, ...meAsGuest } = event.meAsGuest;
+    expect(event.guests).toEqual([meAsGuest]);
   });
 
   test("回答したホストの /events/mine は、ホストとして 1 件だけ返す", async () => {
@@ -623,6 +630,7 @@ describe("PUT /events/:eventId/submissions/mine", () => {
             optionId,
           },
         ],
+        version: expect.any(String),
       },
     });
     const { meAsGuest } = await getEvent(guest, id);
@@ -664,5 +672,55 @@ describe("PUT /events/:eventId/submissions/mine", () => {
 
     const { meAsGuest } = await getEvent(other, id);
     expect(meAsGuest).toMatchObject({ name: "他の人", slots: [expect.anything()] });
+  });
+});
+
+describe("updateMyAvailability の楽観ロック (basedOnVersion)", () => {
+  const db = () => createDb(env.DB);
+
+  async function setup() {
+    const { id, optionId } = await createEvent(createBrowser());
+    const guest = createBrowser();
+    await submit(guest, id, optionId);
+    const actor = { browserId: guest.browserId, userId: null };
+    const { meAsGuest } = await getEvent(guest, id);
+    return { id, optionId, actor, version: meAsGuest.version as string };
+  }
+
+  function input(optionId: string, name: string) {
+    return {
+      name,
+      comment: null,
+      slots: [{ startAt: new Date(slotOnNov2.startAt), endAt: new Date(slotOnNov2.endAt), optionId }],
+    };
+  }
+
+  test("version が一致すれば更新し、新しい version を返す", async () => {
+    const { id, optionId, actor, version } = await setup();
+
+    const updated = await updateMyAvailability(db(), actor, id, input(optionId, "新しい名前"), version);
+
+    expect(updated?.name).toBe("新しい名前");
+    expect(updated?.version).not.toBe(version);
+  });
+
+  test("version が古ければ version_conflict を投げ、更新しない", async () => {
+    const { id, optionId, actor, version } = await setup();
+    await updateMyAvailability(db(), actor, id, input(optionId, "別の端末で変えた"));
+
+    const promise = updateMyAvailability(db(), actor, id, input(optionId, "古い内容"), version);
+
+    await expect(promise).rejects.toMatchObject({ reason: "version_conflict" });
+    const guest = await db().query.participant.findFirst({ where: eq(schema.participant.eventId, id) });
+    expect(guest?.name).not.toBe("古い内容");
+  });
+
+  test("basedOnVersion を省略すれば確かめない (Web UI)", async () => {
+    const { id, optionId, actor } = await setup();
+    await updateMyAvailability(db(), actor, id, input(optionId, "1 回目"));
+
+    const updated = await updateMyAvailability(db(), actor, id, input(optionId, "2 回目"));
+
+    expect(updated?.name).toBe("2 回目");
   });
 });
