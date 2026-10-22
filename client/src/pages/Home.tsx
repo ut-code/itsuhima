@@ -7,7 +7,7 @@ import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { briefProjectReviver } from "../revivers";
 import type { BriefProject } from "../types";
-import { API_ENDPOINT } from "../utils";
+import { API_ENDPOINT, readErrorMessage } from "../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
 
@@ -29,16 +29,7 @@ export default function HomePage() {
           const parsedData = data.map((p) => briefProjectReviver(p));
           setInvolvedProjects(parsedData);
         } else {
-          let errorMessage = "イベントの取得に失敗しました。";
-          try {
-            const data = await res.json();
-            const err = data as unknown as { message: string }; // Middleware のレスポンスは Hono RPC の型に乗らない
-            if (typeof err.message === "string" && err.message.trim()) {
-              errorMessage = err.message.trim();
-            }
-          } catch (_) {
-            // レスポンスがJSONでない場合は無視
-          }
+          const errorMessage = await readErrorMessage(res, "イベントの取得に失敗しました。");
           setToast({
             message: errorMessage,
             variant: "error",

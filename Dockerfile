@@ -1,4 +1,4 @@
-FROM node:20 AS builder
+FROM node:24 AS builder
 WORKDIR /app
 
 COPY package*.json ./
@@ -10,7 +10,7 @@ COPY common ./common
 COPY server ./server
 RUN npm run build:server
 
-FROM node:20-slim
+FROM node:24-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*

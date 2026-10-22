@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "prebuild": "prisma generate",
-    "build": "tsc"
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -22,9 +24,10 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/node": "^22.13.10",
+    "@types/node": "^24.19.2",
     "prisma": "^6.5.0",
     "tsx": "^4.19.3",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^5.0.5"
   }
 }
