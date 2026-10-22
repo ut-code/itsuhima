@@ -8,7 +8,6 @@ port = 3000
 [vars]
 NODE_ENV = "production"
 DOMAIN = "itsuhima.utcode.net"
-CORS_ALLOW_ORIGINS = "https://itsuhima.utcode.net"
 
 [[d1_databases]]
 binding = "DB"
@@ -22,7 +21,6 @@ name = "itsuhima-staging"
 [env.staging.vars]
 NODE_ENV = "production"
 DOMAIN = "itsuhima-staging.utcode.net"
-CORS_ALLOW_ORIGINS = "https://itsuhima-staging.utcode.net"
 
 [[env.staging.d1_databases]]
 binding = "DB"

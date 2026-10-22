@@ -9,8 +9,6 @@ export type Bindings = {
   COOKIE_SECRET_PREVIOUS?: string;
   /** browserId Cookie の Domain */
   DOMAIN?: string;
-  /** カンマ区切り */
-  CORS_ALLOW_ORIGINS?: string;
   /** "production" のとき Cookie に Secure を付ける */
   NODE_ENV?: string;
 };

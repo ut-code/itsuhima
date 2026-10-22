@@ -8,7 +8,7 @@ function browserIdCookie(res: Response) {
 }
 
 function requestWithCookie(cookie?: string, vars: Partial<Bindings> = {}) {
-  return app.request("/", { headers: cookie ? { Cookie: cookie } : {} }, { ...env, ...vars });
+  return app.request("/api", { headers: cookie ? { Cookie: cookie } : {} }, { ...env, ...vars });
 }
 
 describe("browserIdMiddleware", () => {

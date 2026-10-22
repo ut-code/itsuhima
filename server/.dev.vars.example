@@ -1,5 +1,4 @@
 
-CORS_ALLOW_ORIGINS=http://localhost:5173
 DOMAIN=localhost # browserId の Cookie を送るドメイン
 NODE_ENV=dev # dev or production
 COOKIE_SECRET=your-random-secret-key-for-development # Cookie の署名鍵
