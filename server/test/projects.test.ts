@@ -1,4 +1,3 @@
-import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 import { type Browser, createBrowser, createProject, projectInput, slotOnNov2, submissionInput } from "./helpers.js";
 
@@ -38,8 +37,8 @@ describe("POST /projects", () => {
         {
           id: expect.any(String),
           projectId: body.id,
-          startTime: "2026-11-01T23:00:00.000Z",
-          endTime: "2026-11-04T14:00:00.000Z",
+          startTime: "08:00",
+          endTime: "23:00",
         },
       ],
       participationOptions: [{ ...input.participationOptions[0], projectId: body.id }],
@@ -84,35 +83,44 @@ describe("POST /projects", () => {
     expect(res.status).toBe(400);
   });
 
-  test("時間帯が ISO 8601 の日時でなければ 400", async () => {
+  test("時間帯が HH:mm の形式でなければ 400", async () => {
     const res = await createBrowser().post(
       "/projects",
-      projectInput({ allowedRanges: [{ startTime: "09:00", endTime: "18:00" }] }),
+      projectInput({ allowedRanges: [{ startTime: "2026-11-01T23:00:00.000Z", endTime: "2026-11-04T14:00:00.000Z" }] }),
     );
 
     expect(res.status).toBe(400);
   });
 
-  test("時間帯は時刻だけを保存し、開始は初日、終了は最終日の日付で返す", async () => {
-    const host = createBrowser();
-    // 11/03 08:00〜23:00 (JST)。日付は使わない
-    const { id } = await createProject(host, {
-      allowedRanges: [{ startTime: "2026-11-02T23:00:00.000Z", endTime: "2026-11-03T14:00:00.000Z" }],
-    });
-
-    const stored = await env.DB.prepare(`SELECT startTime, endTime FROM "AllowedRange" WHERE projectId = ?`)
-      .bind(id)
-      .first();
-    expect(stored).toEqual({ startTime: "08:00", endTime: "23:00" });
-    expect((await getProject(host, id)).allowedRanges).toMatchObject([
-      { startTime: "2026-11-01T23:00:00.000Z", endTime: "2026-11-04T14:00:00.000Z" },
-    ]);
-  });
-
   test("時間帯が 15 分単位でなければ 400", async () => {
     const res = await createBrowser().post(
       "/projects",
-      projectInput({ allowedRanges: [{ startTime: "2026-11-01T23:10:00.000Z", endTime: "2026-11-04T14:00:00.000Z" }] }),
+      projectInput({ allowedRanges: [{ startTime: "08:10", endTime: "23:00" }] }),
+    );
+
+    expect(res.status).toBe(400);
+  });
+
+  test("時間帯の開始が終了より後なら 400", async () => {
+    const res = await createBrowser().post(
+      "/projects",
+      projectInput({ allowedRanges: [{ startTime: "23:00", endTime: "08:00" }] }),
+    );
+
+    expect(res.status).toBe(400);
+  });
+
+  test("時間帯の終了は 24:00 にできる", async () => {
+    const host = createBrowser();
+    const { id } = await createProject(host, { allowedRanges: [{ startTime: "00:00", endTime: "24:00" }] });
+
+    expect((await getProject(host, id)).allowedRanges).toMatchObject([{ startTime: "00:00", endTime: "24:00" }]);
+  });
+
+  test("24:00 より後の時刻は 400", async () => {
+    const res = await createBrowser().post(
+      "/projects",
+      projectInput({ allowedRanges: [{ startTime: "08:00", endTime: "24:15" }] }),
     );
 
     expect(res.status).toBe(400);
@@ -247,11 +255,13 @@ describe("PUT /projects/:projectId", () => {
     expect(res.status).toBe(403);
   });
 
-  test("時間帯が ISO 8601 の日時でなければ 400", async () => {
+  test("時間帯が HH:mm の形式でなければ 400", async () => {
     const host = createBrowser();
     const { id } = await createProject(host);
 
-    const res = await host.put(`/projects/${id}`, { allowedRanges: [{ startTime: "09:00", endTime: "18:00" }] });
+    const res = await host.put(`/projects/${id}`, {
+      allowedRanges: [{ startTime: "2026-11-10T00:00:00.000Z", endTime: "2026-11-10T09:00:00.000Z" }],
+    });
 
     expect(res.status).toBe(400);
   });
@@ -265,7 +275,7 @@ describe("PUT /projects/:projectId", () => {
       description: "  新しい説明  ",
       startDate: "2026-11-09T15:00:00.000Z",
       endDate: "2026-11-10T14:59:59.999Z",
-      allowedRanges: [{ startTime: "2026-11-10T00:00:00.000Z", endTime: "2026-11-10T09:00:00.000Z" }],
+      allowedRanges: [{ startTime: "09:00", endTime: "18:00" }],
     });
 
     expect(res.status).toBe(200);
@@ -281,8 +291,8 @@ describe("PUT /projects/:projectId", () => {
         {
           id: expect.any(String),
           projectId: id,
-          startTime: "2026-11-10T00:00:00.000Z",
-          endTime: "2026-11-10T09:00:00.000Z",
+          startTime: "09:00",
+          endTime: "18:00",
         },
       ],
       participationOptions: [{ id: expect.any(String), label: "参加", color: "#0F82B1", projectId: id }],
@@ -298,7 +308,7 @@ describe("PUT /projects/:projectId", () => {
       name: "新しい名前",
       startDate: "2026-11-09T15:00:00.000Z",
       endDate: "2026-11-10T14:59:59.999Z",
-      allowedRanges: [{ startTime: "2026-11-10T00:00:00.000Z", endTime: "2026-11-10T09:00:00.000Z" }],
+      allowedRanges: [{ startTime: "09:00", endTime: "18:00" }],
     });
 
     expect(res.status).toBe(200);
@@ -307,7 +317,7 @@ describe("PUT /projects/:projectId", () => {
       name: "新しい名前",
       startDate: "2026-11-01T15:00:00.000Z",
       endDate: "2026-11-04T14:59:59.999Z",
-      allowedRanges: [{ startTime: "2026-11-01T23:00:00.000Z", endTime: "2026-11-04T14:00:00.000Z" }],
+      allowedRanges: [{ startTime: "08:00", endTime: "23:00" }],
     });
   });
 

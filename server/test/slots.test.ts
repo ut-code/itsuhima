@@ -124,6 +124,15 @@ describe("validateSlots", () => {
     ).not.toThrow();
   });
 
+  test("時間帯の終わりが 24:00 なら、24:00 に終わる Slot を通す", () => {
+    const untilMidnight = { ...project, allowedRanges: [{ startTime: "08:00", endTime: "24:00" }] };
+
+    // 11/02 23:00〜11/03 00:00
+    expect(() =>
+      validateSlots(untilMidnight, [slot("2026-11-02T14:00:00.000Z", "2026-11-02T15:00:00.000Z")]),
+    ).not.toThrow();
+  });
+
   test("日付はイベントのタイムゾーンで判定する", () => {
     // JST では 11/03 08:30〜09:30 だが、UTC では 11/02 23:30〜11/03 00:30 で日をまたぐ
     const target = slot("2026-11-02T23:30:00.000Z", "2026-11-03T00:30:00.000Z");

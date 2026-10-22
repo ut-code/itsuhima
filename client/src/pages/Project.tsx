@@ -150,16 +150,15 @@ export default function ProjectPage() {
   useEffect(() => {
     if (!eventId) return;
     if (!project) return;
+    const range = project.allowedRanges[0];
     reset({
       name: project.name,
       description: project.description,
       startDate: project.startDate.tz().format("YYYY-MM-DD"),
       endDate: project.endDate.tz().format("YYYY-MM-DD"),
       allowedRanges: [
-        {
-          startTime: project.allowedRanges[0].startTime.tz().format("HH:mm"),
-          endTime: project.allowedRanges[0].endTime.tz().format("HH:mm"),
-        },
+        // 時間帯が無いイベントは終日とみなす
+        range ? { startTime: range.startTime, endTime: range.endTime } : { startTime: "00:00", endTime: "24:00" },
       ],
       participationOptions: project.participationOptions.map((opt) => ({
         id: opt.id,
@@ -176,30 +175,12 @@ export default function ProjectPage() {
     const startDtISO = dayjs.tz(data.startDate).startOf("day").toISOString();
     const endDtISO = dayjs.tz(data.endDate).endOf("day").toISOString();
 
-    const rangeWithDateTime = data.allowedRanges?.map((range) => {
-      // 注: 現在のところ日付部分は使用していない。
-      const startTime = dayjs
-        .tz(data.startDate)
-        .hour(Number(range.startTime.split(":")[0]))
-        .minute(Number(range.startTime.split(":")[1]))
-        .second(0);
-      const endTime = dayjs
-        .tz(data.endDate)
-        .hour(Number(range.endTime.split(":")[0]))
-        .minute(Number(range.endTime.split(":")[1]))
-        .second(0);
-      return {
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
-      };
-    });
-
     const eventData = {
       name: data.name ?? "",
       description: data.description ?? "",
       startDate: startDtISO,
       endDate: endDtISO,
-      allowedRanges: rangeWithDateTime ?? [],
+      allowedRanges: data.allowedRanges ?? [],
       participationOptions: (data.participationOptions ?? []).map((opt) => ({
         id: opt.id,
         label: opt.label.trim(),
@@ -463,10 +444,12 @@ export default function ProjectPage() {
                         className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                         value={allowedRangeFields[0].endTime.split(":")[0]}
                         onChange={(e) => {
+                          // 24 時は 24:00 だけ
+                          const minute = e.target.value === "24" ? "00" : allowedRangeFields[0].endTime.split(":")[1];
                           replace([
                             {
                               startTime: allowedRangeFields[0].startTime,
-                              endTime: `${e.target.value}:${allowedRangeFields[0].endTime.split(":")[1]}`,
+                              endTime: `${e.target.value}:${minute}`,
                             },
                           ]);
                         }}
@@ -476,7 +459,7 @@ export default function ProjectPage() {
                         <option value="" disabled>
                           時
                         </option>
-                        {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
+                        {Array.from({ length: 25 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
                           <option key={h} value={h}>
                             {h}
                           </option>
@@ -501,11 +484,13 @@ export default function ProjectPage() {
                         <option value="" disabled>
                           分
                         </option>
-                        {["00", "15", "30", "45"].map((h) => (
-                          <option key={h} value={h}>
-                            {h}
-                          </option>
-                        ))}
+                        {(allowedRangeFields[0].endTime.startsWith("24") ? ["00"] : ["00", "15", "30", "45"]).map(
+                          (h) => (
+                            <option key={h} value={h}>
+                              {h}
+                            </option>
+                          ),
+                        )}
                       </select>
                     </div>
                   </div>

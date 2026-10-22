@@ -1,5 +1,3 @@
-const MS_PER_MINUTE = 60 * 1000;
-
 /** timezone での日付 ("YYYY-MM-DD") と、0 時からの経過分を求める関数を作る */
 export function wallClockIn(timezone: string): (value: Date) => { date: string; minutes: number } {
   const format = new Intl.DateTimeFormat("en-CA", {
@@ -29,18 +27,4 @@ export function formatMinutes(minutes: number): string {
 export function parseMinutes(time: string): number {
   const [hour, minute] = time.split(":").map(Number);
   return hour * 60 + minute;
-}
-
-/** timezone の壁時計での日付 ("YYYY-MM-DD") と時刻 ("HH:mm") が指す瞬間 */
-export function fromWallClock(date: string, time: string, timezone: string): Date {
-  const toWallClock = wallClockIn(timezone);
-  const target = Date.parse(`${date}T00:00:00.000Z`) + parseMinutes(time) * MS_PER_MINUTE;
-  // UTC として読んだ値から、その付近のオフセットを引く。オフセットが変わる境目をまたぐときのために 2 回合わせる
-  let instant = target;
-  for (let i = 0; i < 2; i++) {
-    const wall = toWallClock(new Date(instant));
-    const wallAsUtc = Date.parse(`${wall.date}T00:00:00.000Z`) + wall.minutes * MS_PER_MINUTE;
-    instant += target - wallAsUtc;
-  }
-  return new Date(instant);
 }

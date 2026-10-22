@@ -13,11 +13,7 @@ export function projectReviver(project: ISOStringProject): Project {
     ...project,
     startDate: dayjs.utc(project.startDate).tz(),
     endDate: dayjs.utc(project.endDate).tz(),
-    allowedRanges: project.allowedRanges.map((range) => ({
-      ...range,
-      startTime: dayjs.utc(range.startTime).tz(),
-      endTime: dayjs.utc(range.endTime).tz(),
-    })),
+    allowedRanges: project.allowedRanges.map((range) => ({ ...range })),
     participationOptions: project.participationOptions.map((opt) => ({ ...opt })),
     hosts: project.hosts.map((host) => ({ ...host })),
     guests: project.guests.map((guest) => ({

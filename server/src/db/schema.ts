@@ -3,8 +3,6 @@ import { index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const uuid = () => crypto.randomUUID();
 
-export const DEFAULT_TIMEZONE = "Asia/Tokyo";
-
 /** 日程調整プロジェクト。ユーザには「イベント」と表示。 */
 export const project = sqliteTable("Project", {
   id: text().primaryKey(),
@@ -15,7 +13,7 @@ export const project = sqliteTable("Project", {
   /** 注: 日付部分のみ利用。時間は考慮しない。 */
   endDate: text().notNull(),
   /** 日付と時間帯は、このタイムゾーンの壁時計で解釈する (IANA のタイムゾーン名) */
-  timezone: text().notNull().default(DEFAULT_TIMEZONE),
+  timezone: text().notNull().default("Asia/Tokyo"),
   createdAt: text()
     .notNull()
     .$defaultFn(() => new Date().toISOString()),
@@ -28,7 +26,7 @@ export const allowedRange = sqliteTable(
     id: text().primaryKey().$defaultFn(uuid),
     /** イベントのタイムゾーンでの時刻 ("HH:mm") */
     startTime: text().notNull(),
-    /** イベントのタイムゾーンでの時刻 ("HH:mm") */
+    /** イベントのタイムゾーンでの時刻 ("HH:mm")。その日の終わりまでなら "24:00" */
     endTime: text().notNull(),
     projectId: text()
       .notNull()

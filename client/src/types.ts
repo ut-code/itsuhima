@@ -19,8 +19,10 @@ export type Slot = {
 type AllowedRange = {
   id: string;
   projectId: string;
-  startTime: Dayjs;
-  endTime: Dayjs;
+  /** イベントのタイムゾーンでの時刻 ("HH:mm") */
+  startTime: string;
+  /** イベントのタイムゾーンでの時刻 ("HH:mm")。その日の終わりまでなら "24:00" */
+  endTime: string;
 };
 
 type Host = {
