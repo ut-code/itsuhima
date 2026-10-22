@@ -537,14 +537,12 @@ describe("PUT /projects/:projectId/submissions/mine", () => {
     );
 
     expect(res.status).toBe(200);
-    // 現状の挙動: GET と違い、自分の browserId を含む
     expect(await res.json()).toEqual({
       message: "日程が更新されました。",
       guest: {
         id: expect.any(String),
         name: "新しい名前",
         comment: null,
-        browserId: guest.browserId,
         projectId: id,
         slots: [
           {

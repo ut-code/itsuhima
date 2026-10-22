@@ -260,9 +260,11 @@ async function findProjectForSlots(db: Db, projectId: string) {
   };
 }
 
+/** 自分の回答。呼び出し元がそのまま返せるよう、browserId は含めない */
 function findGuest(db: Db, browserId: string, projectId: string) {
   return db.query.guest.findFirst({
     where: and(eq(schema.guest.browserId, browserId), eq(schema.guest.projectId, projectId)),
+    columns: { browserId: false },
     with: { slots: true },
   });
 }
