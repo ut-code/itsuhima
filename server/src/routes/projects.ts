@@ -46,7 +46,7 @@ const router = new Hono<AppEnv>()
   .delete("/:projectId", zValidator("param", projectIdParamsSchema), async (c) => {
     const { projectId } = c.req.valid("param");
     await deleteProject(c.get("db"), c.get("browserId"), projectId);
-    return c.json(204);
+    return c.body(null, 204);
   })
 
   // 日程の提出。

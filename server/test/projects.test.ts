@@ -416,16 +416,15 @@ describe("DELETE /projects/:projectId", () => {
     expect(await res.json()).toEqual({ message: "削除権限がありません。" });
   });
 
-  // 現状の挙動: `c.json(204)` なので、ステータスは 200 で本文が 204 になる
-  test("ホストは、ゲストの回答ごと削除できる", async () => {
+  test("ホストは、ゲストの回答ごと削除できる。204 で本文は無い", async () => {
     const host = createBrowser();
     const { id, optionId } = await createProject(host);
     await submit(createBrowser(), id, optionId);
 
     const res = await host.delete(`/projects/${id}`);
 
-    expect(res.status).toBe(200);
-    expect(await res.json()).toBe(204);
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe("");
     expect((await host.get(`/projects/${id}`)).status).toBe(404);
   });
 });
