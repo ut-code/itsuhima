@@ -1,0 +1,491 @@
+import { describe, expect, test } from "vitest";
+import { type Browser, createBrowser, createProject, projectInput, slotOnNov2, submissionInput } from "./helpers.js";
+
+const missingProjectId = "a".repeat(21);
+
+async function getProject(browser: Browser, projectId: string) {
+  const res = await browser.get(`/projects/${projectId}`);
+  expect(res.status).toBe(200);
+  // biome-ignore lint/suspicious/noExplicitAny: レスポンスの形そのものを検証するため
+  return (await res.json()) as any;
+}
+
+async function submit(guest: Browser, projectId: string, optionId: string, overrides: Record<string, unknown> = {}) {
+  const res = await guest.post(`/projects/${projectId}/submissions`, submissionInput(projectId, optionId, overrides));
+  expect(res.status).toBe(201);
+}
+
+describe("POST /projects", () => {
+  test("作成すると 201 で id と name を返し、作成者がホストになる", async () => {
+    const host = createBrowser();
+    const input = projectInput({ description: "  説明  " });
+
+    const res = await host.post("/projects", input);
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body).toEqual({ id: expect.stringMatching(/^[0-9A-Za-z]{21}$/), name: "テストイベント" });
+
+    const project = await getProject(host, body.id);
+    expect(project).toEqual({
+      id: body.id,
+      name: "テストイベント",
+      description: "説明",
+      startDate: "2026-11-01T15:00:00.000Z",
+      endDate: "2026-11-04T14:59:59.999Z",
+      allowedRanges: [
+        {
+          id: expect.any(String),
+          projectId: body.id,
+          startTime: "2026-11-01T23:00:00.000Z",
+          endTime: "2026-11-04T14:00:00.000Z",
+        },
+      ],
+      participationOptions: [{ ...input.participationOptions[0], projectId: body.id }],
+      hosts: [{ id: expect.any(String), projectId: body.id }],
+      guests: [],
+      isHost: true,
+      meAsGuest: null,
+    });
+  });
+
+  test("空白だけの説明は空文字として返す", async () => {
+    const host = createBrowser();
+    const { id } = await createProject(host, { description: "   " });
+
+    expect((await getProject(host, id)).description).toBe("");
+  });
+
+  test("名前が空なら 400", async () => {
+    const res = await createBrowser().post("/projects", projectInput({ name: "" }));
+
+    expect(res.status).toBe(400);
+  });
+
+  test("開始日が終了日より後なら 400", async () => {
+    const res = await createBrowser().post(
+      "/projects",
+      projectInput({ startDate: "2026-11-05T15:00:00.000Z", endDate: "2026-11-04T14:59:59.999Z" }),
+    );
+
+    expect(res.status).toBe(400);
+  });
+
+  test("参加形態が 0 件なら 400", async () => {
+    const res = await createBrowser().post("/projects", projectInput({ participationOptions: [] }));
+
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /projects/mine", () => {
+  test("ホストまたはゲストとして関わるイベントだけを返す", async () => {
+    const me = createBrowser();
+    const other = createBrowser();
+    const hosted = await createProject(me, { name: "主催" });
+    const joined = await createProject(other, { name: "参加" });
+    await createProject(other, { name: "無関係" });
+    await submit(me, joined.id, joined.optionId);
+
+    const res = await me.get("/projects/mine");
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { name: string }[];
+    expect(body.sort((a, b) => a.name.localeCompare(b.name))).toEqual([
+      {
+        id: hosted.id,
+        name: "主催",
+        description: "説明",
+        startDate: "2026-11-01T15:00:00.000Z",
+        endDate: "2026-11-04T14:59:59.999Z",
+        isHost: true,
+      },
+      {
+        id: joined.id,
+        name: "参加",
+        description: "説明",
+        startDate: "2026-11-01T15:00:00.000Z",
+        endDate: "2026-11-04T14:59:59.999Z",
+        isHost: false,
+      },
+    ]);
+  });
+
+  test("関わるイベントが無ければ空配列", async () => {
+    const res = await createBrowser().get("/projects/mine");
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([]);
+  });
+});
+
+describe("GET /projects/:projectId", () => {
+  test("存在しなければ 404", async () => {
+    const res = await createBrowser().get(`/projects/${missingProjectId}`);
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ message: "イベントが見つかりません。" });
+  });
+
+  test("id が 21 文字でなければ 400", async () => {
+    const res = await createBrowser().get("/projects/short");
+
+    expect(res.status).toBe(400);
+  });
+
+  test("ゲストから見ると isHost は false で、自分の回答が meAsGuest に入る", async () => {
+    const host = createBrowser();
+    const guest = createBrowser();
+    const { id, optionId } = await createProject(host);
+    await submit(guest, id, optionId, { comment: "  よろしく  " });
+
+    const project = await getProject(guest, id);
+
+    const expectedGuest = {
+      id: expect.any(String),
+      name: "ゲスト",
+      comment: "よろしく",
+      projectId: id,
+      slots: [
+        {
+          id: expect.any(String),
+          from: slotOnNov2.start,
+          to: slotOnNov2.end,
+          projectId: id,
+          guestId: expect.any(String),
+          participationOptionId: optionId,
+        },
+      ],
+    };
+    expect(project.isHost).toBe(false);
+    expect(project.meAsGuest).toEqual(expectedGuest);
+    expect(project.guests).toEqual([expectedGuest]);
+  });
+
+  test("回答していない人から見ると meAsGuest は null", async () => {
+    const host = createBrowser();
+    const { id, optionId } = await createProject(host);
+    await submit(createBrowser(), id, optionId);
+
+    const project = await getProject(createBrowser(), id);
+
+    expect(project.isHost).toBe(false);
+    expect(project.meAsGuest).toBeNull();
+    expect(project.guests).toHaveLength(1);
+  });
+
+  test("ホストとゲストの browserId をレスポンスに含めない", async () => {
+    const host = createBrowser();
+    const guest = createBrowser();
+    const { id, optionId } = await createProject(host);
+    await submit(guest, id, optionId);
+
+    const res = await guest.get(`/projects/${id}`);
+    const text = await res.text();
+
+    expect(text).not.toContain("browserId");
+    expect(text).not.toContain(host.browserId);
+    expect(text).not.toContain(guest.browserId);
+  });
+});
+
+describe("PUT /projects/:projectId", () => {
+  test("ホスト以外は 403", async () => {
+    const { id } = await createProject(createBrowser());
+
+    const res = await createBrowser().put(`/projects/${id}`, { name: "乗っ取り" });
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ message: "アクセス権限がありません。" });
+  });
+
+  test("存在しないイベントは 403", async () => {
+    const res = await createBrowser().put(`/projects/${missingProjectId}`, { name: "x" });
+
+    expect(res.status).toBe(403);
+  });
+
+  test("ゲストがいなければ、名前・説明・日程・時間帯を更新できる", async () => {
+    const host = createBrowser();
+    const { id } = await createProject(host);
+
+    const res = await host.put(`/projects/${id}`, {
+      name: "新しい名前",
+      description: "  新しい説明  ",
+      startDate: "2026-11-09T15:00:00.000Z",
+      endDate: "2026-11-10T14:59:59.999Z",
+      allowedRanges: [{ startTime: "2026-11-10T00:00:00.000Z", endTime: "2026-11-10T09:00:00.000Z" }],
+    });
+
+    expect(res.status).toBe(200);
+    const { event } = await res.json();
+    expect(event).toMatchObject({
+      id,
+      name: "新しい名前",
+      description: "新しい説明",
+      startDate: "2026-11-09T15:00:00.000Z",
+      endDate: "2026-11-10T14:59:59.999Z",
+      allowedRanges: [{ startTime: "2026-11-10T00:00:00.000Z", endTime: "2026-11-10T09:00:00.000Z" }],
+    });
+    expect(event.participationOptions).toHaveLength(1);
+  });
+
+  test("ゲストがいると、名前と説明だけ更新し、日程と時間帯は変えない", async () => {
+    const host = createBrowser();
+    const { id, optionId } = await createProject(host);
+    await submit(createBrowser(), id, optionId);
+
+    const res = await host.put(`/projects/${id}`, {
+      name: "新しい名前",
+      startDate: "2026-11-09T15:00:00.000Z",
+      endDate: "2026-11-10T14:59:59.999Z",
+      allowedRanges: [{ startTime: "2026-11-10T00:00:00.000Z", endTime: "2026-11-10T09:00:00.000Z" }],
+    });
+
+    expect(res.status).toBe(200);
+    const project = await getProject(host, id);
+    expect(project).toMatchObject({
+      name: "新しい名前",
+      startDate: "2026-11-01T15:00:00.000Z",
+      endDate: "2026-11-04T14:59:59.999Z",
+      allowedRanges: [{ startTime: "2026-11-01T23:00:00.000Z", endTime: "2026-11-04T14:00:00.000Z" }],
+    });
+  });
+
+  // 現状の挙動: 省略したフィールドは「変更しない」ではなく、消える
+  test("description を省略すると、説明が消える", async () => {
+    const host = createBrowser();
+    const { id } = await createProject(host);
+
+    await host.put(`/projects/${id}`, { name: "新しい名前" });
+
+    expect((await getProject(host, id)).description).toBe("");
+  });
+
+  // 現状の挙動: 省略したフィールドは「変更しない」ではなく、消える
+  test("ゲストがいないときに allowedRanges を省略すると、時間帯が消える", async () => {
+    const host = createBrowser();
+    const { id } = await createProject(host);
+
+    await host.put(`/projects/${id}`, { name: "新しい名前" });
+
+    expect((await getProject(host, id)).allowedRanges).toEqual([]);
+  });
+
+  test("参加形態を追加・変更・削除できる", async () => {
+    const host = createBrowser();
+    const { id } = await createProject(host, {
+      participationOptions: [
+        { id: crypto.randomUUID(), label: "参加", color: "#0F82B1" },
+        { id: crypto.randomUUID(), label: "消す", color: "#000000" },
+      ],
+    });
+    const [kept] = (await getProject(host, id)).participationOptions.filter(
+      (o: { label: string }) => o.label === "参加",
+    );
+    const added = { id: crypto.randomUUID(), label: "オンライン", color: "#FF0000" };
+
+    const res = await host.put(`/projects/${id}`, {
+      participationOptions: [{ id: kept.id, label: "対面", color: "#00FF00" }, added],
+    });
+
+    expect(res.status).toBe(200);
+    const options = (await getProject(host, id)).participationOptions;
+    expect(options.sort((a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label))).toEqual([
+      { ...added, projectId: id },
+      { id: kept.id, label: "対面", color: "#00FF00", projectId: id },
+    ]);
+  });
+
+  test("Slot が紐づく参加形態は削除できない", async () => {
+    const host = createBrowser();
+    const { id, optionId } = await createProject(host);
+    await submit(createBrowser(), id, optionId);
+
+    const res = await host.put(`/projects/${id}`, {
+      participationOptions: [{ id: crypto.randomUUID(), label: "別", color: "#000000" }],
+    });
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ message: "以下の参加形態は日程が登録されているため削除できません: 参加" });
+    expect((await getProject(host, id)).participationOptions).toHaveLength(1);
+  });
+
+  test("参加形態を 0 件にはできない", async () => {
+    const host = createBrowser();
+    const { id } = await createProject(host);
+
+    const res = await host.put(`/projects/${id}`, { participationOptions: [] });
+
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("DELETE /projects/:projectId", () => {
+  test("ホスト以外は 403", async () => {
+    const { id } = await createProject(createBrowser());
+
+    const res = await createBrowser().delete(`/projects/${id}`);
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ message: "削除権限がありません。" });
+  });
+
+  // 現状の挙動: `c.json(204)` なので、ステータスは 200 で本文が 204 になる
+  test("ホストは、ゲストの回答ごと削除できる", async () => {
+    const host = createBrowser();
+    const { id, optionId } = await createProject(host);
+    await submit(createBrowser(), id, optionId);
+
+    const res = await host.delete(`/projects/${id}`);
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toBe(204);
+    expect((await host.get(`/projects/${id}`)).status).toBe(404);
+  });
+});
+
+describe("POST /projects/:projectId/submissions", () => {
+  test("回答すると 201", async () => {
+    const { id, optionId } = await createProject(createBrowser());
+    const guest = createBrowser();
+
+    const res = await guest.post(`/projects/${id}/submissions`, submissionInput(id, optionId));
+
+    expect(res.status).toBe(201);
+    expect(await res.json()).toBe("日程が提出されました。");
+    expect((await getProject(guest, id)).meAsGuest).toMatchObject({ name: "ゲスト", comment: "コメント" });
+  });
+
+  test("空白だけのコメントは null になる", async () => {
+    const { id, optionId } = await createProject(createBrowser());
+    const guest = createBrowser();
+
+    await submit(guest, id, optionId, { comment: "  " });
+
+    expect((await getProject(guest, id)).meAsGuest.comment).toBeNull();
+  });
+
+  test("同じブラウザから 2 回目は 403", async () => {
+    const { id, optionId } = await createProject(createBrowser());
+    const guest = createBrowser();
+    await submit(guest, id, optionId);
+
+    const res = await guest.post(`/projects/${id}/submissions`, submissionInput(id, optionId));
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ message: "提出済みです。" });
+  });
+
+  test("ホストも回答できる", async () => {
+    const host = createBrowser();
+    const { id, optionId } = await createProject(host);
+
+    await submit(host, id, optionId);
+
+    const project = await getProject(host, id);
+    expect(project.isHost).toBe(true);
+    expect(project.meAsGuest).not.toBeNull();
+  });
+
+  test("名前が空なら 400", async () => {
+    const { id, optionId } = await createProject(createBrowser());
+
+    const res = await createBrowser().post(`/projects/${id}/submissions`, submissionInput(id, optionId, { name: "" }));
+
+    expect(res.status).toBe(400);
+  });
+
+  // 現状の挙動: Slot の範囲や参加形態の所属を検証していない
+  test("イベントの期間外の Slot も受け付ける", async () => {
+    const { id, optionId } = await createProject(createBrowser());
+
+    const res = await createBrowser().post(
+      `/projects/${id}/submissions`,
+      submissionInput(id, optionId, {
+        slots: [
+          { start: "2027-01-01T01:00:00.000Z", end: "2027-01-01T03:00:00.000Z", participationOptionId: optionId },
+        ],
+      }),
+    );
+
+    expect(res.status).toBe(201);
+  });
+
+  // 現状の挙動: Slot の範囲や参加形態の所属を検証していない
+  test("別のイベントの参加形態を使った Slot も受け付ける", async () => {
+    const { id } = await createProject(createBrowser());
+    const other = await createProject(createBrowser());
+
+    const res = await createBrowser().post(`/projects/${id}/submissions`, submissionInput(id, other.optionId));
+
+    expect(res.status).toBe(201);
+  });
+
+  // 現状の挙動: 外部キー制約の違反がそのまま 500 になる
+  test("存在しない参加形態を使うと 500", async () => {
+    const { id } = await createProject(createBrowser());
+
+    const res = await createBrowser().post(`/projects/${id}/submissions`, submissionInput(id, crypto.randomUUID()));
+
+    expect(res.status).toBe(500);
+  });
+
+  // 現状の挙動: 外部キー制約の違反がそのまま 500 になる
+  test("存在しないイベントに回答すると 500", async () => {
+    const res = await createBrowser().post(
+      `/projects/${missingProjectId}/submissions`,
+      submissionInput(missingProjectId, crypto.randomUUID(), { slots: [] }),
+    );
+
+    expect(res.status).toBe(500);
+  });
+});
+
+describe("PUT /projects/:projectId/submissions/mine", () => {
+  test("回答していなければ 404", async () => {
+    const { id, optionId } = await createProject(createBrowser());
+
+    const res = await createBrowser().put(`/projects/${id}/submissions/mine`, submissionInput(id, optionId));
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ message: "既存の日程が見つかりません。" });
+  });
+
+  test("名前・コメント・Slot を置き換える", async () => {
+    const { id, optionId } = await createProject(createBrowser());
+    const guest = createBrowser();
+    await submit(guest, id, optionId);
+    const newSlot = {
+      start: "2026-11-03T05:00:00.000Z",
+      end: "2026-11-03T06:00:00.000Z",
+      participationOptionId: optionId,
+    };
+
+    const res = await guest.put(
+      `/projects/${id}/submissions/mine`,
+      submissionInput(id, optionId, { name: "新しい名前", comment: "", slots: [newSlot] }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      message: "日程が更新されました。",
+      guest: { name: "新しい名前", comment: null, slots: [{ from: newSlot.start, to: newSlot.end }] },
+    });
+    const { meAsGuest } = await getProject(guest, id);
+    expect(meAsGuest.slots).toEqual([expect.objectContaining({ from: newSlot.start, to: newSlot.end })]);
+  });
+
+  test("他のゲストの回答は変えない", async () => {
+    const { id, optionId } = await createProject(createBrowser());
+    const guest = createBrowser();
+    const other = createBrowser();
+    await submit(guest, id, optionId);
+    await submit(other, id, optionId, { name: "他の人" });
+
+    await guest.put(`/projects/${id}/submissions/mine`, submissionInput(id, optionId, { slots: [] }));
+
+    const { meAsGuest } = await getProject(other, id);
+    expect(meAsGuest).toMatchObject({ name: "他の人", slots: [expect.anything()] });
+  });
+});
