@@ -10,6 +10,11 @@ import pages from "./routes/pages.js";
 export const app = new Hono<AppEnv>()
   .route("/api", api)
   .route("/", pages)
+  // OG 画像の生成 (wasm など) は重いので、/og に来たときだけ読み込む。ほかのリクエストのコールドスタートを遅くしない
+  .get("/og/:eventId", async (c) => {
+    const { default: ogImage } = await import("./routes/ogImage.js");
+    return ogImage.fetch(c.req.raw, c.env, c.executionCtx);
+  })
   .notFound((c) => {
     if (c.req.path.startsWith("/api/")) {
       return c.json({ message: "Not Found" }, 404);
