@@ -8,7 +8,7 @@ function isQuarterHour(value: Date): boolean {
   return value.getTime() % (15 * 60 * 1000) === 0;
 }
 
-type SlotInput = { start: Date; end: Date; participationOptionId: string };
+type SlotInput = { startAt: Date; endAt: Date; optionId: string };
 
 type Project = {
   /** 日付と時間帯は、このタイムゾーンの壁時計で解釈する */
@@ -37,17 +37,17 @@ export function validateSlots(project: Project, slots: SlotInput[]): void {
   slots.forEach((slot, i) => {
     const invalid = (message: string) => new ServiceError("invalid_slot", `${i + 1} 件目の時間帯: ${message}`);
 
-    if (slot.start.getTime() >= slot.end.getTime()) {
+    if (slot.startAt.getTime() >= slot.endAt.getTime()) {
       throw invalid("開始時刻は終了時刻より前にしてください。");
     }
-    if (!isQuarterHour(slot.start) || !isQuarterHour(slot.end)) {
+    if (!isQuarterHour(slot.startAt) || !isQuarterHour(slot.endAt)) {
       throw invalid("時刻は 15 分単位で指定してください。");
     }
 
-    const start = toWallClock(slot.start);
-    const end = toWallClock(slot.end);
+    const start = toWallClock(slot.startAt);
+    const end = toWallClock(slot.endAt);
     // [start, end) の最後の瞬間の日付。24:00 は翌日の 0:00 として届くので、こうしないと日をまたいだことになる
-    const lastInstantDate = toWallClock(new Date(slot.end.getTime() - 1)).date;
+    const lastInstantDate = toWallClock(new Date(slot.endAt.getTime() - 1)).date;
     if (lastInstantDate !== start.date) {
       throw invalid("日をまたいでいます。日付ごとに分けてください。");
     }
@@ -59,7 +59,7 @@ export function validateSlots(project: Project, slots: SlotInput[]): void {
       throw invalid(`イベントの時間帯 (${formatMinutes(rangeStart)}〜${formatMinutes(rangeEnd)}) の外です。`);
     }
 
-    if (!optionIds.has(slot.participationOptionId)) {
+    if (!optionIds.has(slot.optionId)) {
       throw invalid("このイベントに無い参加形態です。");
     }
   });

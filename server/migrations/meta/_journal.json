@@ -36,6 +36,13 @@
       "when": 1792696723405,
       "tag": "0004_rename_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792696953969,
+      "tag": "0005_rename_columns",
+      "breakpoints": true
     }
   ]
 }

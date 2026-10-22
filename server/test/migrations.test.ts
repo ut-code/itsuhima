@@ -128,3 +128,51 @@ describe("0004_rename_tables", () => {
     expect(await db.prepare(`SELECT count(*) AS n FROM "allowedRange"`).first()).toEqual({ n: 0 });
   });
 });
+
+describe("0005_rename_columns", () => {
+  test("列名とインデックス名を変えても行は残り、外部キーは新しい列名で効く", async () => {
+    const { db, migrate } = await migrateUntil("0005_rename_columns.sql");
+    await db.batch([
+      db.prepare(`INSERT INTO "event" (id, name, startDate, endDate) VALUES ('p', 'name', '2026-11-02', '2026-11-04')`),
+      db.prepare(`INSERT INTO "allowedRange" VALUES ('a', '08:00', '23:00', 'p')`),
+      db.prepare(`INSERT INTO "option" VALUES ('o', '参加', '#0F82B1', 'p')`),
+      db.prepare(`INSERT INTO "Guest" VALUES ('g', 'ゲスト', NULL, 'b', 'p')`),
+      db.prepare(
+        `INSERT INTO "slot" VALUES ('s', '2026-11-02T00:00:00.000Z', '2026-11-02T01:00:00.000Z', 'p', 'g', 'o')`,
+      ),
+    ]);
+
+    await migrate();
+
+    expect(await db.prepare(`SELECT eventId, startAt, endAt, guestId, optionId FROM "slot"`).first()).toEqual({
+      eventId: "p",
+      startAt: "2026-11-02T00:00:00.000Z",
+      endAt: "2026-11-02T01:00:00.000Z",
+      guestId: "g",
+      optionId: "o",
+    });
+    expect(await db.prepare(`SELECT eventId FROM "allowedRange"`).first()).toEqual({ eventId: "p" });
+    expect(await db.prepare(`SELECT eventId FROM "option"`).first()).toEqual({ eventId: "p" });
+    const { results: indexes } = await db
+      .prepare(
+        `SELECT name FROM sqlite_master
+          WHERE type = 'index' AND tbl_name IN ('allowedRange', 'option', 'slot') AND name NOT LIKE 'sqlite_%'`,
+      )
+      .all<{ name: string }>();
+    expect(indexes.map((i) => i.name).sort()).toEqual([
+      "allowedRange_eventId_idx",
+      "option_eventId_label_key",
+      "slot_eventId_startAt_idx",
+      "slot_guestId_idx",
+      "slot_optionId_idx",
+    ]);
+
+    // 同じイベントで同じラベルの参加形態は作れない
+    await expect(db.prepare(`INSERT INTO "option" VALUES ('o2', '参加', '#000000', 'p')`).run()).rejects.toThrow(
+      /UNIQUE/,
+    );
+    // 外部キーの CASCADE も新しい列名で効く
+    await db.batch([db.prepare(`DELETE FROM "slot"`), db.prepare(`DELETE FROM "event"`)]);
+    expect(await db.prepare(`SELECT count(*) AS n FROM "allowedRange"`).first()).toEqual({ n: 0 });
+  });
+});

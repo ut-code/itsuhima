@@ -12,8 +12,8 @@ const project = {
 };
 const allDayProject = { ...project, allowedRanges: [] };
 
-function slot(start: string, end: string, participationOptionId = "option") {
-  return { start: new Date(start), end: new Date(end), participationOptionId };
+function slot(startAt: string, endAt: string, optionId = "option") {
+  return { startAt: new Date(startAt), endAt: new Date(endAt), optionId };
 }
 
 function validationError(fn: () => void): ServiceError {

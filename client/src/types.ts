@@ -4,12 +4,13 @@ type ParticipationOption = {
   id: string;
   label: string;
   color: string;
-  projectId: string;
+  eventId: string;
 };
 
+/** API の startAt / endAt / optionId を、カレンダーで使う名前にしたもの */
 export type Slot = {
   id: string;
-  projectId: string;
+  eventId: string;
   guestId: string;
   from: Dayjs;
   to: Dayjs;
@@ -18,7 +19,7 @@ export type Slot = {
 
 type AllowedRange = {
   id: string;
-  projectId: string;
+  eventId: string;
   /** イベントのタイムゾーンでの時刻 ("HH:mm") */
   startTime: string;
   /** イベントのタイムゾーンでの時刻 ("HH:mm")。その日の終わりまでなら "24:00" */
@@ -68,7 +69,7 @@ export type ISOStringProject = {
   timezone: string;
   allowedRanges: {
     id: string;
-    projectId: string;
+    eventId: string;
     startTime: string;
     endTime: string;
   }[];
@@ -76,7 +77,7 @@ export type ISOStringProject = {
     id: string;
     label: string;
     color: string;
-    projectId: string;
+    eventId: string;
   }[];
   hosts: Host[];
   guests: {
@@ -86,11 +87,13 @@ export type ISOStringProject = {
     comment: string | null;
     slots: {
       id: string;
-      projectId: string;
+      eventId: string;
       guestId: string;
-      from: string;
-      to: string;
-      participationOptionId: string;
+      /** UTC の ISO 8601 */
+      startAt: string;
+      /** UTC の ISO 8601 */
+      endAt: string;
+      optionId: string;
     }[];
   }[];
   isHost: boolean;
@@ -101,11 +104,13 @@ export type ISOStringProject = {
     comment: string | null;
     slots: {
       id: string;
-      projectId: string;
+      eventId: string;
       guestId: string;
-      from: string;
-      to: string;
-      participationOptionId: string;
+      /** UTC の ISO 8601 */
+      startAt: string;
+      /** UTC の ISO 8601 */
+      endAt: string;
+      optionId: string;
     }[];
   } | null;
 };

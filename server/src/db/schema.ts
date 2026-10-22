@@ -28,11 +28,11 @@ export const allowedRange = sqliteTable(
     startTime: text().notNull(),
     /** イベントのタイムゾーンでの時刻 ("HH:mm")。その日の終わりまでなら "24:00" */
     endTime: text().notNull(),
-    projectId: text()
+    eventId: text()
       .notNull()
       .references(() => project.id, { onDelete: "cascade", onUpdate: "cascade" }),
   },
-  (t) => [index("AllowedRange_projectId_idx").on(t.projectId)],
+  (t) => [index("allowedRange_eventId_idx").on(t.eventId)],
 );
 
 /** あるゲストが参加可能な時間帯の 1 つ。日を跨がない。 */
@@ -40,9 +40,11 @@ export const slot = sqliteTable(
   "slot",
   {
     id: text().primaryKey().$defaultFn(uuid),
-    from: text().notNull(),
-    to: text().notNull(),
-    projectId: text()
+    /** UTC の ISO 8601 */
+    startAt: text().notNull(),
+    /** UTC の ISO 8601 */
+    endAt: text().notNull(),
+    eventId: text()
       .notNull()
       .references(() => project.id, { onDelete: "cascade", onUpdate: "cascade" }),
     // Postgres では RESTRICT だったが、SQLite の RESTRICT は即時に検査されるため、Project の削除からの CASCADE で
@@ -50,14 +52,14 @@ export const slot = sqliteTable(
     guestId: text()
       .notNull()
       .references(() => guest.id, { onUpdate: "cascade" }),
-    participationOptionId: text()
+    optionId: text()
       .notNull()
       .references(() => participationOption.id, { onUpdate: "cascade" }),
   },
   (t) => [
-    index("Slot_projectId_idx").on(t.projectId),
-    index("Slot_guestId_idx").on(t.guestId),
-    index("Slot_participationOptionId_idx").on(t.participationOptionId),
+    index("slot_eventId_startAt_idx").on(t.eventId, t.startAt),
+    index("slot_guestId_idx").on(t.guestId),
+    index("slot_optionId_idx").on(t.optionId),
   ],
 );
 
@@ -102,11 +104,11 @@ export const participationOption = sqliteTable(
     id: text().primaryKey().$defaultFn(uuid),
     label: text().notNull(),
     color: text().notNull(),
-    projectId: text()
+    eventId: text()
       .notNull()
       .references(() => project.id, { onDelete: "cascade", onUpdate: "cascade" }),
   },
-  (t) => [uniqueIndex("ParticipationOption_projectId_label_key").on(t.projectId, t.label)],
+  (t) => [uniqueIndex("option_eventId_label_key").on(t.eventId, t.label)],
 );
 
 export const projectRelations = relations(project, ({ many }) => ({
@@ -118,14 +120,14 @@ export const projectRelations = relations(project, ({ many }) => ({
 }));
 
 export const allowedRangeRelations = relations(allowedRange, ({ one }) => ({
-  project: one(project, { fields: [allowedRange.projectId], references: [project.id] }),
+  project: one(project, { fields: [allowedRange.eventId], references: [project.id] }),
 }));
 
 export const slotRelations = relations(slot, ({ one }) => ({
-  project: one(project, { fields: [slot.projectId], references: [project.id] }),
+  project: one(project, { fields: [slot.eventId], references: [project.id] }),
   guest: one(guest, { fields: [slot.guestId], references: [guest.id] }),
   participationOption: one(participationOption, {
-    fields: [slot.participationOptionId],
+    fields: [slot.optionId],
     references: [participationOption.id],
   }),
 }));
@@ -140,6 +142,6 @@ export const guestRelations = relations(guest, ({ one, many }) => ({
 }));
 
 export const participationOptionRelations = relations(participationOption, ({ one, many }) => ({
-  project: one(project, { fields: [participationOption.projectId], references: [project.id] }),
+  project: one(project, { fields: [participationOption.eventId], references: [project.id] }),
   slots: many(slot),
 }));

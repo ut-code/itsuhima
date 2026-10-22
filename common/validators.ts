@@ -24,9 +24,9 @@ export const submitReqSchema = z.object({
   comment: z.string().max(500, "コメントは500文字以内で入力してください").nullable().optional(),
   slots: z.array(
     z.object({
-      start: isoStrToDate,
-      end: isoStrToDate,
-      participationOptionId: z.string().uuid(),
+      startAt: isoStrToDate,
+      endAt: isoStrToDate,
+      optionId: z.string().uuid(),
     }),
   ),
 });

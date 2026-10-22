@@ -30,7 +30,7 @@ export async function createProject(db: Db, browserId: string, input: CreateProj
     ...insertMany(
       db,
       schema.allowedRange,
-      input.allowedRanges.map((range) => ({ ...range, projectId: project.id })),
+      input.allowedRanges.map((range) => ({ ...range, eventId: project.id })),
     ),
     db.insert(schema.host).values({ browserId, projectId: project.id }),
     ...insertMany(
@@ -40,7 +40,7 @@ export async function createProject(db: Db, browserId: string, input: CreateProj
         id: opt.id,
         label: opt.label,
         color: opt.color,
-        projectId: project.id,
+        eventId: project.id,
       })),
     ),
   ]);
@@ -146,7 +146,7 @@ export async function updateProject(db: Db, browserId: string, projectId: string
 
     // 削除対象の参加形態に Slot が紐づいているかチェック
     const existingOptions = await db.query.participationOption.findMany({
-      where: eq(schema.participationOption.projectId, projectId),
+      where: eq(schema.participationOption.eventId, projectId),
       with: { slots: { columns: { id: true } } },
     });
     const newOptionIds = input.participationOptions.map((o) => o.id);
@@ -163,7 +163,7 @@ export async function updateProject(db: Db, browserId: string, projectId: string
         .delete(schema.participationOption)
         .where(
           and(
-            eq(schema.participationOption.projectId, projectId),
+            eq(schema.participationOption.eventId, projectId),
             notInArray(schema.participationOption.id, newOptionIds),
           ),
         ),
@@ -171,7 +171,7 @@ export async function updateProject(db: Db, browserId: string, projectId: string
       ...input.participationOptions.map((opt) =>
         db
           .insert(schema.participationOption)
-          .values({ id: opt.id, label: opt.label, color: opt.color, projectId })
+          .values({ id: opt.id, label: opt.label, color: opt.color, eventId: projectId })
           .onConflictDoUpdate({
             target: schema.participationOption.id,
             set: { label: opt.label, color: opt.color },
@@ -193,11 +193,11 @@ export async function updateProject(db: Db, browserId: string, projectId: string
   }
   if (!existingGuest && input.allowedRanges) {
     statements.push(
-      db.delete(schema.allowedRange).where(eq(schema.allowedRange.projectId, projectId)),
+      db.delete(schema.allowedRange).where(eq(schema.allowedRange.eventId, projectId)),
       ...insertMany(
         db,
         schema.allowedRange,
-        input.allowedRanges.map((range) => ({ ...range, projectId })),
+        input.allowedRanges.map((range) => ({ ...range, eventId: projectId })),
       ),
     );
   }
@@ -256,11 +256,11 @@ function findGuest(db: Db, browserId: string, projectId: string) {
 
 function slotRows(input: SubmissionInput, projectId: string, guestId: string) {
   return input.slots.map((slot) => ({
-    from: toIso(slot.start),
-    to: toIso(slot.end),
-    projectId,
+    startAt: toIso(slot.startAt),
+    endAt: toIso(slot.endAt),
+    eventId: projectId,
     guestId,
-    participationOptionId: slot.participationOptionId,
+    optionId: slot.optionId,
   }));
 }
 

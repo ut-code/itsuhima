@@ -157,9 +157,9 @@ export default function SubmissionPage() {
         comment: comment.trim() || null,
         projectId: projectId || "",
         slots: slots.map((slot) => ({
-          start: slot.start.toISOString(),
-          end: slot.end.toISOString(),
-          participationOptionId: slot.participationOptionId,
+          startAt: slot.start.toISOString(),
+          endAt: slot.end.toISOString(),
+          optionId: slot.participationOptionId,
         })),
       };
       if (!myGuestId) {

@@ -37,12 +37,12 @@ describe("POST /projects", () => {
       allowedRanges: [
         {
           id: expect.any(String),
-          projectId: body.id,
+          eventId: body.id,
           startTime: "08:00",
           endTime: "23:00",
         },
       ],
-      participationOptions: [{ ...input.participationOptions[0], projectId: body.id }],
+      participationOptions: [{ ...input.participationOptions[0], eventId: body.id }],
       hosts: [{ id: expect.any(String), projectId: body.id }],
       guests: [],
       isHost: true,
@@ -201,11 +201,11 @@ describe("GET /projects/:projectId", () => {
       slots: [
         {
           id: expect.any(String),
-          from: slotOnNov2.start,
-          to: slotOnNov2.end,
-          projectId: id,
+          startAt: slotOnNov2.startAt,
+          endAt: slotOnNov2.endAt,
+          eventId: id,
           guestId: expect.any(String),
-          participationOptionId: optionId,
+          optionId,
         },
       ],
     };
@@ -293,12 +293,12 @@ describe("PATCH /projects/:projectId", () => {
       allowedRanges: [
         {
           id: expect.any(String),
-          projectId: id,
+          eventId: id,
           startTime: "09:00",
           endTime: "18:00",
         },
       ],
-      participationOptions: [{ id: expect.any(String), label: "参加", color: "#0F82B1", projectId: id }],
+      participationOptions: [{ id: expect.any(String), label: "参加", color: "#0F82B1", eventId: id }],
     });
   });
 
@@ -380,8 +380,8 @@ describe("PATCH /projects/:projectId", () => {
     expect(res.status).toBe(200);
     const options = (await getProject(host, id)).participationOptions;
     expect(options.sort((a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label))).toEqual([
-      { ...added, projectId: id },
-      { id: kept.id, label: "対面", color: "#00FF00", projectId: id },
+      { ...added, eventId: id },
+      { id: kept.id, label: "対面", color: "#00FF00", eventId: id },
     ]);
   });
 
@@ -515,9 +515,7 @@ describe("日程の提出・更新での Slot の検証", () => {
       `/projects/${id}/submissions`,
       submissionInput(id, optionId, {
         // 11/01 10:00〜12:00
-        slots: [
-          { start: "2026-11-01T01:00:00.000Z", end: "2026-11-01T03:00:00.000Z", participationOptionId: optionId },
-        ],
+        slots: [{ startAt: "2026-11-01T01:00:00.000Z", endAt: "2026-11-01T03:00:00.000Z", optionId }],
       }),
     );
 
@@ -544,15 +542,16 @@ describe("日程の提出・更新での Slot の検証", () => {
       submissionInput(id, optionId, {
         name: "新しい名前",
         // 11/01 10:00〜12:00
-        slots: [
-          { start: "2026-11-01T01:00:00.000Z", end: "2026-11-01T03:00:00.000Z", participationOptionId: optionId },
-        ],
+        slots: [{ startAt: "2026-11-01T01:00:00.000Z", endAt: "2026-11-01T03:00:00.000Z", optionId }],
       }),
     );
 
     expect(res.status).toBe(400);
     const { meAsGuest } = await getProject(guest, id);
-    expect(meAsGuest).toMatchObject({ name: "ゲスト", slots: [{ from: slotOnNov2.start, to: slotOnNov2.end }] });
+    expect(meAsGuest).toMatchObject({
+      name: "ゲスト",
+      slots: [{ startAt: slotOnNov2.startAt, endAt: slotOnNov2.endAt }],
+    });
   });
 });
 
@@ -571,9 +570,9 @@ describe("PUT /projects/:projectId/submissions/mine", () => {
     const guest = createBrowser();
     await submit(guest, id, optionId);
     const newSlot = {
-      start: "2026-11-03T05:00:00.000Z",
-      end: "2026-11-03T06:00:00.000Z",
-      participationOptionId: optionId,
+      startAt: "2026-11-03T05:00:00.000Z",
+      endAt: "2026-11-03T06:00:00.000Z",
+      optionId,
     };
 
     const res = await guest.put(
@@ -592,17 +591,17 @@ describe("PUT /projects/:projectId/submissions/mine", () => {
         slots: [
           {
             id: expect.any(String),
-            from: newSlot.start,
-            to: newSlot.end,
-            projectId: id,
+            startAt: newSlot.startAt,
+            endAt: newSlot.endAt,
+            eventId: id,
             guestId: expect.any(String),
-            participationOptionId: optionId,
+            optionId,
           },
         ],
       },
     });
     const { meAsGuest } = await getProject(guest, id);
-    expect(meAsGuest.slots).toEqual([expect.objectContaining({ from: newSlot.start, to: newSlot.end })]);
+    expect(meAsGuest.slots).toEqual([expect.objectContaining({ startAt: newSlot.startAt, endAt: newSlot.endAt })]);
   });
 
   // D1 は 1 つの文のバインド変数が 100 個まで (Slot 1 行で 6 個)。ローカルの D1 はこの上限を強制しないので、
@@ -616,9 +615,9 @@ describe("PUT /projects/:projectId/submissions/mine", () => {
       Array.from({ length: 15 }, (_, hour) => {
         const start = new Date(Date.UTC(2026, 10, day, 23 + hour));
         return {
-          start: start.toISOString(),
-          end: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
-          participationOptionId: optionId,
+          startAt: start.toISOString(),
+          endAt: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
+          optionId,
         };
       }),
     );
