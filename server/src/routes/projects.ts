@@ -35,8 +35,8 @@ const router = new Hono<AppEnv>()
     return c.json(project, 200);
   })
 
-  // プロジェクト編集
-  .put("/:projectId", zValidator("param", projectIdParamsSchema), zValidator("json", editReqSchema), async (c) => {
+  // プロジェクト編集。省略したフィールドは変えない
+  .patch("/:projectId", zValidator("param", projectIdParamsSchema), zValidator("json", editReqSchema), async (c) => {
     const { projectId } = c.req.valid("param");
     const event = await updateProject(c.get("db"), c.get("browserId"), projectId, c.req.valid("json"));
     return c.json({ event }, 200);

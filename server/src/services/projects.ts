@@ -178,32 +178,24 @@ export async function updateProject(db: Db, browserId: string, projectId: string
     );
   }
 
-  // ゲストの回答があれば、日程と時間帯は変えない
-  if (existingGuest) {
+  // 省略したフィールドは変えない。ゲストの回答があれば、日程と時間帯は変えない
+  const projectFields = {
+    name: input.name,
+    description: input.description === undefined ? undefined : input.description.trim() || null,
+    startDate: existingGuest || !input.startDate ? undefined : toIso(input.startDate),
+    endDate: existingGuest || !input.endDate ? undefined : toIso(input.endDate),
+  };
+  // Drizzle は undefined の列を更新しないが、更新する列が 1 つも無いとエラーにする
+  if (Object.values(projectFields).some((value) => value !== undefined)) {
+    statements.push(db.update(schema.project).set(projectFields).where(eq(schema.project.id, projectId)));
+  }
+  if (!existingGuest && input.allowedRanges) {
     statements.push(
-      db
-        .update(schema.project)
-        .set({ name: input.name, description: input.description?.trim() || null })
-        .where(eq(schema.project.id, projectId)),
-    );
-  } else {
-    statements.push(
-      db
-        .update(schema.project)
-        .set({
-          name: input.name,
-          description: input.description?.trim() || null,
-          startDate: input.startDate ? toIso(input.startDate) : undefined,
-          endDate: input.endDate ? toIso(input.endDate) : undefined,
-        })
-        .where(eq(schema.project.id, projectId)),
-      db
-        .delete(schema.allowedRange)
-        .where(eq(schema.allowedRange.projectId, projectId)), // 既存削除
+      db.delete(schema.allowedRange).where(eq(schema.allowedRange.projectId, projectId)),
       ...insertMany(
         db,
         schema.allowedRange,
-        (input.allowedRanges ?? []).map((range) => ({ ...range, projectId })),
+        input.allowedRanges.map((range) => ({ ...range, projectId })),
       ),
     );
   }

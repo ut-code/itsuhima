@@ -239,18 +239,18 @@ describe("GET /projects/:projectId", () => {
   });
 });
 
-describe("PUT /projects/:projectId", () => {
+describe("PATCH /projects/:projectId", () => {
   test("ホスト以外は 403", async () => {
     const { id } = await createProject(createBrowser());
 
-    const res = await createBrowser().put(`/projects/${id}`, { name: "乗っ取り" });
+    const res = await createBrowser().patch(`/projects/${id}`, { name: "乗っ取り" });
 
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({ message: "アクセス権限がありません。" });
   });
 
   test("存在しないイベントは 403", async () => {
-    const res = await createBrowser().put(`/projects/${missingProjectId}`, { name: "x" });
+    const res = await createBrowser().patch(`/projects/${missingProjectId}`, { name: "x" });
 
     expect(res.status).toBe(403);
   });
@@ -259,7 +259,7 @@ describe("PUT /projects/:projectId", () => {
     const host = createBrowser();
     const { id } = await createProject(host);
 
-    const res = await host.put(`/projects/${id}`, {
+    const res = await host.patch(`/projects/${id}`, {
       allowedRanges: [{ startTime: "2026-11-10T00:00:00.000Z", endTime: "2026-11-10T09:00:00.000Z" }],
     });
 
@@ -270,7 +270,7 @@ describe("PUT /projects/:projectId", () => {
     const host = createBrowser();
     const { id } = await createProject(host);
 
-    const res = await host.put(`/projects/${id}`, {
+    const res = await host.patch(`/projects/${id}`, {
       name: "新しい名前",
       description: "  新しい説明  ",
       startDate: "2026-11-09T15:00:00.000Z",
@@ -304,7 +304,7 @@ describe("PUT /projects/:projectId", () => {
     const { id, optionId } = await createProject(host);
     await submit(createBrowser(), id, optionId);
 
-    const res = await host.put(`/projects/${id}`, {
+    const res = await host.patch(`/projects/${id}`, {
       name: "新しい名前",
       startDate: "2026-11-09T15:00:00.000Z",
       endDate: "2026-11-10T14:59:59.999Z",
@@ -321,24 +321,40 @@ describe("PUT /projects/:projectId", () => {
     });
   });
 
-  // 現状の挙動: 省略したフィールドは「変更しない」ではなく、消える
-  test("description を省略すると、説明が消える", async () => {
+  test("省略したフィールドは変えない", async () => {
     const host = createBrowser();
     const { id } = await createProject(host);
 
-    await host.put(`/projects/${id}`, { name: "新しい名前" });
+    const res = await host.patch(`/projects/${id}`, { name: "新しい名前" });
 
-    expect((await getProject(host, id)).description).toBe("");
+    expect(res.status).toBe(200);
+    expect(await getProject(host, id)).toMatchObject({
+      name: "新しい名前",
+      description: "説明",
+      startDate: "2026-11-01T15:00:00.000Z",
+      endDate: "2026-11-04T14:59:59.999Z",
+      allowedRanges: [{ startTime: "08:00", endTime: "23:00" }],
+      participationOptions: [{ label: "参加" }],
+    });
   });
 
-  // 現状の挙動: 省略したフィールドは「変更しない」ではなく、消える
-  test("ゲストがいないときに allowedRanges を省略すると、時間帯が消える", async () => {
+  test("何も指定しなくても 200 で、何も変えない", async () => {
     const host = createBrowser();
     const { id } = await createProject(host);
 
-    await host.put(`/projects/${id}`, { name: "新しい名前" });
+    const res = await host.patch(`/projects/${id}`, {});
 
-    expect((await getProject(host, id)).allowedRanges).toEqual([]);
+    expect(res.status).toBe(200);
+    expect(await getProject(host, id)).toMatchObject({ name: "テストイベント", description: "説明" });
+  });
+
+  test("空文字の説明と空の時間帯を指定すると、消える", async () => {
+    const host = createBrowser();
+    const { id } = await createProject(host);
+
+    await host.patch(`/projects/${id}`, { description: "", allowedRanges: [] });
+
+    expect(await getProject(host, id)).toMatchObject({ description: "", allowedRanges: [] });
   });
 
   test("参加形態を追加・変更・削除できる", async () => {
@@ -354,7 +370,7 @@ describe("PUT /projects/:projectId", () => {
     );
     const added = { id: crypto.randomUUID(), label: "オンライン", color: "#FF0000" };
 
-    const res = await host.put(`/projects/${id}`, {
+    const res = await host.patch(`/projects/${id}`, {
       participationOptions: [{ id: kept.id, label: "対面", color: "#00FF00" }, added],
     });
 
@@ -371,7 +387,7 @@ describe("PUT /projects/:projectId", () => {
     const { id, optionId } = await createProject(host);
     await submit(createBrowser(), id, optionId);
 
-    const res = await host.put(`/projects/${id}`, {
+    const res = await host.patch(`/projects/${id}`, {
       participationOptions: [{ id: crypto.randomUUID(), label: "別", color: "#000000" }],
     });
 
@@ -384,7 +400,7 @@ describe("PUT /projects/:projectId", () => {
     const host = createBrowser();
     const { id } = await createProject(host);
 
-    const res = await host.put(`/projects/${id}`, { participationOptions: [] });
+    const res = await host.patch(`/projects/${id}`, { participationOptions: [] });
 
     expect(res.status).toBe(400);
   });

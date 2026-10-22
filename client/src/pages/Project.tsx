@@ -213,7 +213,7 @@ export default function ProjectPage() {
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      const res = await client.projects[":projectId"].$put(
+      const res = await client.projects[":projectId"].$patch(
         { param: { projectId: project.id }, json: eventData },
         { init: { credentials: "include" } },
       );
