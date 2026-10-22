@@ -36,7 +36,7 @@ JSON-RPC メッセージを中継するだけ。ロジックを二重に持た�
 |---|---|---|
 | `ITSUHIMA_PAIRING_CODE` | なし | 連携コード（6 桁）。初回のみ必要 |
 | `ITSUHIMA_TOKEN` | なし | API トークン。指定すると保存済みトークンより優先される |
-| `ITSUHIMA_API` | `https://api.itsuhima.utcode.net` | 接続先。ローカル開発では `http://localhost:3000` |
+| `ITSUHIMA_API` | `https://api-itsuhima.utcode.net` | 接続先。ローカル開発では `http://localhost:3000` |
 
 ## 開発
 

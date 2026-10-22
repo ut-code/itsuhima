@@ -23,6 +23,11 @@ type ParticipationOption = {
   color: string;
 };
 
+/**
+ * ハイライト条件。同時に有効なのは 1 つだけ。
+ */
+export type Highlight = { type: "maxCount" } | { type: "guest"; guestId: string };
+
 type Props = {
   startDate: Dayjs;
   endDate: Dayjs;
@@ -33,6 +38,7 @@ type Props = {
   guestIdToComment: Record<string, string>;
   participationOptions: ParticipationOption[];
   currentParticipationOptionId: string;
+  highlight: Highlight | null;
   editMode: boolean;
   onChangeEditingSlots: (slots: EditingSlot[]) => void;
 };
@@ -54,6 +60,16 @@ const MAX_SCROLL_SPEED = 8;
 const OPACITY = 0.2;
 const PRIMARY_RGB: [number, number, number] = [15, 130, 177];
 
+/**
+ * 編集中に自分の予定と見分けられるよう、他ゲストの色を無彩色に落とす。
+ * 明度は帯域にクランプし、淡い参加形態色が薄すぎて見えなくならないようにする。
+ */
+function toGrayscale([r, g, b]: [number, number, number]): [number, number, number] {
+  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+  const y = Math.round(Math.min(Math.max(luminance, 90), 170));
+  return [y, y, y];
+}
+
 // TODO: colors.ts のものと共通化
 function hexToRgb(hex: string): [number, number, number] {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -72,6 +88,7 @@ export const Calendar = ({
   guestIdToComment,
   participationOptions,
   currentParticipationOptionId,
+  highlight,
   editMode,
   onChangeEditingSlots,
 }: Props) => {
@@ -112,13 +129,27 @@ export const Calendar = ({
   }, [editingSlots]);
 
   // viewingSlots → ViewingMatrix → rendered slots
-  const computedViewingSlots = useMemo(() => {
+  const viewingMatrix = useMemo(() => {
     const matrix = new ViewingMatrix(countDays, startDate);
     for (const slot of viewingSlots) {
       matrix.setGuestRange(slot.from, slot.to, slot.guestId, slot.optionId);
     }
-    return matrix.getSlots();
+    return matrix;
   }, [viewingSlots, countDays, startDate]);
+
+  const computedViewingSlots = useMemo(() => viewingMatrix.getSlots(), [viewingMatrix]);
+
+  // ハイライト条件を満たすセルを求め、連続区間にまとめる
+  const highlightSlots = useMemo(() => {
+    if (!highlight) return [];
+    if (highlight.type === "guest") {
+      const { guestId } = highlight;
+      return viewingMatrix.buildHighlight((cell) => guestId in cell).getSlots();
+    }
+    const maxCount = viewingMatrix.getMaxGuestCount();
+    if (maxCount === 0) return [];
+    return viewingMatrix.buildHighlight((cell) => Object.keys(cell).length === maxCount).getSlots();
+  }, [viewingMatrix, highlight]);
 
   // セル座標変換ヘルパー（毎レンダーで最新クロージャを利用）
   const xyToCell = (x: number, y: number) => {
@@ -138,6 +169,39 @@ export const Calendar = ({
       .add(slotStartMinutes + slot * 15, "minute");
 
   const toSlotIdx = (dt: Dayjs) => (dt.hour() * 60 + dt.minute() - slotStartMinutes) / 15;
+
+  /**
+   * ハイライトの「補集合」を矩形として列挙する。ここを白ベールで覆うことで、
+   * 既存の（参加形態の色 × 人数の濃さ）表現を汚さずに該当区間だけを浮き上がらせる。
+   */
+  const veilRects = useMemo(() => {
+    if (highlightSlots.length === 0) return [];
+
+    const perDay: { from: number; to: number }[][] = Array.from({ length: countDays }, () => []);
+    for (const slot of highlightSlots) {
+      const dayIdx = slot.from.startOf("day").diff(startDate.startOf("day"), "day");
+      if (dayIdx < 0 || dayIdx >= countDays) continue;
+      const rawFrom = (slot.from.hour() * 60 + slot.from.minute() - slotStartMinutes) / 15;
+      // to は 24:00（翌日 0:00）になりうるので、from からの経過時間で求める
+      const rawTo = rawFrom + slot.to.diff(slot.from, "minute") / 15;
+      const from = Math.max(0, rawFrom);
+      const to = Math.min(slotCount, rawTo);
+      if (to <= from) continue;
+      perDay[dayIdx].push({ from, to });
+    }
+
+    const rects: { day: number; from: number; to: number }[] = [];
+    for (let day = 0; day < countDays; day++) {
+      const ranges = perDay[day].sort((a, b) => a.from - b.from);
+      let cursor = 0;
+      for (const range of ranges) {
+        if (range.from > cursor) rects.push({ day, from: cursor, to: range.from });
+        cursor = Math.max(cursor, range.to);
+      }
+      if (cursor < slotCount) rects.push({ day, from: cursor, to: slotCount });
+    }
+    return rects;
+  }, [highlightSlots, countDays, startDate, slotCount, slotStartMinutes]);
 
   updatePreviewRef.current = (x: number, y: number) => {
     const cell = xyToCell(x, y);
@@ -365,18 +429,19 @@ export const Calendar = ({
                 .map((opt) => {
                   const guestIds = optionGroups.get(opt.id) ?? [];
                   const opacity = 1 - (1 - OPACITY) ** guestIds.length;
-                  return { ...opt, guestIds, opacity };
+                  const rgb = editMode ? toGrayscale(hexToRgb(opt.color)) : hexToRgb(opt.color);
+                  return { ...opt, guestIds, opacity, rgb, displayColor: `rgb(${rgb.join(",")})` };
                 });
 
               let background: string;
               if (breakdown.length === 1) {
-                const [r, g, b] = hexToRgb(breakdown[0].color);
+                const [r, g, b] = breakdown[0].rgb;
                 background = `rgba(${r},${g},${b},${breakdown[0].opacity.toFixed(3)})`;
               } else if (breakdown.length > 1) {
                 const w = 100 / breakdown.length;
                 const stops = breakdown
                   .map((bd, j) => {
-                    const [r, g, b] = hexToRgb(bd.color);
+                    const [r, g, b] = bd.rgb;
                     return `rgba(${r},${g},${b},${bd.opacity.toFixed(3)}) ${j * w}%, rgba(${r},${g},${b},${bd.opacity.toFixed(3)}) ${(j + 1) * w}%`;
                   })
                   .join(", ");
@@ -416,7 +481,7 @@ export const Calendar = ({
                         >
                           <span
                             className="badge sm:badge-sm h-4 min-h-0 border-0 bg-gray-200 px-1 py-0 font-bold text-[10px] sm:h-5 sm:px-2 sm:text-sm"
-                            style={{ color: bd.color }}
+                            style={{ color: bd.displayColor }}
                             data-tooltip-id="member-info"
                             data-tooltip-html={tooltipContent}
                             data-tooltip-place="top"
@@ -430,6 +495,15 @@ export const Calendar = ({
                 </div>
               );
             })}
+
+            {/* ハイライト: 非該当領域を白ベールで落とす（pointer-events-none で内訳ツールチップは維持） */}
+            {veilRects.map((rect) => (
+              <div
+                key={`hl-${rect.day}-${rect.from}`}
+                className="pointer-events-none absolute bg-white/65"
+                style={pct(rect.day, rect.from, 1, rect.to - rect.from)}
+              />
+            ))}
 
             {/* 編集中スロット（自分の登録済み時間） */}
             {slots.map((slot) => {

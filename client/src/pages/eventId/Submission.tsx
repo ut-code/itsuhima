@@ -11,12 +11,13 @@ import {
   LuSend,
   LuSettings2,
   LuUser,
+  LuUsers,
   LuX,
 } from "react-icons/lu";
 import { NavLink, useParams } from "react-router";
 import type { AppType } from "../../../../server/src/main";
 import { AddToCalendar } from "../../components/AddToCalendar";
-import { Calendar } from "../../components/Calendar";
+import { Calendar, type Highlight } from "../../components/Calendar";
 import Header from "../../components/Header";
 import { projectReviver } from "../../revivers";
 import type { Project, Slot } from "../../types";
@@ -138,6 +139,8 @@ export default function SubmissionPage() {
 
   const [comment, setComment] = useState(meAsGuest?.comment ?? "");
 
+  const [highlight, setHighlight] = useState<Highlight | null>(null);
+
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [guestListExpanded, setGuestListExpanded] = useState(false);
 
@@ -221,6 +224,11 @@ export default function SubmissionPage() {
     }
   }, [meAsGuest]);
 
+  // 編集・確認モードではベールがドラッグ入力の邪魔になるため解除する
+  useEffect(() => {
+    if (mode !== "view") setHighlight(null);
+  }, [mode]);
+
   const guestIdToName = useMemo(() => {
     if (!project) return {};
     return Object.fromEntries(project.guests.map((g) => [g.id, g.name]));
@@ -299,12 +307,25 @@ export default function SubmissionPage() {
               <div>
                 <div className="flex items-center justify-between gap-2">
                   <h1 className="min-w-0 truncate font-bold text-base text-base-content sm:text-lg">{project.name}</h1>
-                  {isHost && (
-                    <NavLink to={`/e/${projectId}/edit`} className="btn btn-sm btn-outline shrink-0 gap-1.5">
-                      <LuSettings2 className="h-4 w-4" />
-                      <span>編集</span>
-                    </NavLink>
-                  )}
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {/* 自分の日程をカレンダーアプリに追加 */}
+                    {mode === "view" && meAsGuest && meAsGuest.slots.length > 0 && (
+                      <AddToCalendar
+                        projectName={project.name}
+                        projectId={projectId ?? ""}
+                        projectDescription={project.description}
+                        slots={meAsGuest.slots}
+                        participationOptionIdToLabel={participationOptionIdToLabel}
+                        participationOptionCount={project.participationOptions.length}
+                      />
+                    )}
+                    {isHost && (
+                      <NavLink to={`/e/${projectId}/edit`} className="btn btn-sm btn-outline shrink-0 gap-1.5">
+                        <LuSettings2 className="h-4 w-4" />
+                        <span>編集</span>
+                      </NavLink>
+                    )}
+                  </div>
                 </div>
                 {project.description &&
                   (() => {
@@ -337,18 +358,6 @@ export default function SubmissionPage() {
                     );
                   })()}
               </div>
-
-              {/* 自分の日程をカレンダーアプリに追加 */}
-              {mode === "view" && meAsGuest && meAsGuest.slots.length > 0 && (
-                <AddToCalendar
-                  projectName={project.name}
-                  projectId={projectId ?? ""}
-                  projectDescription={project.description}
-                  slots={meAsGuest.slots}
-                  participationOptionIdToLabel={participationOptionIdToLabel}
-                  participationOptionCount={project.participationOptions.length}
-                />
-              )}
 
               {/* 参加形態選択ボタン */}
               {mode === "edit" && project.participationOptions.length > 1 && selectedParticipationOptionId !== null && (
@@ -396,6 +405,7 @@ export default function SubmissionPage() {
                 guestIdToComment={guestIdToComment}
                 participationOptions={project.participationOptions}
                 currentParticipationOptionId={selectedParticipationOptionId}
+                highlight={mode === "view" ? highlight : null}
                 editMode={mode === "edit"}
                 onChangeEditingSlots={setEditingSlots}
               />
@@ -403,31 +413,71 @@ export default function SubmissionPage() {
               {/* 参加者一覧 */}
               {project.guests.length > 0 && (
                 <div className="mt-1 pb-2">
-                  <button
-                    type="button"
-                    onClick={() => setGuestListExpanded((prev) => !prev)}
-                    className="flex items-center gap-1.5 font-medium text-base-content/80 text-sm hover:text-base-content"
-                  >
-                    参加者 ({project.guests.length}人)
-                    {guestListExpanded ? <LuChevronUp className="h-4 w-4" /> : <LuChevronDown className="h-4 w-4" />}
-                  </button>
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setGuestListExpanded((prev) => !prev)}
+                      className="flex min-w-0 items-center gap-1.5 font-medium text-base-content/80 text-sm hover:text-base-content"
+                    >
+                      参加者 ({project.guests.length}人)
+                      {guestListExpanded ? <LuChevronUp className="h-4 w-4" /> : <LuChevronDown className="h-4 w-4" />}
+                    </button>
+                    {/* ハイライト操作（カレンダーの縦幅を使わないようこの行に置く） */}
+                    {mode === "view" && (
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        {highlight?.type === "guest" && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-primary min-w-0 gap-1.5"
+                            onClick={() => setHighlight(null)}
+                          >
+                            <LuUser className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{guestIdToName[highlight.guestId] ?? "参加者"}</span>
+                            <LuX className="h-4 w-4 shrink-0" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className={`btn btn-sm shrink-0 gap-1.5 ${
+                            highlight?.type === "maxCount" ? "btn-primary" : "btn-outline"
+                          }`}
+                          onClick={() =>
+                            setHighlight((prev) => (prev?.type === "maxCount" ? null : { type: "maxCount" }))
+                          }
+                        >
+                          <LuUsers className="h-4 w-4" />
+                          最多人数
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   {guestListExpanded && (
                     <ul className="mt-1 divide-y divide-base-200">
                       {project.guests.map((guest) => {
                         const commentText = guestIdToComment[guest.id];
+                        const isHighlighted = highlight?.type === "guest" && highlight.guestId === guest.id;
                         return (
-                          <li key={guest.id} className="flex items-start gap-3 py-2">
-                            <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-base-300">
-                              <LuUser className="h-4 w-4 text-base-content/40" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="pt-1 font-medium text-base-content text-sm">{guest.name}</p>
-                              {commentText && (
-                                <div className="mt-1.5 w-fit max-w-full rounded-2xl rounded-tl-none bg-base-300 px-3 py-2 text-base-content text-sm">
-                                  <span className="wrap-break-word whitespace-pre-wrap">{commentText}</span>
-                                </div>
-                              )}
-                            </div>
+                          <li key={guest.id}>
+                            <button
+                              type="button"
+                              aria-pressed={isHighlighted}
+                              onClick={() => setHighlight(isHighlighted ? null : { type: "guest", guestId: guest.id })}
+                              className={`flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
+                                isHighlighted ? "bg-primary/10" : "hover:bg-base-200"
+                              }`}
+                            >
+                              <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-base-300">
+                                <LuUser className="h-4 w-4 text-base-content/40" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="pt-1 font-medium text-base-content text-sm">{guest.name}</p>
+                                {commentText && (
+                                  <div className="mt-1.5 w-fit max-w-full rounded-2xl rounded-tl-none bg-base-300 px-3 py-2 text-base-content text-sm">
+                                    <span className="wrap-break-word whitespace-pre-wrap">{commentText}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </button>
                           </li>
                         );
                       })}

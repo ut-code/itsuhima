@@ -23,7 +23,7 @@
 Streamable HTTP のエンドポイントに直接接続する。
 
 ```
-POST https://api.itsuhima.utcode.net/mcp
+POST https://api-itsuhima.utcode.net/mcp
 Authorization: Bearer <API トークン>
 ```
 

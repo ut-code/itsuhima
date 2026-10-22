@@ -11,7 +11,7 @@ import { dirname, join } from "node:path";
  */
 import { createInterface } from "node:readline";
 
-const API_ORIGIN = (process.env.ITSUHIMA_API ?? "https://api.itsuhima.utcode.net").replace(/\/+$/, "");
+const API_ORIGIN = (process.env.ITSUHIMA_API ?? "https://api-itsuhima.utcode.net").replace(/\/+$/, "");
 const CONFIG_PATH = join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "itsuhima-mcp", "token.json");
 
 /** stderr にだけ書く。stdout は JSON-RPC 専用なので混ぜてはいけない。 */

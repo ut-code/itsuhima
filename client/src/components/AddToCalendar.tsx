@@ -17,6 +17,7 @@ type Props = {
 /**
  * 自分の提出済み日程をカレンダーアプリに追加するボタン。
  * その場で ics を生成してダウンロードさせ、各カレンダーアプリのインポート機能で読み込んでもらう。
+ * カレンダーの縦幅を圧迫しないよう、タイトル行に並べて置く想定（モバイルではアイコンのみ）。
  */
 export function AddToCalendar({
   projectName,
@@ -54,10 +55,15 @@ export function AddToCalendar({
   };
 
   return (
-    <div className="mt-2 flex items-center gap-1">
-      <button type="button" onClick={handleClick} className="btn btn-sm btn-outline gap-1.5">
+    <div className="flex shrink-0 items-center gap-1">
+      <button
+        type="button"
+        onClick={handleClick}
+        aria-label="カレンダー追加"
+        className="btn btn-sm btn-outline gap-1.5"
+      >
         <LuCalendarPlus className="h-4 w-4" />
-        <span>カレンダー追加 (β)</span>
+        <span className="hidden sm:inline">カレンダー追加 (β)</span>
       </button>
       <button
         type="button"
