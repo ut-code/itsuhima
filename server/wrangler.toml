@@ -2,6 +2,11 @@ name = "itsuhima"
 main = "src/main.ts"
 compatibility_date = "2026-10-01"
 
+# Pages から付け替える。Pages にドメインが付いている間は、デプロイが失敗する (先に Pages から外す)
+routes = [{ pattern = "itsuhima.utcode.net", custom_domain = true }]
+# 移行の間は workers.dev の URL も残す
+workers_dev = true
+
 [dev]
 port = 3000
 
@@ -25,6 +30,8 @@ migrations_dir = "migrations"
 
 [env.staging]
 name = "itsuhima-staging"
+routes = [{ pattern = "itsuhima-staging.utcode.net", custom_domain = true }]
+workers_dev = true
 
 [env.staging.vars]
 NODE_ENV = "production"
