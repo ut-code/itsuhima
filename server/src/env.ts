@@ -13,6 +13,13 @@ export type Bindings = {
   DOMAIN?: string;
   /** "production" のとき Cookie に Secure を付ける */
   NODE_ENV?: string;
+  /** ブラウザから見えるオリジン (例: https://itsuhima.utcode.net)。Better Auth の baseURL。OAuth のリダイレクト URI もここから作る */
+  PUBLIC_ORIGIN: string;
+  /** Better Auth の署名・暗号化の鍵 (32 文字以上のランダム値) */
+  BETTER_AUTH_SECRET: string;
+  /** Google の OAuth クライアント */
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
 };
 
 export type AppVariables = {
