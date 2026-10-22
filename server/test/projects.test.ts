@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 import { type Browser, createBrowser, createProject, projectInput, slotOnNov2, submissionInput } from "./helpers.js";
 
@@ -90,6 +91,22 @@ describe("POST /projects", () => {
     );
 
     expect(res.status).toBe(400);
+  });
+
+  test("時間帯は時刻だけを保存し、開始は初日、終了は最終日の日付で返す", async () => {
+    const host = createBrowser();
+    // 11/03 08:00〜23:00 (JST)。日付は使わない
+    const { id } = await createProject(host, {
+      allowedRanges: [{ startTime: "2026-11-02T23:00:00.000Z", endTime: "2026-11-03T14:00:00.000Z" }],
+    });
+
+    const stored = await env.DB.prepare(`SELECT startTime, endTime FROM "AllowedRange" WHERE projectId = ?`)
+      .bind(id)
+      .first();
+    expect(stored).toEqual({ startTime: "08:00", endTime: "23:00" });
+    expect((await getProject(host, id)).allowedRanges).toMatchObject([
+      { startTime: "2026-11-01T23:00:00.000Z", endTime: "2026-11-04T14:00:00.000Z" },
+    ]);
   });
 
   test("時間帯が 15 分単位でなければ 400", async () => {

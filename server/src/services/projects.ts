@@ -4,6 +4,7 @@ import type { editReqSchema, projectReqSchema, submitReqSchema } from "../../../
 import { type Db, insertMany, runBatch } from "../db/index.js";
 import * as schema from "../db/schema.js";
 import { nanoid } from "../lib/id.js";
+import { formatMinutes, fromWallClock, wallClockIn } from "../lib/wallClock.js";
 import { ServiceError } from "./errors.js";
 import { validateSlots } from "./slots.js";
 
@@ -16,6 +17,28 @@ function toIso(value: string | Date): string {
   return new Date(value).toISOString();
 }
 
+/** 時間帯は日付を持たず、timezone での時刻 ("HH:mm") で入れる */
+function toTimeOfDay(value: string, timezone: string): string {
+  return formatMinutes(wallClockIn(timezone)(new Date(value)).minutes);
+}
+
+/**
+ * API では時間帯を ISO 8601 の日時で返す。Web UI が送るのと同じく、開始は初日、終了は最終日の日付にする。
+ */
+function allowedRangesResponse<T extends { startTime: string; endTime: string }>(
+  project: { timezone: string; startDate: string; endDate: string },
+  ranges: T[],
+): T[] {
+  const toWallClock = wallClockIn(project.timezone);
+  const firstDate = toWallClock(new Date(project.startDate)).date;
+  const lastDate = toWallClock(new Date(project.endDate)).date;
+  return ranges.map((range) => ({
+    ...range,
+    startTime: fromWallClock(firstDate, range.startTime, project.timezone).toISOString(),
+    endTime: fromWallClock(lastDate, range.endTime, project.timezone).toISOString(),
+  }));
+}
+
 export async function createProject(db: Db, browserId: string, input: CreateProjectInput) {
   const project = {
     id: nanoid(),
@@ -23,6 +46,7 @@ export async function createProject(db: Db, browserId: string, input: CreateProj
     description: input.description.trim() || null,
     startDate: toIso(input.startDate),
     endDate: toIso(input.endDate),
+    timezone: schema.DEFAULT_TIMEZONE,
   };
 
   await runBatch(db, [
@@ -31,8 +55,8 @@ export async function createProject(db: Db, browserId: string, input: CreateProj
       db,
       schema.allowedRange,
       input.allowedRanges.map((range) => ({
-        startTime: toIso(range.startTime),
-        endTime: toIso(range.endTime),
+        startTime: toTimeOfDay(range.startTime, project.timezone),
+        endTime: toTimeOfDay(range.endTime, project.timezone),
         projectId: project.id,
       })),
     ),
@@ -110,7 +134,7 @@ export async function getProject(db: Db, browserId: string, projectId: string) {
     description: project.description ?? "",
     startDate: project.startDate,
     endDate: project.endDate,
-    allowedRanges: project.allowedRanges,
+    allowedRanges: allowedRangesResponse(project, project.allowedRanges),
     participationOptions: project.participationOptions,
     hosts: project.hosts.map(omitBrowserId),
     guests: project.guests.map(omitBrowserId),
@@ -125,16 +149,20 @@ function omitBrowserId<T extends { browserId: string }>(entity: T): Omit<T, "bro
 }
 
 export async function updateProject(db: Db, browserId: string, projectId: string, input: UpdateProjectInput) {
-  const [host, existingGuest] = await Promise.all([
+  const [host, existingGuest, project] = await Promise.all([
     db.query.host.findFirst({
       where: and(eq(schema.host.browserId, browserId), eq(schema.host.projectId, projectId)),
     }),
     db.query.guest.findFirst({
       where: eq(schema.guest.projectId, projectId),
     }),
+    db.query.project.findFirst({
+      where: eq(schema.project.id, projectId),
+      columns: { timezone: true },
+    }),
   ]);
 
-  if (!host) {
+  if (!host || !project) {
     throw new ServiceError("not_host", "アクセス権限がありません。");
   }
 
@@ -208,8 +236,8 @@ export async function updateProject(db: Db, browserId: string, projectId: string
         db,
         schema.allowedRange,
         (input.allowedRanges ?? []).map((r) => ({
-          startTime: toIso(r.startTime),
-          endTime: toIso(r.endTime),
+          startTime: toTimeOfDay(r.startTime, project.timezone),
+          endTime: toTimeOfDay(r.endTime, project.timezone),
           projectId,
         })),
       ),
@@ -218,11 +246,14 @@ export async function updateProject(db: Db, browserId: string, projectId: string
 
   await runBatch(db, statements);
 
-  return db.query.project.findFirst({
+  const updated = await db.query.project.findFirst({
     where: eq(schema.project.id, projectId),
-    columns: { id: true, name: true, description: true, startDate: true, endDate: true },
+    columns: { id: true, name: true, description: true, startDate: true, endDate: true, timezone: true },
     with: { allowedRanges: true, participationOptions: true },
   });
+  if (!updated) return undefined;
+  const { timezone: _, ...rest } = updated;
+  return { ...rest, allowedRanges: allowedRangesResponse(updated, updated.allowedRanges) };
 }
 
 export async function deleteProject(db: Db, browserId: string, projectId: string) {
@@ -254,10 +285,7 @@ async function findProjectForSlots(db: Db, projectId: string) {
     timezone: project.timezone,
     startDate: new Date(project.startDate),
     endDate: new Date(project.endDate),
-    allowedRanges: project.allowedRanges.map((r) => ({
-      startTime: new Date(r.startTime),
-      endTime: new Date(r.endTime),
-    })),
+    allowedRanges: project.allowedRanges,
     participationOptions: project.participationOptions,
   };
 }

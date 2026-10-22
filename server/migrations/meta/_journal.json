@@ -15,6 +15,13 @@
       "when": 1792693418605,
       "tag": "0001_add_project_timezone_created_at",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792693843461,
+      "tag": "0002_allowed_range_time_of_day",
+      "breakpoints": true
     }
   ]
 }

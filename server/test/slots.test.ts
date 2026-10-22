@@ -7,7 +7,7 @@ const project = {
   timezone: "Asia/Tokyo",
   startDate: new Date("2026-11-01T15:00:00.000Z"),
   endDate: new Date("2026-11-04T14:59:59.999Z"),
-  allowedRanges: [{ startTime: new Date("2026-11-01T23:00:00.000Z"), endTime: new Date("2026-11-04T14:00:00.000Z") }],
+  allowedRanges: [{ startTime: "08:00", endTime: "23:00" }],
   participationOptions: [{ id: "option" }],
 };
 const allDayProject = { ...project, allowedRanges: [] };

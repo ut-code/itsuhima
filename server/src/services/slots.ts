@@ -1,30 +1,7 @@
+import { formatMinutes, parseMinutes, wallClockIn } from "../lib/wallClock.js";
 import { ServiceError } from "./errors.js";
 
 const MINUTES_PER_DAY = 24 * 60;
-
-/** timezone での日付 ("YYYY-MM-DD") と、0 時からの経過分を求める関数を作る */
-function wallClockIn(timezone: string): (value: Date) => { date: string; minutes: number } {
-  const format = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  });
-  return (value) => {
-    const parts = Object.fromEntries(format.formatToParts(value).map((p) => [p.type, p.value]));
-    return {
-      date: `${parts.year}-${parts.month}-${parts.day}`,
-      minutes: Number(parts.hour) * 60 + Number(parts.minute),
-    };
-  };
-}
-
-function formatMinutes(minutes: number): string {
-  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
-}
 
 /** 秒以下が 0 で、分が 15 の倍数か。タイムゾーンのオフセットはどれも 15 分の倍数なので UTC で判定してよい。 */
 function isQuarterHour(value: Date): boolean {
@@ -34,11 +11,12 @@ function isQuarterHour(value: Date): boolean {
 type SlotInput = { start: Date; end: Date; participationOptionId: string };
 
 type Project = {
-  /** 日付と時間帯は、このタイムゾーンの壁時計で解釈する (AllowedRange は日付部分を使わず、時刻だけを使う) */
+  /** 日付と時間帯は、このタイムゾーンの壁時計で解釈する */
   timezone: string;
   startDate: Date;
   endDate: Date;
-  allowedRanges: { startTime: Date; endTime: Date }[];
+  /** 時刻は "HH:mm" */
+  allowedRanges: { startTime: string; endTime: string }[];
   participationOptions: { id: string }[];
 };
 
@@ -52,8 +30,8 @@ export function validateSlots(project: Project, slots: SlotInput[]): void {
   const lastDate = toWallClock(project.endDate).date;
   // 時間帯は現在 1 つだけ。無ければ終日とみなす
   const range = project.allowedRanges[0];
-  const rangeStart = range ? toWallClock(range.startTime).minutes : 0;
-  const rangeEnd = range ? toWallClock(range.endTime).minutes : MINUTES_PER_DAY;
+  const rangeStart = range ? parseMinutes(range.startTime) : 0;
+  const rangeEnd = range ? parseMinutes(range.endTime) : MINUTES_PER_DAY;
   const optionIds = new Set(project.participationOptions.map((o) => o.id));
 
   slots.forEach((slot, i) => {
