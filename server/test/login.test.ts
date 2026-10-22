@@ -54,3 +54,48 @@ describe("ログインした本人の判定 (別の端末)", () => {
     expect(await json(await laptop.get(`/events/${id}`))).toMatchObject({ meAsGuest: { name: "Alice (スマホ)" } });
   });
 });
+
+describe("ログインしたときの紐づけ", () => {
+  test("ログインせずに回答したブラウザでログインすると、その回答が別の端末でも自分のものになる", async () => {
+    const host = createBrowser();
+    const { id, optionId } = await createEvent(host);
+    const laptop = createBrowser();
+    expect((await laptop.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice" }))).status).toBe(
+      201,
+    );
+
+    await laptop.login(alice);
+    const phone = createBrowser();
+    await phone.login(alice);
+
+    expect(await json(await phone.get(`/events/${id}`))).toMatchObject({ meAsGuest: { name: "Alice" } });
+  });
+
+  test("ログインせずにイベントを作ったブラウザでログインすると、別の端末でもホストになる", async () => {
+    const laptop = createBrowser();
+    const { id } = await createEvent(laptop);
+
+    await laptop.login(alice);
+    const phone = createBrowser();
+    await phone.login(alice);
+
+    expect(await json(await phone.get("/events/mine"))).toEqual([expect.objectContaining({ id, isHost: true })]);
+  });
+
+  test("同じイベントにすでにユーザーの回答があれば、紐づけず、どちらの回答も消さない", async () => {
+    const host = createBrowser();
+    const { id, optionId } = await createEvent(host);
+    const laptop = createBrowser();
+    await laptop.login(alice);
+    await laptop.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice (PC)" }));
+    const tablet = createBrowser();
+    await tablet.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice (タブレット)" }));
+
+    await tablet.login(alice);
+
+    const event = await json(await host.get(`/events/${id}`));
+    expect(event.guests.map((g: { name: string }) => g.name).sort()).toEqual(["Alice (PC)", "Alice (タブレット)"]);
+    // ログインした端末では、ユーザーに紐づいた回答を自分のものとする
+    expect(await json(await tablet.get(`/events/${id}`))).toMatchObject({ meAsGuest: { name: "Alice (PC)" } });
+  });
+});
