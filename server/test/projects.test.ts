@@ -184,6 +184,7 @@ describe("GET /projects/:projectId", () => {
     expect(project.isHost).toBe(false);
     expect(project.meAsGuest).toEqual(expectedGuest);
     expect(project.guests).toEqual([expectedGuest]);
+    expect(project.meAsGuest.slots[0].guestId).toBe(project.meAsGuest.id);
   });
 
   test("回答していない人から見ると meAsGuest は null", async () => {
@@ -253,15 +254,22 @@ describe("PUT /projects/:projectId", () => {
     expect(res.status).toBe(200);
     // biome-ignore lint/suspicious/noExplicitAny: レスポンスの形そのものを検証するため
     const { event } = (await res.json()) as any;
-    expect(event).toMatchObject({
+    expect(event).toEqual({
       id,
       name: "新しい名前",
       description: "新しい説明",
       startDate: "2026-11-09T15:00:00.000Z",
       endDate: "2026-11-10T14:59:59.999Z",
-      allowedRanges: [{ startTime: "2026-11-10T00:00:00.000Z", endTime: "2026-11-10T09:00:00.000Z" }],
+      allowedRanges: [
+        {
+          id: expect.any(String),
+          projectId: id,
+          startTime: "2026-11-10T00:00:00.000Z",
+          endTime: "2026-11-10T09:00:00.000Z",
+        },
+      ],
+      participationOptions: [{ id: expect.any(String), label: "参加", color: "#0F82B1", projectId: id }],
     });
-    expect(event.participationOptions).toHaveLength(1);
   });
 
   test("ゲストがいると、名前と説明だけ更新し、日程と時間帯は変えない", async () => {
@@ -420,6 +428,18 @@ describe("POST /projects/:projectId/submissions", () => {
     const project = await getProject(host, id);
     expect(project.isHost).toBe(true);
     expect(project.meAsGuest).not.toBeNull();
+    expect(project.hosts).toEqual([{ id: expect.any(String), projectId: id }]);
+    expect(project.guests).toEqual([project.meAsGuest]);
+  });
+
+  test("回答したホストの /projects/mine は、ホストとして 1 件だけ返す", async () => {
+    const host = createBrowser();
+    const { id, optionId } = await createProject(host);
+    await submit(host, id, optionId);
+
+    const res = await host.get("/projects/mine");
+
+    expect(await res.json()).toEqual([expect.objectContaining({ id, isHost: true })]);
   });
 
   test("名前が空なら 400", async () => {
@@ -517,9 +537,26 @@ describe("PUT /projects/:projectId/submissions/mine", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({
+    // 現状の挙動: GET と違い、自分の browserId を含む
+    expect(await res.json()).toEqual({
       message: "日程が更新されました。",
-      guest: { name: "新しい名前", comment: null, slots: [{ from: newSlot.start, to: newSlot.end }] },
+      guest: {
+        id: expect.any(String),
+        name: "新しい名前",
+        comment: null,
+        browserId: guest.browserId,
+        projectId: id,
+        slots: [
+          {
+            id: expect.any(String),
+            from: newSlot.start,
+            to: newSlot.end,
+            projectId: id,
+            guestId: expect.any(String),
+            participationOptionId: optionId,
+          },
+        ],
+      },
     });
     const { meAsGuest } = await getProject(guest, id);
     expect(meAsGuest.slots).toEqual([expect.objectContaining({ from: newSlot.start, to: newSlot.end })]);
