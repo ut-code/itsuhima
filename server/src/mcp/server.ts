@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import type { McpContext } from "./context.js";
+import { registerCreateEvent } from "./tools/createEvent.js";
 import { registerFindCommonAvailability } from "./tools/findCommonAvailability.js";
 import { registerGetEvent } from "./tools/getEvent.js";
 import { registerListEvents } from "./tools/listEvents.js";
@@ -20,5 +21,6 @@ export function createItsuhimaMcpServer(ctx: McpContext) {
   registerGetEvent(server, ctx);
   registerFindCommonAvailability(server, ctx);
   registerSubmitAvailability(server, ctx);
+  registerCreateEvent(server, ctx);
   return server;
 }

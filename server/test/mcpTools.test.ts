@@ -364,3 +364,87 @@ describe("update_availability", () => {
     expect(text).toContain("submit_availability");
   });
 });
+
+describe("create_event", () => {
+  test("イベントを作り、共有 URL と詳細を返す。作った人は主催者になる", async () => {
+    const { browser, token } = await loginAndAuthorize(alice);
+
+    const { text, isError } = await callTool(token, "create_event", {
+      name: "打ち上げ",
+      start_date: "2026-11-02",
+      end_date: "2026-11-04",
+      end_time: "24:00",
+      participation_options: [{ label: "対面" }, { label: "オンライン" }],
+    });
+
+    expect(isError).toBe(false);
+    const id = text.match(/event_id: (\S+)/)?.[1] ?? "";
+    expect(text).toContain(`共有 URL: http://localhost:3000/e/${id}`);
+    expect(text).toContain("あなたの立場: 主催者");
+    expect(text).toContain("入力できる時間帯: 09:00 〜 24:00");
+    expect(text).toContain('label: "オンライン"');
+    // Web から見ても主催者
+    const event = (await (await browser.get(`/events/${id}`)).json()) as {
+      isHost: boolean;
+      options: { label: string; color: string }[];
+    };
+    expect(event.isHost).toBe(true);
+    expect(event.options.map((o) => o.label).sort()).toEqual(["オンライン", "対面"]);
+    expect(new Set(event.options.map((o) => o.color)).size).toBe(2);
+  });
+
+  test("参加形態を省略すると、既定の参加形態が 1 つできる", async () => {
+    const { token } = await loginAndAuthorize(alice);
+
+    const { text } = await callTool(token, "create_event", {
+      name: "会",
+      start_date: "2026-11-02",
+      end_date: "2026-11-02",
+    });
+
+    expect(text).toContain("入力できる時間帯: 09:00 〜 21:00");
+    expect(text.match(/option\[[^\]]+\] label: "通常"/g)).toHaveLength(1);
+  });
+
+  test("日付や時刻の前後が逆なら、直す点を返す", async () => {
+    const { token } = await loginAndAuthorize(alice);
+
+    const { text, isError } = await callTool(token, "create_event", {
+      name: "会",
+      start_date: "2026-11-04",
+      end_date: "2026-11-02",
+      start_time: "18:00",
+      end_time: "10:00",
+    });
+
+    expect(isError).toBe(true);
+    expect(text).toContain("開始日は終了日より前に設定してください");
+    expect(text).toContain("開始時刻は終了時刻より前でなければなりません");
+  });
+
+  test("参加形態のラベルが重複していればエラー", async () => {
+    const { token } = await loginAndAuthorize(alice);
+
+    const { isError } = await callTool(token, "create_event", {
+      name: "会",
+      start_date: "2026-11-02",
+      end_date: "2026-11-02",
+      participation_options: [{ label: "対面" }, { label: "対面" }],
+    });
+
+    expect(isError).toBe(true);
+  });
+
+  test("create を許可していなければエラー", async () => {
+    const { token } = await loginAndAuthorize(alice, "openid read submit");
+
+    const { text, isError } = await callTool(token, "create_event", {
+      name: "会",
+      start_date: "2026-11-02",
+      end_date: "2026-11-02",
+    });
+
+    expect(isError).toBe(true);
+    expect(text).toContain("「create」");
+  });
+});
