@@ -3,6 +3,7 @@ import type { McpContext } from "./context.js";
 import { registerFindCommonAvailability } from "./tools/findCommonAvailability.js";
 import { registerGetEvent } from "./tools/getEvent.js";
 import { registerListEvents } from "./tools/listEvents.js";
+import { registerSubmitAvailability } from "./tools/submitAvailability.js";
 
 const INSTRUCTIONS = [
   "イツヒマは、みんなの空いている時間を集めて日程を決めるサービスです。",
@@ -18,5 +19,6 @@ export function createItsuhimaMcpServer(ctx: McpContext) {
   registerListEvents(server, ctx);
   registerGetEvent(server, ctx);
   registerFindCommonAvailability(server, ctx);
+  registerSubmitAvailability(server, ctx);
   return server;
 }

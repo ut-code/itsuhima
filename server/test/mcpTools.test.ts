@@ -172,3 +172,195 @@ describe("find_common_availability", () => {
     }
   });
 });
+
+/** 11/02 (JST) の時間帯 */
+function range(start: string, end: string, optionId?: string) {
+  return {
+    start: `2026-11-02T${start}:00+09:00`,
+    end: `2026-11-02T${end}:00+09:00`,
+    ...(optionId ? { participation_option_id: optionId } : {}),
+  };
+}
+
+function versionIn(text: string) {
+  return text.match(/version: (\S+)/)?.[1] ?? "";
+}
+
+describe("submit_availability", () => {
+  test("回答すると、登録した時間帯と version を返す。参加形態が 1 つなら ID を省略できる", async () => {
+    const { browser, token } = await loginAndAuthorize(alice);
+    const { id, optionId } = await createEvent(createBrowser());
+
+    const { text, isError } = await callTool(token, "submit_availability", {
+      event_id: id,
+      name: "Alice",
+      ranges: [range("10:00", "12:00"), range("14:00", "15:00")],
+      comment: "よろしく",
+    });
+
+    expect(isError).toBe(false);
+    expect(text).toContain("日程を回答しました (時間帯 2 件)。");
+    expect(text).toContain(`- 2026-11-02(月) 10:00〜12:00 [option ${optionId}]`);
+    // Web から見ても同じ回答 (ログインしたユーザーの参加者)
+    const { meAsGuest } = (await (await browser.get(`/events/${id}`)).json()) as {
+      meAsGuest: { name: string; comment: string; version: string; slots: unknown[] };
+    };
+    expect(meAsGuest).toMatchObject({ name: "Alice", comment: "よろしく", slots: [{}, {}] });
+    expect(versionIn(text)).toBe(meAsGuest.version);
+  });
+
+  test("主催者も回答できる", async () => {
+    const { browser, token } = await loginAndAuthorize(alice);
+    const { id } = await createEvent(browser);
+
+    await callTool(token, "submit_availability", { event_id: id, name: "Alice", ranges: [range("10:00", "11:00")] });
+
+    const { text } = await callTool(token, "get_event", { event_id: id });
+    expect(text).toContain("あなたの立場: 主催者");
+    expect(text).toContain("あなたの回答: あり");
+  });
+
+  test("参加形態が複数あるのに ID を省略すると、get_event を案内するエラー", async () => {
+    const { token } = await loginAndAuthorize(alice);
+    const options = [
+      { id: crypto.randomUUID(), label: "対面", color: "#0F82B1" },
+      { id: crypto.randomUUID(), label: "オンライン", color: "#FF9500" },
+    ];
+    const { id } = await createEvent(createBrowser(), { options });
+
+    const { text, isError } = await callTool(token, "submit_availability", {
+      event_id: id,
+      name: "Alice",
+      ranges: [range("10:00", "11:00", options[1].id), range("12:00", "13:00")],
+    });
+
+    expect(isError).toBe(true);
+    expect(text).toContain("2 件目の時間帯に participation_option_id がありません。");
+    expect(text).toContain(options[0].id);
+  });
+
+  test("時間帯の外や 15 分単位でない時間帯は、直し方を添えたエラー", async () => {
+    const { token } = await loginAndAuthorize(alice);
+    const { id } = await createEvent(createBrowser());
+
+    const outside = await callTool(token, "submit_availability", {
+      event_id: id,
+      name: "Alice",
+      ranges: [range("10:00", "11:00"), range("07:00", "09:00")],
+    });
+    expect(outside.isError).toBe(true);
+    expect(outside.text).toContain("2 件目の時間帯: イベントの時間帯 (08:00〜23:00) の外です。");
+    expect(outside.text).toContain("get_event");
+
+    const notQuarter = await callTool(token, "submit_availability", {
+      event_id: id,
+      name: "Alice",
+      ranges: [range("10:10", "11:00")],
+    });
+    expect(notQuarter.isError).toBe(true);
+    expect(notQuarter.text).toContain("15 分単位");
+  });
+
+  test("オフセットの無い日時は受け付けない", async () => {
+    const { token } = await loginAndAuthorize(alice);
+    const { id } = await createEvent(createBrowser());
+
+    const { isError } = await callTool(token, "submit_availability", {
+      event_id: id,
+      name: "Alice",
+      ranges: [{ start: "2026-11-02T10:00:00", end: "2026-11-02T11:00:00" }],
+    });
+
+    expect(isError).toBe(true);
+  });
+
+  test("回答済みなら、update_availability を案内するエラー", async () => {
+    const { token } = await loginAndAuthorize(alice);
+    const { id } = await createEvent(createBrowser());
+    const args = { event_id: id, name: "Alice", ranges: [range("10:00", "11:00")] };
+    await callTool(token, "submit_availability", args);
+
+    const { text, isError } = await callTool(token, "submit_availability", args);
+
+    expect(isError).toBe(true);
+    expect(text).toContain("update_availability");
+  });
+
+  test("submit を許可していなければエラー", async () => {
+    const { token } = await loginAndAuthorize(alice, "openid read");
+    const { id } = await createEvent(createBrowser());
+
+    const { text, isError } = await callTool(token, "submit_availability", {
+      event_id: id,
+      name: "Alice",
+      ranges: [range("10:00", "11:00")],
+    });
+
+    expect(isError).toBe(true);
+    expect(text).toContain("「submit」");
+  });
+});
+
+describe("update_availability", () => {
+  async function submitted() {
+    const { browser, token } = await loginAndAuthorize(alice);
+    const { id } = await createEvent(createBrowser());
+    const { text } = await callTool(token, "submit_availability", {
+      event_id: id,
+      name: "Alice",
+      comment: "最初のコメント",
+      ranges: [range("10:00", "11:00")],
+    });
+    return { browser, token, id, version: versionIn(text) };
+  }
+
+  test("version が合えば、時間帯を置き換え、名前とコメントは省略すればそのまま", async () => {
+    const { token, id, version } = await submitted();
+
+    const { text, isError } = await callTool(token, "update_availability", {
+      event_id: id,
+      based_on_version: version,
+      ranges: [range("13:00", "14:00"), range("15:00", "16:00")],
+    });
+
+    expect(isError).toBe(false);
+    expect(text).toContain("回答を更新しました (時間帯 2 件)。");
+    expect(text).not.toContain("10:00〜11:00");
+    expect(versionIn(text)).not.toBe(version);
+    const detail = await callTool(token, "get_event", { event_id: id, include: "guests" });
+    expect(detail.text).toContain('name: "Alice" / comment: "最初のコメント" / 時間帯 2 件');
+  });
+
+  test("別の端末で更新されていれば (version が古ければ)、取り直しを案内するエラーで、更新しない", async () => {
+    const { browser, token, id, version } = await submitted();
+    // Web (別の端末) から更新する
+    const event = (await (await browser.get(`/events/${id}`)).json()) as { options: { id: string }[] };
+    await browser.put(`/events/${id}/submissions/mine`, submissionInput(event.options[0].id, { name: "Alice (Web)" }));
+
+    const { text, isError } = await callTool(token, "update_availability", {
+      event_id: id,
+      based_on_version: version,
+      ranges: [],
+    });
+
+    expect(isError).toBe(true);
+    expect(text).toContain("get_event で最新の回答と version を取得し直し");
+    const detail = await callTool(token, "get_event", { event_id: id, include: "guests" });
+    expect(detail.text).toContain('name: "Alice (Web)"');
+    expect(detail.text).toContain("時間帯 1 件");
+  });
+
+  test("まだ回答していなければ、submit_availability を案内するエラー", async () => {
+    const { token } = await loginAndAuthorize(alice);
+    const { id } = await createEvent(createBrowser());
+
+    const { text, isError } = await callTool(token, "update_availability", {
+      event_id: id,
+      based_on_version: "x",
+      ranges: [],
+    });
+
+    expect(isError).toBe(true);
+    expect(text).toContain("submit_availability");
+  });
+});
