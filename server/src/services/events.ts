@@ -4,6 +4,7 @@ import type { editEventReqSchema, eventReqSchema, submitReqSchema } from "../../
 import { type Db, insertMany, runBatch } from "../db/index.js";
 import * as schema from "../db/schema.js";
 import { nanoid } from "../lib/id.js";
+import { type Actor, ownedBy, pickMine } from "./actor.js";
 import { ServiceError } from "./errors.js";
 import { validateSlots } from "./slots.js";
 
@@ -16,7 +17,7 @@ function toIso(value: string | Date): string {
   return new Date(value).toISOString();
 }
 
-export async function createEvent(db: Db, browserId: string, input: CreateEventInput) {
+export async function createEvent(db: Db, actor: Actor, input: CreateEventInput) {
   const event = {
     id: nanoid(),
     name: input.name,
@@ -32,7 +33,9 @@ export async function createEvent(db: Db, browserId: string, input: CreateEventI
       schema.allowedRange,
       input.allowedRanges.map((range) => ({ ...range, eventId: event.id })),
     ),
-    db.insert(schema.participant).values({ eventId: event.id, role: "host", browserId }),
+    db
+      .insert(schema.participant)
+      .values({ eventId: event.id, role: "host", browserId: actor.browserId, userId: actor.userId }),
     ...insertMany(
       db,
       schema.option,
@@ -49,18 +52,15 @@ export async function createEvent(db: Db, browserId: string, input: CreateEventI
 }
 
 /** ホストまたはゲストとして関わるイベント */
-export async function listMyEvents(db: Db, browserId: string) {
+export async function listMyEvents(db: Db, actor: Actor) {
   const events = await db.query.event.findMany({
     where: inArray(
       schema.event.id,
-      db
-        .select({ id: schema.participant.eventId })
-        .from(schema.participant)
-        .where(eq(schema.participant.browserId, browserId)),
+      db.select({ id: schema.participant.eventId }).from(schema.participant).where(ownedBy(actor)),
     ),
     with: {
       participants: {
-        where: eq(schema.participant.browserId, browserId),
+        where: ownedBy(actor),
         columns: { role: true },
       },
     },
@@ -78,7 +78,7 @@ export async function listMyEvents(db: Db, browserId: string) {
 }
 
 /** イベントの詳細。URL (イベント ID) を知っていれば誰でも見られる。 */
-export async function getEvent(db: Db, browserId: string, eventId: string) {
+export async function getEvent(db: Db, actor: Actor, eventId: string) {
   const event = await db.query.event.findFirst({
     where: eq(schema.event.id, eventId),
     with: {
@@ -96,7 +96,7 @@ export async function getEvent(db: Db, browserId: string, eventId: string) {
     throw new ServiceError("event_not_found", "イベントが見つかりません。");
   }
 
-  const me = event.participants.find((p) => p.browserId === browserId);
+  const me = pickMine(actor, event.participants);
 
   return {
     id: event.id,
@@ -141,21 +141,17 @@ function toGuest(participant: ParticipantWithSlots & { name: string }) {
   };
 }
 
-async function isHost(db: Db, browserId: string, eventId: string) {
+async function isHost(db: Db, actor: Actor, eventId: string) {
   const host = await db.query.participant.findFirst({
-    where: and(
-      eq(schema.participant.eventId, eventId),
-      eq(schema.participant.browserId, browserId),
-      eq(schema.participant.role, "host"),
-    ),
+    where: and(eq(schema.participant.eventId, eventId), ownedBy(actor), eq(schema.participant.role, "host")),
     columns: { id: true },
   });
   return host !== undefined;
 }
 
-export async function updateEvent(db: Db, browserId: string, eventId: string, input: UpdateEventInput) {
+export async function updateEvent(db: Db, actor: Actor, eventId: string, input: UpdateEventInput) {
   const [host, existingGuest] = await Promise.all([
-    isHost(db, browserId, eventId),
+    isHost(db, actor, eventId),
     db.query.participant.findFirst({
       where: and(eq(schema.participant.eventId, eventId), isNotNull(schema.participant.name)),
       columns: { id: true },
@@ -236,8 +232,8 @@ export async function updateEvent(db: Db, browserId: string, eventId: string, in
   });
 }
 
-export async function deleteEvent(db: Db, browserId: string, eventId: string) {
-  if (!(await isHost(db, browserId, eventId))) {
+export async function deleteEvent(db: Db, actor: Actor, eventId: string) {
+  if (!(await isHost(db, actor, eventId))) {
     throw new ServiceError("not_host", "削除権限がありません。");
   }
 
@@ -266,16 +262,17 @@ async function findEventForSlots(db: Db, eventId: string) {
   };
 }
 
-function findMyParticipant(db: Db, browserId: string, eventId: string) {
-  return db.query.participant.findFirst({
-    where: and(eq(schema.participant.browserId, browserId), eq(schema.participant.eventId, eventId)),
+async function findMyParticipant(db: Db, actor: Actor, eventId: string) {
+  const mine = await db.query.participant.findMany({
+    where: and(ownedBy(actor), eq(schema.participant.eventId, eventId)),
     with: { slots: true },
   });
+  return pickMine(actor, mine);
 }
 
 /** 自分の回答。回答していなければ null */
-async function findMyGuest(db: Db, browserId: string, eventId: string) {
-  const me = await findMyParticipant(db, browserId, eventId);
+async function findMyGuest(db: Db, actor: Actor, eventId: string) {
+  const me = await findMyParticipant(db, actor, eventId);
   return me && hasAnswered(me) ? toGuest(me) : null;
 }
 
@@ -289,9 +286,9 @@ function slotRows(input: SubmissionInput, eventId: string, participantId: string
   }));
 }
 
-export async function submitAvailability(db: Db, browserId: string, eventId: string, input: SubmissionInput) {
+export async function submitAvailability(db: Db, actor: Actor, eventId: string, input: SubmissionInput) {
   // ホストはイベントを作った時点で participant があり、名前を入れると回答したことになる
-  const me = await findMyParticipant(db, browserId, eventId);
+  const me = await findMyParticipant(db, actor, eventId);
   if (me && hasAnswered(me)) {
     throw new ServiceError("already_submitted", "提出済みです。");
   }
@@ -303,15 +300,22 @@ export async function submitAvailability(db: Db, browserId: string, eventId: str
   await runBatch(db, [
     me
       ? db.update(schema.participant).set(answer).where(eq(schema.participant.id, me.id))
-      : db.insert(schema.participant).values({ id: participantId, eventId, role: "guest", browserId, ...answer }),
+      : db.insert(schema.participant).values({
+          id: participantId,
+          eventId,
+          role: "guest",
+          browserId: actor.browserId,
+          userId: actor.userId,
+          ...answer,
+        }),
     ...insertMany(db, schema.slot, slotRows(input, eventId, participantId)),
   ]);
 
-  return findMyGuest(db, browserId, eventId);
+  return findMyGuest(db, actor, eventId);
 }
 
-export async function updateMyAvailability(db: Db, browserId: string, eventId: string, input: SubmissionInput) {
-  const myGuest = await findMyGuest(db, browserId, eventId);
+export async function updateMyAvailability(db: Db, actor: Actor, eventId: string, input: SubmissionInput) {
+  const myGuest = await findMyGuest(db, actor, eventId);
 
   if (!myGuest) {
     throw new ServiceError("submission_not_found", "既存の日程が見つかりません。");
@@ -328,5 +332,5 @@ export async function updateMyAvailability(db: Db, browserId: string, eventId: s
       .where(eq(schema.participant.id, myGuest.id)),
   ]);
 
-  return findMyGuest(db, browserId, eventId);
+  return findMyGuest(db, actor, eventId);
 }

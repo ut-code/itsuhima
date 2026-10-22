@@ -18,34 +18,34 @@ const eventIdParamsSchema = z.object({ eventId: z.string().length(21) });
 const router = new Hono<AppEnv>()
   // イベント作成
   .post("/", zValidator("json", eventReqSchema), async (c) => {
-    const event = await createEvent(c.get("db"), c.get("browserId"), c.req.valid("json"));
+    const event = await createEvent(c.get("db"), c.get("actor"), c.req.valid("json"));
     return c.json({ id: event.id, name: event.name }, 201);
   })
 
   // 自分が関連するイベント取得
   .get("/mine", async (c) => {
-    const events = await listMyEvents(c.get("db"), c.get("browserId"));
+    const events = await listMyEvents(c.get("db"), c.get("actor"));
     return c.json(events, 200);
   })
 
   // イベント取得
   .get("/:eventId", zValidator("param", eventIdParamsSchema), async (c) => {
     const { eventId } = c.req.valid("param");
-    const event = await getEvent(c.get("db"), c.get("browserId"), eventId);
+    const event = await getEvent(c.get("db"), c.get("actor"), eventId);
     return c.json(event, 200);
   })
 
   // イベント編集。省略したフィールドは変えない
   .patch("/:eventId", zValidator("param", eventIdParamsSchema), zValidator("json", editEventReqSchema), async (c) => {
     const { eventId } = c.req.valid("param");
-    const event = await updateEvent(c.get("db"), c.get("browserId"), eventId, c.req.valid("json"));
+    const event = await updateEvent(c.get("db"), c.get("actor"), eventId, c.req.valid("json"));
     return c.json({ event }, 200);
   })
 
   // イベント削除
   .delete("/:eventId", zValidator("param", eventIdParamsSchema), async (c) => {
     const { eventId } = c.req.valid("param");
-    await deleteEvent(c.get("db"), c.get("browserId"), eventId);
+    await deleteEvent(c.get("db"), c.get("actor"), eventId);
     return c.body(null, 204);
   })
 
@@ -57,7 +57,7 @@ const router = new Hono<AppEnv>()
     async (c) => {
       const { eventId } = c.req.valid("param");
       const { name, comment, slots } = c.req.valid("json");
-      const guest = await submitAvailability(c.get("db"), c.get("browserId"), eventId, { name, comment, slots });
+      const guest = await submitAvailability(c.get("db"), c.get("actor"), eventId, { name, comment, slots });
       return c.json({ guest }, 201);
     },
   )
@@ -70,7 +70,7 @@ const router = new Hono<AppEnv>()
     async (c) => {
       const { eventId } = c.req.valid("param");
       const { name, comment, slots } = c.req.valid("json");
-      const guest = await updateMyAvailability(c.get("db"), c.get("browserId"), eventId, { name, comment, slots });
+      const guest = await updateMyAvailability(c.get("db"), c.get("actor"), eventId, { name, comment, slots });
       return c.json({ guest }, 200);
     },
   );
