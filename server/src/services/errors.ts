@@ -7,7 +7,8 @@ export type ServiceErrorReason =
   | "not_host"
   | "already_submitted"
   | "options_empty"
-  | "option_in_use";
+  | "option_in_use"
+  | "invalid_slot";
 
 /**
  * サービス層が投げる業務エラー。message は Web UI にそのまま表示する既定の文で、

@@ -3,6 +3,7 @@ import type { editReqSchema, projectReqSchema, submitReqSchema } from "../../../
 import { prisma } from "../db.js";
 import { nanoid } from "../lib/id.js";
 import { ServiceError } from "./errors.js";
+import { validateSlots } from "./slots.js";
 
 export type CreateProjectInput = z.infer<typeof projectReqSchema>;
 export type UpdateProjectInput = z.infer<typeof editReqSchema>;
@@ -215,6 +216,23 @@ export async function deleteProject(browserId: string, projectId: string) {
   });
 }
 
+/** Slot の検証に必要な分だけプロジェクトを読む */
+async function findProjectForSlots(projectId: string) {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: {
+      startDate: true,
+      endDate: true,
+      allowedRanges: { select: { startTime: true, endTime: true } },
+      participationOptions: { select: { id: true } },
+    },
+  });
+  if (!project) {
+    throw new ServiceError("project_not_found", "イベントが見つかりません。");
+  }
+  return project;
+}
+
 export async function submitAvailability(browserId: string, projectId: string, input: SubmissionInput) {
   const existingGuest = await prisma.guest.findUnique({
     where: {
@@ -227,6 +245,8 @@ export async function submitAvailability(browserId: string, projectId: string, i
   if (existingGuest) {
     throw new ServiceError("already_submitted", "提出済みです。");
   }
+
+  validateSlots(await findProjectForSlots(projectId), input.slots);
 
   return prisma.guest.create({
     data: {
@@ -256,6 +276,9 @@ export async function updateMyAvailability(browserId: string, projectId: string,
   if (!existingGuest) {
     throw new ServiceError("submission_not_found", "既存の日程が見つかりません。");
   }
+
+  validateSlots(await findProjectForSlots(projectId), input.slots);
+
   const slotData = input.slots.map((slot) => ({
     from: slot.start,
     to: slot.end,

@@ -396,49 +396,64 @@ describe("POST /projects/:projectId/submissions", () => {
     expect(res.status).toBe(400);
   });
 
-  // 現状の挙動: Slot の範囲や参加形態の所属を検証していない
-  test("イベントの期間外の Slot も受け付ける", async () => {
-    const { id, optionId } = await createProject(createBrowser());
-
-    const res = await createBrowser().post(
-      `/projects/${id}/submissions`,
-      submissionInput(id, optionId, {
-        slots: [
-          { start: "2027-01-01T01:00:00.000Z", end: "2027-01-01T03:00:00.000Z", participationOptionId: optionId },
-        ],
-      }),
-    );
-
-    expect(res.status).toBe(201);
-  });
-
-  // 現状の挙動: Slot の範囲や参加形態の所属を検証していない
-  test("別のイベントの参加形態を使った Slot も受け付ける", async () => {
-    const { id } = await createProject(createBrowser());
-    const other = await createProject(createBrowser());
-
-    const res = await createBrowser().post(`/projects/${id}/submissions`, submissionInput(id, other.optionId));
-
-    expect(res.status).toBe(201);
-  });
-
-  // 現状の挙動: 外部キー制約の違反がそのまま 500 になる
-  test("存在しない参加形態を使うと 500", async () => {
-    const { id } = await createProject(createBrowser());
-
-    const res = await createBrowser().post(`/projects/${id}/submissions`, submissionInput(id, crypto.randomUUID()));
-
-    expect(res.status).toBe(500);
-  });
-
-  // 現状の挙動: 外部キー制約の違反がそのまま 500 になる
-  test("存在しないイベントに回答すると 500", async () => {
+  test("存在しないイベントに回答すると 404", async () => {
     const res = await createBrowser().post(
       `/projects/${missingProjectId}/submissions`,
       submissionInput(missingProjectId, crypto.randomUUID(), { slots: [] }),
     );
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ message: "イベントが見つかりません。" });
+  });
+});
+
+// 検証の中身は slots.test.ts で確かめる。ここでは、提出と更新で検証が効いていることだけを確かめる
+describe("日程の提出・更新での Slot の検証", () => {
+  test("イベントの期間外なら 400", async () => {
+    const { id, optionId } = await createProject(createBrowser());
+
+    const res = await createBrowser().post(
+      `/projects/${id}/submissions`,
+      submissionInput(id, optionId, {
+        // 11/01 10:00〜12:00
+        slots: [
+          { start: "2026-11-01T01:00:00.000Z", end: "2026-11-01T03:00:00.000Z", participationOptionId: optionId },
+        ],
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ message: expect.stringContaining("日程の範囲") });
+  });
+
+  test("別のイベントの参加形態なら 400", async () => {
+    const { id } = await createProject(createBrowser());
+    const other = await createProject(createBrowser());
+
+    const res = await createBrowser().post(`/projects/${id}/submissions`, submissionInput(id, other.optionId));
+
+    expect(res.status).toBe(400);
+  });
+
+  test("回答の更新でも検証し、弾いたときは元の回答を変えない", async () => {
+    const { id, optionId } = await createProject(createBrowser());
+    const guest = createBrowser();
+    await submit(guest, id, optionId);
+
+    const res = await guest.put(
+      `/projects/${id}/submissions/mine`,
+      submissionInput(id, optionId, {
+        name: "新しい名前",
+        // 11/01 10:00〜12:00
+        slots: [
+          { start: "2026-11-01T01:00:00.000Z", end: "2026-11-01T03:00:00.000Z", participationOptionId: optionId },
+        ],
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    const { meAsGuest } = await getProject(guest, id);
+    expect(meAsGuest).toMatchObject({ name: "ゲスト", slots: [{ from: slotOnNov2.start, to: slotOnNov2.end }] });
   });
 });
 

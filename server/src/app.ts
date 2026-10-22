@@ -13,6 +13,7 @@ const serviceErrorStatus = {
   already_submitted: 403, // 本来は 409 だが、現状の挙動に合わせている
   options_empty: 400,
   option_in_use: 400,
+  invalid_slot: 400,
 } as const satisfies Record<ServiceErrorReason, number>;
 
 export type AppVariables = {
