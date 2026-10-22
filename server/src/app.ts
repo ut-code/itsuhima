@@ -2,8 +2,18 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { browserIdMiddleware } from "./middleware/browserId.js";
 import projectsRoutes from "./routes/projects.js";
+import { ServiceError, type ServiceErrorReason } from "./services/errors.js";
 
 const allowedOrigins = process.env.CORS_ALLOW_ORIGINS?.split(",") || [];
+
+const serviceErrorStatus = {
+  project_not_found: 404,
+  submission_not_found: 404,
+  not_host: 403,
+  already_submitted: 403, // 本来は 409 だが、現状の挙動に合わせている
+  options_empty: 400,
+  option_in_use: 400,
+} as const satisfies Record<ServiceErrorReason, number>;
 
 export type AppVariables = {
   browserId: string;
@@ -23,6 +33,9 @@ export const app = new Hono<{ Variables: AppVariables }>()
   })
   .route("/projects", projectsRoutes)
   .onError((err, c) => {
+    if (err instanceof ServiceError) {
+      return c.json({ message: err.message }, serviceErrorStatus[err.reason]);
+    }
     console.error(err);
     return c.json({ message: "Internal Server Error" }, 500);
   });
