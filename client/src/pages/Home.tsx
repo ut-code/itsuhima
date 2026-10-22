@@ -5,14 +5,14 @@ import { NavLink } from "react-router";
 import type { AppType } from "../../../server/src/main";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
-import { briefProjectReviver } from "../revivers";
-import type { BriefProject } from "../types";
+import { briefEventReviver } from "../revivers";
+import type { BriefEvent } from "../types";
 import { API_ENDPOINT, readErrorMessage } from "../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
 
 export default function HomePage() {
-  const [involvedProjects, setInvolvedProjects] = useState<BriefProject[] | null>(null);
+  const [involvedEvents, setInvolvedEvents] = useState<BriefEvent[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{
     message: string;
@@ -20,14 +20,14 @@ export default function HomePage() {
   } | null>(null);
 
   useEffect(() => {
-    const fetchInvolvedProjects = async () => {
+    const fetchInvolvedEvents = async () => {
       setLoading(true);
       try {
-        const res = await client.projects.mine.$get({}, { init: { credentials: "include" } });
+        const res = await client.events.mine.$get({}, { init: { credentials: "include" } });
         if (res.status === 200) {
           const data = await res.json();
-          const parsedData = data.map((p) => briefProjectReviver(p));
-          setInvolvedProjects(parsedData);
+          const parsedData = data.map((p) => briefEventReviver(p));
+          setInvolvedEvents(parsedData);
         } else {
           const errorMessage = await readErrorMessage(res, "イベントの取得に失敗しました。");
           setToast({
@@ -35,21 +35,21 @@ export default function HomePage() {
             variant: "error",
           });
           setTimeout(() => setToast(null), 5000);
-          setInvolvedProjects(null);
+          setInvolvedEvents(null);
         }
       } catch (error) {
-        console.error("Error fetching involved projects:", error);
+        console.error("Error fetching involved events:", error);
         setToast({
           message: "ネットワークエラーが発生しました。",
           variant: "error",
         });
         setTimeout(() => setToast(null), 5000);
-        setInvolvedProjects(null);
+        setInvolvedEvents(null);
       } finally {
         setLoading(false);
       }
     };
-    fetchInvolvedProjects();
+    fetchInvolvedEvents();
   }, []);
 
   return (
@@ -67,9 +67,9 @@ export default function HomePage() {
             </NavLink>
           </div>
           {loading ? (
-            <ProjectsSkeleton />
-          ) : involvedProjects && involvedProjects.length > 0 ? (
-            <ProjectDashboard involvedProjects={involvedProjects} />
+            <EventsSkeleton />
+          ) : involvedEvents && involvedEvents.length > 0 ? (
+            <EventDashboard involvedEvents={involvedEvents} />
           ) : (
             <EmptyState />
           )}
@@ -95,67 +95,67 @@ export default function HomePage() {
   );
 }
 
-function ProjectDashboard({ involvedProjects }: { involvedProjects: BriefProject[] }) {
-  const hostedProjects = involvedProjects
+function EventDashboard({ involvedEvents }: { involvedEvents: BriefEvent[] }) {
+  const hostedEvents = involvedEvents
     .filter((p) => p.isHost)
     .sort((a, b) => b.startDate.valueOf() - a.startDate.valueOf());
 
-  const participatingProjects = involvedProjects
+  const participatingEvents = involvedEvents
     .filter((p) => !p.isHost)
     .sort((a, b) => b.startDate.valueOf() - a.startDate.valueOf());
 
   return (
     <div className="space-y-8">
-      {hostedProjects.length > 0 && (
-        <ProjectSection title="主催しているイベント" icon={<LuUser className="h-5 w-5" />} projects={hostedProjects} />
+      {hostedEvents.length > 0 && (
+        <EventSection title="主催しているイベント" icon={<LuUser className="h-5 w-5" />} events={hostedEvents} />
       )}
 
-      {participatingProjects.length > 0 && (
-        <ProjectSection
+      {participatingEvents.length > 0 && (
+        <EventSection
           title="参加しているイベント"
           icon={<LuUsers className="h-5 w-5" />}
-          projects={participatingProjects}
+          events={participatingEvents}
         />
       )}
     </div>
   );
 }
 
-function ProjectSection({ title, icon, projects }: { title: string; icon: React.ReactNode; projects: BriefProject[] }) {
+function EventSection({ title, icon, events }: { title: string; icon: React.ReactNode; events: BriefEvent[] }) {
   return (
     <section>
       <div className="flex items-center gap-2 text-base-content/80">
         {icon}
         <h2 className="font-bold text-lg">{title}</h2>
         <span className="ml-1 rounded-full bg-base-300 px-2 py-0.5 font-medium text-base-content/70 text-xs">
-          {projects.length}
+          {events.length}
         </span>
       </div>
       <div className="mt-4 overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm">
-        {projects.map((project, index) => (
-          <ProjectRow key={project.id} project={project} isLast={index === projects.length - 1} />
+        {events.map((event, index) => (
+          <EventRow key={event.id} event={event} isLast={index === events.length - 1} />
         ))}
       </div>
     </section>
   );
 }
 
-function ProjectRow({ project, isLast }: { project: BriefProject; isLast: boolean }) {
+function EventRow({ event, isLast }: { event: BriefEvent; isLast: boolean }) {
   return (
     <NavLink
-      to={`/e/${project.id}`}
+      to={`/e/${event.id}`}
       className={`group flex items-center justify-between gap-4 p-4 transition-colors hover:bg-base-200 ${
         !isLast ? "border-base-300 border-b" : ""
       }`}
     >
       <div className="min-w-0 flex-1">
         <h3 className="truncate font-medium text-base-content transition-colors group-hover:text-primary">
-          {project.name}
+          {event.name}
         </h3>
         <div className="mt-1 flex items-center gap-1.5 text-base-content/50 text-sm">
           <LuCalendar className="h-3.5 w-3.5 shrink-0" />
           <span>
-            {project.startDate.format("YYYY年M月D日")} 〜 {project.endDate.format("YYYY年M月D日")}
+            {event.startDate.format("YYYY年M月D日")} 〜 {event.endDate.format("YYYY年M月D日")}
           </span>
         </div>
       </div>
@@ -176,7 +176,7 @@ function EmptyState() {
   );
 }
 
-function ProjectsSkeleton() {
+function EventsSkeleton() {
   return (
     <div className="space-y-8">
       {[1, 2].map((section) => (

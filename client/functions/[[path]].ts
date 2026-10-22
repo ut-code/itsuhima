@@ -4,14 +4,14 @@ interface Env {
   API_ENDPOINT: string;
 }
 
-interface ProjectData {
+interface EventData {
   id: string;
   name: string;
   startDate: string;
   endDate: string;
   allowedRanges: Array<{
     id: string;
-    projectId: string;
+    eventId: string;
     startTime: string;
     endTime: string;
   }>;
@@ -71,16 +71,16 @@ function formatDate(dateString: string): string {
     .replace(/-/g, "/");
 }
 
-// プロジェクト情報を取得
-async function fetchProjectData(eventId: string, apiEndpoint: string): Promise<ProjectData | null> {
+// イベント情報を取得
+async function fetchEventData(eventId: string, apiEndpoint: string): Promise<EventData | null> {
   try {
-    const response = await fetch(`${apiEndpoint}/projects/${eventId}`);
+    const response = await fetch(`${apiEndpoint}/events/${eventId}`);
     if (!response.ok) {
       return null;
     }
     return await response.json();
   } catch (error) {
-    console.error("Failed to fetch project data:", error);
+    console.error("Failed to fetch event data:", error);
     return null;
   }
 }
@@ -140,21 +140,21 @@ export async function onRequest(context: EventContext<Env, any, any>): Promise<R
     return response;
   }
 
-  const projectData = await fetchProjectData(eventId, env.API_ENDPOINT);
+  const eventData = await fetchEventData(eventId, env.API_ENDPOINT);
 
   const defaultOgImageUrl = `${url.origin}/og-image.jpg`;
 
-  if (!projectData) {
-    // プロジェクトが見つからない場合はデフォルト画像を設定
+  if (!eventData) {
+    // イベントが見つからない場合はデフォルト画像を設定
     return new HTMLRewriter()
       .on('meta[property="og:image"]', new OGImageRewriter(defaultOgImageUrl))
       .transform(response);
   }
 
-  const ogTitle = `${projectData.name} - イツヒマ`;
+  const ogTitle = `${eventData.name} - イツヒマ`;
 
-  const startDate = formatDate(projectData.startDate);
-  const endDate = formatDate(projectData.endDate);
+  const startDate = formatDate(eventData.startDate);
+  const endDate = formatDate(eventData.endDate);
   const dateRange = startDate === endDate ? startDate : `${startDate} 〜 ${endDate}`;
   const ogDescription = `日程範囲: ${dateRange}`;
 

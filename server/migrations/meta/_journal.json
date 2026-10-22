@@ -8,6 +8,48 @@
       "when": 1792671045091,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792693418605,
+      "tag": "0001_add_project_timezone_created_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792693843461,
+      "tag": "0002_allowed_range_time_of_day",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792696463507,
+      "tag": "0003_project_dates",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792696723405,
+      "tag": "0004_rename_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792696953969,
+      "tag": "0005_rename_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1792697240075,
+      "tag": "0006_merge_host_guest_into_participant",
+      "breakpoints": true
     }
   ]
 }

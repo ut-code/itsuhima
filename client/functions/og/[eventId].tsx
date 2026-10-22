@@ -7,22 +7,22 @@ interface Env {
   API_ENDPOINT: string;
 }
 
-interface ProjectData {
+interface EventData {
   id: string;
   name: string;
   startDate: string;
   endDate: string;
 }
 
-async function fetchProjectData(eventId: string, apiEndpoint: string): Promise<ProjectData | null> {
+async function fetchEventData(eventId: string, apiEndpoint: string): Promise<EventData | null> {
   try {
-    const response = await fetch(`${apiEndpoint}/projects/${eventId}`);
+    const response = await fetch(`${apiEndpoint}/events/${eventId}`);
     if (!response.ok) {
       return null;
     }
     return await response.json();
   } catch (error) {
-    console.error("Failed to fetch project data:", error);
+    console.error("Failed to fetch event data:", error);
     return null;
   }
 }
@@ -75,10 +75,10 @@ export const onRequestGet: PagesFunction<Env, "eventId"> = async (context) => {
     return new Response("Invalid event ID", { status: 400 });
   }
 
-  const projectData = await fetchProjectData(eventId, env.API_ENDPOINT);
+  const eventData = await fetchEventData(eventId, env.API_ENDPOINT);
 
-  if (!projectData) {
-    // プロジェクトがない場合はデフォルト画像にリダイレクト
+  if (!eventData) {
+    // イベントがない場合はデフォルト画像にリダイレクト
     const url = new URL(context.request.url);
     return Response.redirect(`${url.origin}/og-image.jpg`, 302);
   }
@@ -87,10 +87,10 @@ export const onRequestGet: PagesFunction<Env, "eventId"> = async (context) => {
     "https://unpkg.com/@fontsource/m-plus-1p@5.2.8/files/m-plus-1p-japanese-700-normal.woff",
   ).then((res) => res.arrayBuffer());
 
-  const projectName = truncateByWidth(projectData.name, 72);
+  const eventName = truncateByWidth(eventData.name, 72);
 
-  const startDate = formatDate(projectData.startDate);
-  const endDate = formatDate(projectData.endDate);
+  const startDate = formatDate(eventData.startDate);
+  const endDate = formatDate(eventData.endDate);
   const dateRange = startDate === endDate ? startDate : `${startDate} 〜 ${endDate}`;
 
   const response = new ImageResponse(
@@ -134,7 +134,7 @@ export const onRequestGet: PagesFunction<Env, "eventId"> = async (context) => {
               wordBreak: "break-word",
             }}
           >
-            {projectName}
+            {eventName}
           </span>
           <span
             style={{

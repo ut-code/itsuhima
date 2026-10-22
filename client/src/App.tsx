@@ -1,9 +1,9 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from "react-router";
+import EventFormPage from "./pages/EventForm.tsx";
 import SubmissionPage from "./pages/eventId/Submission.tsx";
 import HomePage from "./pages/Home.tsx";
 import LandingPage from "./pages/Landing.tsx";
 import NotFoundPage from "./pages/NotFound.tsx";
-import ProjectPage from "./pages/Project.tsx";
 
 /**
  * Nano ID 形式の正規表現。
@@ -39,11 +39,11 @@ export default function App() {
       <Routes>
         <Route index element={<LandingPage />} />
         <Route path="home" element={<HomePage />} />
-        <Route path="new" element={<ProjectPage />} />
+        <Route path="new" element={<EventFormPage />} />
         <Route path="e">
           <Route path=":eventId" element={<Outlet />}>
             <Route index element={<SubmissionPage />} />
-            <Route path="edit" element={<ProjectPage />} />
+            <Route path="edit" element={<EventFormPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Route>

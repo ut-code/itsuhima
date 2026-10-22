@@ -2,7 +2,7 @@
  * サービス層のエラーの理由。HTTP のステータスへの変換は呼び出す側 (`app.ts` の `onError`) が行う。
  */
 export type ServiceErrorReason =
-  | "project_not_found"
+  | "event_not_found"
   | "submission_not_found"
   | "not_host"
   | "already_submitted"

@@ -19,8 +19,8 @@ import type { AppType } from "../../../../server/src/main";
 import { AddToCalendar } from "../../components/AddToCalendar";
 import { Calendar, type Highlight } from "../../components/Calendar";
 import Header from "../../components/Header";
-import { projectReviver } from "../../revivers";
-import type { Project, Slot } from "../../types";
+import { eventReviver } from "../../revivers";
+import type { Event, Slot } from "../../types";
 import { API_ENDPOINT, readErrorMessage } from "../../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
@@ -74,25 +74,25 @@ const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
 };
 
 export default function SubmissionPage() {
-  const { eventId: projectId } = useParams<{ eventId: string }>();
-  const [project, setProject] = useState<Project | null>(null);
-  const [projectLoading, setProjectLoading] = useState(true);
+  const { eventId } = useParams<{ eventId: string }>();
+  const [event, setEvent] = useState<Event | null>(null);
+  const [eventLoading, setEventLoading] = useState(true);
 
   const [postLoading, setPostLoading] = useState(false);
 
-  const loading = projectLoading || postLoading;
+  const loading = eventLoading || postLoading;
 
-  const fetchProject = useCallback(async () => {
-    if (!projectId) {
-      setProject(null);
-      setProjectLoading(false);
+  const fetchEvent = useCallback(async () => {
+    if (!eventId) {
+      setEvent(null);
+      setEventLoading(false);
       return;
     }
-    setProjectLoading(true);
+    setEventLoading(true);
     try {
-      const res = await client.projects[":projectId"].$get(
+      const res = await client.events[":eventId"].$get(
         {
-          param: { projectId },
+          param: { eventId },
         },
         {
           init: { credentials: "include" },
@@ -100,10 +100,10 @@ export default function SubmissionPage() {
       );
       if (res.status === 200) {
         const data = await res.json();
-        const parsedData = projectReviver(data);
-        setProject(parsedData);
+        const parsedData = eventReviver(data);
+        setEvent(parsedData);
       } else {
-        const errorMessage = await readErrorMessage(res, "プロジェクトの取得に失敗しました。");
+        const errorMessage = await readErrorMessage(res, "イベントの取得に失敗しました。");
         setToast({
           message: errorMessage,
           variant: "error",
@@ -111,23 +111,23 @@ export default function SubmissionPage() {
         setTimeout(() => setToast(null), 5000);
       }
     } catch (error) {
-      console.error("Error fetching project:", error);
+      console.error("Error fetching event:", error);
       setToast({
         message: "ネットワークエラーが発生しました。",
         variant: "error",
       });
       setTimeout(() => setToast(null), 5000);
     } finally {
-      setProjectLoading(false);
+      setEventLoading(false);
     }
-  }, [projectId]);
+  }, [eventId]);
   useEffect(() => {
-    fetchProject();
-  }, [fetchProject]);
+    fetchEvent();
+  }, [fetchEvent]);
 
-  const meAsGuest = project?.meAsGuest;
+  const meAsGuest = event?.meAsGuest;
   const myGuestId = meAsGuest?.id;
-  const isHost = project?.isHost;
+  const isHost = event?.isHost;
 
   const [mode, setMode] = useState<"view" | "edit" | "confirm">("view");
 
@@ -155,17 +155,16 @@ export default function SubmissionPage() {
       const payload = {
         name: guestName,
         comment: comment.trim() || null,
-        projectId: projectId || "",
         slots: slots.map((slot) => ({
-          start: slot.start.toISOString(),
-          end: slot.end.toISOString(),
-          participationOptionId: slot.participationOptionId,
+          startAt: slot.start.toISOString(),
+          endAt: slot.end.toISOString(),
+          optionId: slot.participationOptionId,
         })),
       };
       if (!myGuestId) {
-        const response = await client.projects[":projectId"].submissions.$post(
+        const response = await client.events[":eventId"].submissions.$post(
           {
-            param: { projectId: projectId || "" },
+            param: { eventId: eventId || "" },
             json: payload,
           },
           {
@@ -186,9 +185,9 @@ export default function SubmissionPage() {
           setTimeout(() => setToast(null), 3000);
         }
       } else {
-        const response = await client.projects[":projectId"].submissions.mine.$put(
+        const response = await client.events[":eventId"].submissions.mine.$put(
           {
-            param: { projectId: projectId || "" },
+            param: { eventId: eventId || "" },
             json: payload,
           },
           {
@@ -209,10 +208,10 @@ export default function SubmissionPage() {
           setTimeout(() => setToast(null), 3000);
         }
       }
-      await Promise.all([fetchProject()]);
+      await Promise.all([fetchEvent()]);
       setPostLoading(false);
     },
-    [guestName, comment, projectId, fetchProject],
+    [guestName, comment, eventId, fetchEvent],
   );
 
   useEffect(() => {
@@ -230,26 +229,26 @@ export default function SubmissionPage() {
   }, [mode]);
 
   const guestIdToName = useMemo(() => {
-    if (!project) return {};
-    return Object.fromEntries(project.guests.map((g) => [g.id, g.name]));
-  }, [project]);
+    if (!event) return {};
+    return Object.fromEntries(event.guests.map((g) => [g.id, g.name]));
+  }, [event]);
 
   const guestIdToComment = useMemo(() => {
-    if (!project) return {};
-    return Object.fromEntries(project.guests.filter((g) => g.comment).map((g) => [g.id, g.comment as string]));
-  }, [project]);
+    if (!event) return {};
+    return Object.fromEntries(event.guests.filter((g) => g.comment).map((g) => [g.id, g.comment as string]));
+  }, [event]);
 
   const participationOptionIdToLabel = useMemo(() => {
-    if (!project) return {};
-    return Object.fromEntries(project.participationOptions.map((opt) => [opt.id, opt.label]));
-  }, [project]);
+    if (!event) return {};
+    return Object.fromEntries(event.options.map((opt) => [opt.id, opt.label]));
+  }, [event]);
 
   const viewingSlots = useMemo(() => {
-    if (!project) return [];
+    if (!event) return [];
 
     if (mode !== "view") {
       // 編集・確認モードの場合、自分のスロットは editingSlots に入るので、こちらには自分以外のスロットのみ含める
-      return project.guests
+      return event.guests
         .filter((g) => g.id !== myGuestId)
         .flatMap((g) =>
           g.slots.map((s) => ({
@@ -262,7 +261,7 @@ export default function SubmissionPage() {
     }
 
     // 閲覧モードの場合は自分も含めて全て
-    return project.guests.flatMap((g) =>
+    return event.guests.flatMap((g) =>
       g.slots.map((s) => ({
         from: s.from,
         to: s.to,
@@ -270,14 +269,14 @@ export default function SubmissionPage() {
         optionId: s.participationOptionId,
       })),
     );
-  }, [project, myGuestId, mode]);
+  }, [event, myGuestId, mode]);
 
-  // project が読み込まれたらデフォルトの参加形態を設定
+  // event が読み込まれたらデフォルトの参加形態を設定
   useEffect(() => {
-    if (project && project.participationOptions.length > 0 && !selectedParticipationOptionId) {
-      setSelectedParticipationOptionId(project.participationOptions[0].id);
+    if (event && event.options.length > 0 && !selectedParticipationOptionId) {
+      setSelectedParticipationOptionId(event.options[0].id);
     }
-  }, [project, selectedParticipationOptionId]);
+  }, [event, selectedParticipationOptionId]);
 
   return (
     <>
@@ -287,7 +286,7 @@ export default function SubmissionPage() {
           <div className="flex w-full flex-1 items-center justify-center">
             <span className="loading loading-dots loading-md text-base-content/40" />
           </div>
-        ) : !project ? (
+        ) : !event ? (
           <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-4 px-4 py-16 sm:px-6 lg:px-8">
             <div className="flex min-h-100 w-full flex-col items-center justify-center gap-4 rounded-xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
               <p className="text-base-content/70 text-xl">イベントが見つかりませんでした。</p>
@@ -303,37 +302,37 @@ export default function SubmissionPage() {
         ) : (
           <div className="flex flex-1 flex-col overflow-y-auto">
             <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col px-4 py-2 sm:px-6 sm:py-3 lg:px-8">
-              {/* プロジェクト情報 */}
+              {/* イベント情報 */}
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <h1 className="min-w-0 truncate font-bold text-base text-base-content sm:text-lg">{project.name}</h1>
+                  <h1 className="min-w-0 truncate font-bold text-base text-base-content sm:text-lg">{event.name}</h1>
                   <div className="flex shrink-0 items-center gap-1.5">
                     {/* 自分の日程をカレンダーアプリに追加 */}
                     {mode === "view" && meAsGuest && meAsGuest.slots.length > 0 && (
                       <AddToCalendar
-                        projectName={project.name}
-                        projectId={projectId ?? ""}
-                        projectDescription={project.description}
+                        eventName={event.name}
+                        eventId={eventId ?? ""}
+                        eventDescription={event.description}
                         slots={meAsGuest.slots}
                         participationOptionIdToLabel={participationOptionIdToLabel}
-                        participationOptionCount={project.participationOptions.length}
+                        participationOptionCount={event.options.length}
                       />
                     )}
                     {isHost && (
-                      <NavLink to={`/e/${projectId}/edit`} className="btn btn-sm btn-outline shrink-0 gap-1.5">
+                      <NavLink to={`/e/${eventId}/edit`} className="btn btn-sm btn-outline shrink-0 gap-1.5">
                         <LuSettings2 className="h-4 w-4" />
                         <span>編集</span>
                       </NavLink>
                     )}
                   </div>
                 </div>
-                {project.description &&
+                {event.description &&
                   (() => {
-                    const { text: truncatedText, truncated } = truncateText(project.description);
+                    const { text: truncatedText, truncated } = truncateText(event.description);
                     return (
                       <div className="mt-2 sm:mt-3">
                         <p className="whitespace-pre-wrap text-base-content/70 text-sm">
-                          {descriptionExpanded ? project.description : truncatedText}
+                          {descriptionExpanded ? event.description : truncatedText}
                         </p>
                         {truncated && (
                           <button
@@ -360,9 +359,9 @@ export default function SubmissionPage() {
               </div>
 
               {/* 参加形態選択ボタン */}
-              {mode === "edit" && project.participationOptions.length > 1 && selectedParticipationOptionId !== null && (
+              {mode === "edit" && event.options.length > 1 && selectedParticipationOptionId !== null && (
                 <div className="mt-3 mb-2 flex flex-wrap items-center gap-1.5">
-                  {project.participationOptions.map((opt) => {
+                  {event.options.map((opt) => {
                     const rgb = hexToRgb(opt.color);
                     const lightBg = rgb
                       ? `rgba(${rgb.r * 0.2 + 255 * 0.8}, ${rgb.g * 0.2 + 255 * 0.8}, ${rgb.b * 0.2 + 255 * 0.8}, 1)`
@@ -396,14 +395,14 @@ export default function SubmissionPage() {
               )}
 
               <Calendar
-                startDate={project.startDate}
-                endDate={project.endDate}
-                allowedRanges={project.allowedRanges}
+                startDate={event.startDate}
+                endDate={event.endDate}
+                allowedRanges={event.allowedRanges}
                 editingSlots={mode !== "view" ? editingSlots : []}
                 viewingSlots={viewingSlots}
                 guestIdToName={guestIdToName}
                 guestIdToComment={guestIdToComment}
-                participationOptions={project.participationOptions}
+                participationOptions={event.options}
                 currentParticipationOptionId={selectedParticipationOptionId}
                 highlight={mode === "view" ? highlight : null}
                 editMode={mode === "edit"}
@@ -411,7 +410,7 @@ export default function SubmissionPage() {
               />
 
               {/* 参加者一覧 */}
-              {project.guests.length > 0 && (
+              {event.guests.length > 0 && (
                 <div className="mt-1 pb-2">
                   <div className="flex items-center justify-between gap-2">
                     <button
@@ -419,7 +418,7 @@ export default function SubmissionPage() {
                       onClick={() => setGuestListExpanded((prev) => !prev)}
                       className="flex min-w-0 items-center gap-1.5 font-medium text-base-content/80 text-sm hover:text-base-content"
                     >
-                      参加者 ({project.guests.length}人)
+                      参加者 ({event.guests.length}人)
                       {guestListExpanded ? <LuChevronUp className="h-4 w-4" /> : <LuChevronDown className="h-4 w-4" />}
                     </button>
                     {/* ハイライト操作（カレンダーの縦幅を使わないようこの行に置く） */}
@@ -453,7 +452,7 @@ export default function SubmissionPage() {
                   </div>
                   {guestListExpanded && (
                     <ul className="mt-1 divide-y divide-base-200">
-                      {project.guests.map((guest) => {
+                      {event.guests.map((guest) => {
                         const commentText = guestIdToComment[guest.id];
                         const isHighlighted = highlight?.type === "guest" && highlight.guestId === guest.id;
                         return (
@@ -552,7 +551,7 @@ export default function SubmissionPage() {
         )}
       </div>
 
-      {project && mode === "confirm" && (
+      {event && mode === "confirm" && (
         <>
           <button
             type="button"

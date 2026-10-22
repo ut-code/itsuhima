@@ -5,9 +5,10 @@ import { EditingMatrix, ViewingMatrix } from "../lib/CalendarMatrix";
 import type { Dayjs } from "../lib/dayjs";
 import type { EditingSlot } from "../pages/eventId/Submission";
 
+/** 時刻は "HH:mm"。終わりは "24:00" もありうる */
 type AllowedRange = {
-  startTime: Dayjs;
-  endTime: Dayjs;
+  startTime: string;
+  endTime: string;
 };
 
 type ViewingSlot = {
@@ -78,6 +79,12 @@ function hexToRgb(hex: string): [number, number, number] {
     : PRIMARY_RGB;
 }
 
+/** "HH:mm" を 0 時からの経過分にする */
+function toMinutes(time: string): number {
+  const [hour, minute] = time.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
 export const Calendar = ({
   startDate,
   endDate,
@@ -94,13 +101,11 @@ export const Calendar = ({
 }: Props) => {
   const countDays = endDate.startOf("day").diff(startDate.startOf("day"), "day") + 1;
 
-  const allowedRange = allowedRanges[0] ?? {
-    startTime: startDate.startOf("day"),
-    endTime: startDate.startOf("day").add(23, "hour").add(59, "minute"),
-  };
-  const slotStartMinutes = allowedRange.startTime.hour() * 60 + allowedRange.startTime.minute();
-  const slotEndMinutes = allowedRange.endTime.hour() * 60 + allowedRange.endTime.minute();
-  const slotCount = Math.ceil((slotEndMinutes - slotStartMinutes) / 15);
+  // 時間帯が無ければ終日とみなす
+  const allowedRange = allowedRanges[0] ?? { startTime: "00:00", endTime: "24:00" };
+  const slotStartMinutes = toMinutes(allowedRange.startTime);
+  const slotEndMinutes = toMinutes(allowedRange.endTime);
+  const slotCount = (slotEndMinutes - slotStartMinutes) / 15;
 
   const gridHeight = slotCount * MIN_SLOT_HEIGHT;
   const innerWidth = TIME_COL_WIDTH + countDays * MIN_DAY_WIDTH;
@@ -411,7 +416,8 @@ export const Calendar = ({
             {computedViewingSlots.map((slot) => {
               const dayIdx = slot.from.startOf("day").diff(startDate.startOf("day"), "day");
               const fromSlot = toSlotIdx(slot.from);
-              const toSlot = toSlotIdx(slot.to);
+              // to は 24:00（翌日 0:00）になりうるので、from からの経過時間で求める
+              const toSlot = fromSlot + slot.to.diff(slot.from, "minute") / 15;
               if (dayIdx < 0 || dayIdx >= countDays || fromSlot < 0 || toSlot <= fromSlot) return null;
 
               const optionGroups = new Map<string, string[]>();
@@ -509,7 +515,8 @@ export const Calendar = ({
             {slots.map((slot) => {
               const dayIdx = slot.from.startOf("day").diff(startDate.startOf("day"), "day");
               const fromSlot = toSlotIdx(slot.from);
-              const toSlot = toSlotIdx(slot.to);
+              // to は 24:00（翌日 0:00）になりうるので、from からの経過時間で求める
+              const toSlot = fromSlot + slot.to.diff(slot.from, "minute") / 15;
               if (dayIdx < 0 || dayIdx >= countDays) return null;
 
               const option = participationOptions.find((o) => o.id === slot.optionId);

@@ -5,9 +5,9 @@ import { generateIcs } from "../lib/generateIcs";
 import type { Slot } from "../types";
 
 type Props = {
-  projectName: string;
-  projectId: string;
-  projectDescription?: string | null;
+  eventName: string;
+  eventId: string;
+  eventDescription?: string | null;
   slots: Pick<Slot, "from" | "to" | "participationOptionId">[];
   participationOptionIdToLabel: Record<string, string>;
   // 参加形態がデフォルト値のみ（＝実質未設定）かどうかの判定に使う
@@ -20,17 +20,17 @@ type Props = {
  * カレンダーの縦幅を圧迫しないよう、タイトル行に並べて置く想定（モバイルではアイコンのみ）。
  */
 export function AddToCalendar({
-  projectName,
-  projectId,
-  projectDescription,
+  eventName,
+  eventId,
+  eventDescription,
   slots,
   participationOptionIdToLabel,
   participationOptionCount,
 }: Props) {
   const handleClick = () => {
-    const eventUrl = `${window.location.origin}/e/${projectId}`;
+    const eventUrl = `${window.location.origin}/e/${eventId}`;
     const icsContent = generateIcs(
-      projectName,
+      eventName,
       slots.map((slot) => {
         const label = participationOptionIdToLabel[slot.participationOptionId] ?? "";
         // 参加形態がデフォルト値のみで他に選択肢がない場合、タイトルには含めない
@@ -42,7 +42,7 @@ export function AddToCalendar({
         };
       }),
       eventUrl,
-      projectDescription ?? undefined,
+      eventDescription ?? undefined,
     );
 
     const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
