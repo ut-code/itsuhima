@@ -39,7 +39,7 @@ type Guest = {
   slots: Slot[];
 };
 
-export type Project = {
+export type Event = {
   id: string;
   name: string;
   description: string;
@@ -50,7 +50,7 @@ export type Project = {
   /** IANA のタイムゾーン名 */
   timezone: string;
   allowedRanges: AllowedRange[];
-  participationOptions: ParticipationOption[];
+  options: ParticipationOption[];
   hosts: Host[];
   guests: Guest[];
   isHost: boolean;
@@ -58,7 +58,7 @@ export type Project = {
 };
 
 // TODO: ユーティリティ関数で処理するようにする
-export type ISOStringProject = {
+export type ISOStringEvent = {
   id: string;
   name: string;
   description: string;
@@ -73,7 +73,7 @@ export type ISOStringProject = {
     startTime: string;
     endTime: string;
   }[];
-  participationOptions: {
+  options: {
     id: string;
     label: string;
     color: string;
@@ -115,8 +115,5 @@ export type ISOStringProject = {
   } | null;
 };
 
-export type BriefProject = Pick<Project, "id" | "name" | "startDate" | "endDate" | "timezone" | "isHost">;
-export type ISOStringBriefProject = Pick<
-  ISOStringProject,
-  "id" | "name" | "startDate" | "endDate" | "timezone" | "isHost"
->;
+export type BriefEvent = Pick<Event, "id" | "name" | "startDate" | "endDate" | "timezone" | "isHost">;
+export type ISOStringBriefEvent = Pick<ISOStringEvent, "id" | "name" | "startDate" | "endDate" | "timezone" | "isHost">;

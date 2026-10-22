@@ -32,7 +32,7 @@ export const app = new Hono<AppEnv>()
   .get("/", (c) => {
     return c.json({ message: "Hello! イツヒマ？" });
   })
-  .route("/projects", eventsRoutes)
+  .route("/events", eventsRoutes)
   .onError((err, c) => {
     if (err instanceof ServiceError) {
       return c.json({ message: err.message }, serviceErrorStatus[err.reason]);

@@ -17,38 +17,38 @@ import {
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
 import { DEFAULT_PARTICIPATION_OPTION, generateDistinctColor } from "../../../common/colors";
-import { editReqSchema, projectReqSchema } from "../../../common/validators";
+import { editEventReqSchema, eventReqSchema } from "../../../common/validators";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
 import { EXTERNAL_LINKS } from "../constants/links";
 import dayjs from "../lib/dayjs";
-import { projectReviver } from "../revivers";
-import type { Project } from "../types";
+import { eventReviver } from "../revivers";
+import type { Event } from "../types";
 import { API_ENDPOINT, FRONTEND_ORIGIN, readErrorMessage } from "../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
 
-export default function ProjectPage() {
+export default function EventFormPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
 
-  const formSchema = eventId ? editReqSchema : projectReqSchema;
+  const formSchema = eventId ? editEventReqSchema : eventReqSchema;
   type FormSchemaType = z.infer<typeof formSchema>;
 
-  const [project, setProject] = useState<Project | null>(null);
-  const [projectLoading, setProjectLoading] = useState(true);
+  const [event, setEvent] = useState<Event | null>(null);
+  const [eventLoading, setEventLoading] = useState(true);
 
-  const fetchProject = useCallback(async () => {
+  const fetchEvent = useCallback(async () => {
     if (!eventId) {
-      setProject(null);
-      setProjectLoading(false);
+      setEvent(null);
+      setEventLoading(false);
       return;
     }
-    setProjectLoading(true);
+    setEventLoading(true);
     try {
-      const res = await client.projects[":projectId"].$get(
+      const res = await client.events[":eventId"].$get(
         {
-          param: { projectId: eventId },
+          param: { eventId },
         },
         {
           init: { credentials: "include" },
@@ -56,10 +56,10 @@ export default function ProjectPage() {
       );
       if (res.status === 200) {
         const data = await res.json();
-        const parsedData = projectReviver(data);
-        setProject(parsedData);
+        const parsedData = eventReviver(data);
+        setEvent(parsedData);
       } else {
-        const errorMessage = await readErrorMessage(res, "プロジェクトの取得に失敗しました。");
+        const errorMessage = await readErrorMessage(res, "イベントの取得に失敗しました。");
         setToast({
           message: errorMessage,
           variant: "error",
@@ -74,20 +74,20 @@ export default function ProjectPage() {
       });
       setTimeout(() => setToast(null), 5000);
     } finally {
-      setProjectLoading(false);
+      setEventLoading(false);
     }
   }, [eventId]);
 
   useEffect(() => {
-    fetchProject();
-  }, [fetchProject]);
+    fetchEvent();
+  }, [fetchEvent]);
 
   const [submitLoading, setSubmitLoading] = useState<boolean>(false);
-  const loading = projectLoading || submitLoading;
+  const loading = eventLoading || submitLoading;
 
   const [dialogStatus, setDialogStatus] = useState<{
-    projectId: string;
-    projectName: string;
+    eventId: string;
+    eventName: string;
   } | null>(null);
 
   // TODO: グローバルにしないと、delete の際は遷移を伴うので表示されない
@@ -117,7 +117,7 @@ export default function ProjectPage() {
       startDate: eventId ? "" : dayjs.tz().format("YYYY-MM-DD"),
       endDate: eventId ? "" : dayjs.tz().add(6, "day").format("YYYY-MM-DD"),
       allowedRanges: [{ startTime: "08:00", endTime: "23:00" }],
-      participationOptions: eventId
+      options: eventId
         ? []
         : [
             {
@@ -144,29 +144,29 @@ export default function ProjectPage() {
     remove: removeParticipation,
   } = useFieldArray({
     control,
-    keyName: "fieldId", // RHF 内部のキーの名称。デフォルトの id だと participationOptions の id と衝突するため変更
-    name: "participationOptions",
+    keyName: "fieldId", // RHF 内部のキーの名称。デフォルトの id だと options の id と衝突するため変更
+    name: "options",
   });
   useEffect(() => {
     if (!eventId) return;
-    if (!project) return;
-    const range = project.allowedRanges[0];
+    if (!event) return;
+    const range = event.allowedRanges[0];
     reset({
-      name: project.name,
-      description: project.description,
-      startDate: project.startDate.format("YYYY-MM-DD"),
-      endDate: project.endDate.format("YYYY-MM-DD"),
+      name: event.name,
+      description: event.description,
+      startDate: event.startDate.format("YYYY-MM-DD"),
+      endDate: event.endDate.format("YYYY-MM-DD"),
       allowedRanges: [
         // 時間帯が無いイベントは終日とみなす
         range ? { startTime: range.startTime, endTime: range.endTime } : { startTime: "00:00", endTime: "24:00" },
       ],
-      participationOptions: project.participationOptions.map((opt) => ({
+      options: event.options.map((opt) => ({
         id: opt.id,
         label: opt.label,
         color: opt.color,
       })),
     });
-  }, [eventId, project, reset]);
+  }, [eventId, event, reset]);
 
   // 送信処理
   const onSubmit = async (data: FormSchemaType) => {
@@ -178,15 +178,15 @@ export default function ProjectPage() {
       startDate: data.startDate ?? "",
       endDate: data.endDate ?? "",
       allowedRanges: data.allowedRanges ?? [],
-      participationOptions: (data.participationOptions ?? []).map((opt) => ({
+      options: (data.options ?? []).map((opt) => ({
         id: opt.id,
         label: opt.label.trim(),
         color: opt.color,
       })),
-    } satisfies z.infer<typeof projectReqSchema>;
+    } satisfies z.infer<typeof eventReqSchema>;
 
-    if (!project) {
-      const res = await client.projects.$post(
+    if (!event) {
+      const res = await client.events.$post(
         {
           json: eventData,
         },
@@ -199,8 +199,8 @@ export default function ProjectPage() {
       if (res.status === 201) {
         const { id, name } = await res.json();
         setDialogStatus({
-          projectId: id,
-          projectName: name,
+          eventId: id,
+          eventName: name,
         });
       } else {
         setToast({
@@ -210,14 +210,14 @@ export default function ProjectPage() {
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      const res = await client.projects[":projectId"].$patch(
-        { param: { projectId: project.id }, json: eventData },
+      const res = await client.events[":eventId"].$patch(
+        { param: { eventId: event.id }, json: eventData },
         { init: { credentials: "include" } },
       );
       setSubmitLoading(false);
       if (res.ok) {
         // TODO: PUT のレスポンスでデータを返すことを検討
-        await fetchProject();
+        await fetchEvent();
         setToast({
           message: "更新しました。",
           variant: "success",
@@ -237,17 +237,17 @@ export default function ProjectPage() {
     }
   };
 
-  const isHost = project?.isHost;
+  const isHost = event?.isHost;
 
   useEffect(() => {
-    if (!loading && project && !isHost) {
+    if (!loading && event && !isHost) {
       if (eventId) {
         navigate(`/e/${eventId}`);
       } else {
         navigate("/");
       }
     }
-  }, [loading, project, isHost, eventId, navigate]);
+  }, [loading, event, isHost, eventId, navigate]);
 
   return (
     <>
@@ -257,7 +257,7 @@ export default function ProjectPage() {
           <div className="flex min-h-[60vh] items-center justify-center">
             <span className="loading loading-dots loading-md text-base-content/40" />
           </div>
-        ) : eventId !== undefined && !project ? (
+        ) : eventId !== undefined && !event ? (
           <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
             <div className="flex min-h-100 flex-col items-center justify-center gap-4 rounded-xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
               <p className="text-base text-base-content/70 sm:text-xl">イベントが見つかりませんでした。</p>
@@ -269,12 +269,10 @@ export default function ProjectPage() {
         ) : (
           <main className="mx-auto max-w-7xl px-4 py-8 pb-24 sm:px-6 lg:px-8">
             <div className="mb-6">
-              <h1 className="font-bold text-2xl text-base-content">
-                {project ? `${project.name} の編集` : "新規作成"}
-              </h1>
+              <h1 className="font-bold text-2xl text-base-content">{event ? `${event.name} の編集` : "新規作成"}</h1>
             </div>
 
-            <form id="project-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form id="event-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* 基本情報 */}
               <div className="rounded-xl border border-base-300 bg-base-100 p-6 shadow-sm">
                 <h2 className="mb-4 font-bold text-base text-base-content sm:text-lg">基本情報</h2>
@@ -315,9 +313,9 @@ export default function ProjectPage() {
                 <h2 className="mb-4 font-bold text-base text-base-content sm:text-lg">日程の範囲</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div
-                    className={project && project.guests.length > 0 ? "tooltip tooltip-top" : ""}
+                    className={event && event.guests.length > 0 ? "tooltip tooltip-top" : ""}
                     data-tip={
-                      project && project.guests.length > 0
+                      event && event.guests.length > 0
                         ? "すでに日程を登録したユーザーがいるため、開始日の編集はできません"
                         : ""
                     }
@@ -329,16 +327,16 @@ export default function ProjectPage() {
                       type="date"
                       {...register("startDate")}
                       id="input-start"
-                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.startDate ? "border-red-500" : "border-base-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
+                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.startDate ? "border-red-500" : "border-base-300"} ${event && event.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                       onFocus={handleFieldFocus}
-                      disabled={!!(project && project.guests.length > 0)}
+                      disabled={!!(event && event.guests.length > 0)}
                     />
                     {errors.startDate && <p className="mt-1.5 text-error text-sm">{errors.startDate.message}</p>}
                   </div>
                   <div
-                    className={project && project.guests.length > 0 ? "tooltip tooltip-top" : ""}
+                    className={event && event.guests.length > 0 ? "tooltip tooltip-top" : ""}
                     data-tip={
-                      project && project.guests.length > 0
+                      event && event.guests.length > 0
                         ? "すでに日程を登録したユーザーがいるため、終了日の編集はできません"
                         : ""
                     }
@@ -350,9 +348,9 @@ export default function ProjectPage() {
                       type="date"
                       {...register("endDate")}
                       id="input-end"
-                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.endDate ? "border-red-500" : "border-base-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
+                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.endDate ? "border-red-500" : "border-base-300"} ${event && event.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                       onFocus={handleFieldFocus}
-                      disabled={!!(project && project.guests.length > 0)}
+                      disabled={!!(event && event.guests.length > 0)}
                     />
                     {errors.endDate && <p className="mt-1.5 text-error text-sm">{errors.endDate.message}</p>}
                   </div>
@@ -373,9 +371,9 @@ export default function ProjectPage() {
                   </div>
                 </div>
                 <div
-                  className={project && project.guests.length > 0 ? "tooltip tooltip-top w-full" : "w-full"}
+                  className={event && event.guests.length > 0 ? "tooltip tooltip-top w-full" : "w-full"}
                   data-tip={
-                    project && project.guests.length > 0
+                    event && event.guests.length > 0
                       ? "すでに日程を登録したユーザーがいるため、時間帯の編集はできません"
                       : ""
                   }
@@ -385,7 +383,7 @@ export default function ProjectPage() {
                     <div className="flex flex-1 items-center gap-1.5 sm:gap-2">
                       <select
                         aria-label="開始時刻（時）"
-                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${event && event.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                         value={allowedRangeFields[0].startTime.split(":")[0]}
                         onChange={(e) => {
                           replace([
@@ -396,7 +394,7 @@ export default function ProjectPage() {
                           ]);
                         }}
                         onFocus={handleFieldFocus}
-                        disabled={!!(project && project.guests.length > 0)}
+                        disabled={!!(event && event.guests.length > 0)}
                       >
                         <option value="" disabled>
                           時
@@ -410,7 +408,7 @@ export default function ProjectPage() {
                       <span className="font-medium text-base-content/70 text-sm sm:text-base">:</span>
                       <select
                         aria-label="開始時刻（分）"
-                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${event && event.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                         value={allowedRangeFields[0].startTime.split(":")[1]}
                         onChange={(e) => {
                           replace([
@@ -421,7 +419,7 @@ export default function ProjectPage() {
                           ]);
                         }}
                         onFocus={handleFieldFocus}
-                        disabled={!!(project && project.guests.length > 0)}
+                        disabled={!!(event && event.guests.length > 0)}
                       >
                         <option value="" disabled>
                           分
@@ -438,7 +436,7 @@ export default function ProjectPage() {
                     <div className="flex flex-1 items-center gap-1.5 sm:gap-2">
                       <select
                         aria-label="終了時刻（時）"
-                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${event && event.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                         value={allowedRangeFields[0].endTime.split(":")[0]}
                         onChange={(e) => {
                           // 24 時は 24:00 だけ
@@ -451,7 +449,7 @@ export default function ProjectPage() {
                           ]);
                         }}
                         onFocus={handleFieldFocus}
-                        disabled={!!(project && project.guests.length > 0)}
+                        disabled={!!(event && event.guests.length > 0)}
                       >
                         <option value="" disabled>
                           時
@@ -465,7 +463,7 @@ export default function ProjectPage() {
                       <span className="font-medium text-base-content/70 text-sm sm:text-base">:</span>
                       <select
                         aria-label="終了時刻（分）"
-                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${project && project.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${event && event.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                         value={allowedRangeFields[0].endTime.split(":")[1]}
                         onChange={(e) => {
                           replace([
@@ -476,7 +474,7 @@ export default function ProjectPage() {
                           ]);
                         }}
                         onFocus={handleFieldFocus}
-                        disabled={!!(project && project.guests.length > 0)}
+                        disabled={!!(event && event.guests.length > 0)}
                       >
                         <option value="" disabled>
                           分
@@ -541,7 +539,7 @@ export default function ProjectPage() {
 
                   <div className="space-y-3">
                     {participationFields.map((field, index) => {
-                      const hasSlots = project?.guests.some((guest) =>
+                      const hasSlots = event?.guests.some((guest) =>
                         guest.slots.some((slot) => slot.participationOptionId === field.id),
                       );
                       const isLastOption = participationFields.length === 1;
@@ -554,11 +552,11 @@ export default function ProjectPage() {
                       return (
                         <div key={field.id} className="w-full">
                           <div className="flex items-center gap-2 sm:gap-3">
-                            <input type="hidden" {...register(`participationOptions.${index}.id`)} value={field.id} />
+                            <input type="hidden" {...register(`options.${index}.id`)} value={field.id} />
                             <div className="relative h-10 w-10 shrink-0 sm:h-11 sm:w-11">
                               <input
                                 type="color"
-                                {...register(`participationOptions.${index}.color`)}
+                                {...register(`options.${index}.color`)}
                                 defaultValue={field.color}
                                 // カラーピッカーのスタイルはブラウザに依存した調整が必要
                                 className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-lg border-0 shadow-[0_0_0_2px_var(--color-base-300),0_1px_2px_0_rgb(0_0_0/0.05)] [&::-moz-color-swatch]:rounded-lg [&::-moz-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-lg [&::-webkit-color-swatch]:border-0"
@@ -566,13 +564,13 @@ export default function ProjectPage() {
                             </div>
                             <input
                               type="text"
-                              {...register(`participationOptions.${index}.label`)}
+                              {...register(`options.${index}.label`)}
                               defaultValue={field.label}
                               maxLength={50}
                               placeholder="参加形態名（例：対面、オンライン）"
-                              className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.participationOptions?.[index]?.label ? "border-red-500" : "border-base-300"}`}
+                              className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.options?.[index]?.label ? "border-red-500" : "border-base-300"}`}
                               onBlur={() => {
-                                trigger(`participationOptions.${index}.label` as const);
+                                trigger(`options.${index}.label` as const);
                               }}
                             />
                             <div className={cannotDelete ? "tooltip tooltip-left" : ""} data-tip={tooltipMessage}>
@@ -586,14 +584,14 @@ export default function ProjectPage() {
                               </button>
                             </div>
                           </div>
-                          {errors.participationOptions?.[index]?.label && (
+                          {errors.options?.[index]?.label && (
                             <p className="mt-1.5 text-error text-sm">
-                              {errors.participationOptions[index]?.label?.message as string}
+                              {errors.options[index]?.label?.message as string}
                             </p>
                           )}
-                          {errors.participationOptions?.[index]?.color && (
+                          {errors.options?.[index]?.color && (
                             <p className="mt-1.5 text-error text-sm">
-                              {errors.participationOptions[index]?.color?.message as string}
+                              {errors.options[index]?.color?.message as string}
                             </p>
                           )}
                         </div>
@@ -620,7 +618,7 @@ export default function ProjectPage() {
               </div>
 
               {/* イベントの削除 */}
-              {project && (
+              {event && (
                 <div className="rounded-lg border border-error/30 bg-error/10 p-6 shadow-sm">
                   <h2 className="mb-2 font-bold text-base text-base-content sm:text-lg">イベントの削除</h2>
                   <p className="mb-4 text-base-content/70 text-sm">
@@ -652,8 +650,8 @@ export default function ProjectPage() {
                     キャンセル
                   </NavLink>
                 )}
-                <button type="submit" form="project-form" className="btn btn-primary" disabled={!isValid || !isDirty}>
-                  イベントを{project ? "更新" : "作成"}する
+                <button type="submit" form="event-form" className="btn btn-primary" disabled={!isValid || !isDirty}>
+                  イベントを{event ? "更新" : "作成"}する
                 </button>
               </div>
             </div>
@@ -666,7 +664,7 @@ export default function ProjectPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-lg border border-base-300 bg-base-100 p-5 shadow-2xl sm:p-6">
             <h3 className="mb-1.5 font-bold text-base-content text-lg sm:mb-2 sm:text-2xl">
-              {dialogStatus.projectName}を作成しました
+              {dialogStatus.eventName}を作成しました
             </h3>
             <p className="mb-4 text-base-content/70 text-xs sm:mb-6 sm:text-sm">URL をコピーして共有しましょう！</p>
             <div className="mb-4 flex gap-2 sm:mb-6">
@@ -674,12 +672,12 @@ export default function ProjectPage() {
                 type="text"
                 disabled
                 className="h-10 min-w-0 flex-1 rounded-lg border border-base-300 bg-base-200 px-3 text-base text-base-content/80"
-                value={`${FRONTEND_ORIGIN}/e/${dialogStatus.projectId}`}
+                value={`${FRONTEND_ORIGIN}/e/${dialogStatus.eventId}`}
               />
               <button
                 type="button"
                 onClick={async () => {
-                  await navigator.clipboard.writeText(`${FRONTEND_ORIGIN}/e/${dialogStatus.projectId}`);
+                  await navigator.clipboard.writeText(`${FRONTEND_ORIGIN}/e/${dialogStatus.eventId}`);
                   setCopied(true);
                   setTimeout(() => {
                     setCopied(false);
@@ -696,7 +694,7 @@ export default function ProjectPage() {
                 <span className="hidden sm:inline">コピー</span>
               </button>
             </div>
-            <NavLink className="btn btn-primary w-full" to={`/e/${dialogStatus.projectId}`}>
+            <NavLink className="btn btn-primary w-full" to={`/e/${dialogStatus.eventId}`}>
               イベントへ
               <LuChevronRight className="ml-1 h-4 w-4 sm:h-5 sm:w-5" />
             </NavLink>
@@ -705,7 +703,7 @@ export default function ProjectPage() {
       )}
 
       {/* 削除確認ダイアログ */}
-      {project && (
+      {event && (
         <dialog ref={deleteDialogRef} className="modal">
           <div className="modal-box">
             <h3 className="mb-2 font-bold text-base-content text-lg">イベントを削除しますか？</h3>
@@ -720,8 +718,8 @@ export default function ProjectPage() {
                 onClick={async () => {
                   deleteDialogRef.current?.close();
                   try {
-                    const res = await client.projects[":projectId"].$delete(
-                      { param: { projectId: project.id } },
+                    const res = await client.events[":eventId"].$delete(
+                      { param: { eventId: event.id } },
                       { init: { credentials: "include" } },
                     );
                     if (!res.ok) {

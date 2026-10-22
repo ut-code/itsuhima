@@ -1,7 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
-import { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/validators.js";
+import { editEventReqSchema, eventReqSchema, submitReqSchema } from "../../../common/validators.js";
 import type { AppEnv } from "../env.js";
 import {
   createEvent,
@@ -13,11 +13,11 @@ import {
   updateMyAvailability,
 } from "../services/events.js";
 
-const projectIdParamsSchema = z.object({ projectId: z.string().length(21) });
+const eventIdParamsSchema = z.object({ eventId: z.string().length(21) });
 
 const router = new Hono<AppEnv>()
   // イベント作成
-  .post("/", zValidator("json", projectReqSchema), async (c) => {
+  .post("/", zValidator("json", eventReqSchema), async (c) => {
     const event = await createEvent(c.get("db"), c.get("browserId"), c.req.valid("json"));
     return c.json({ id: event.id, name: event.name }, 201);
   })
@@ -29,48 +29,48 @@ const router = new Hono<AppEnv>()
   })
 
   // イベント取得
-  .get("/:projectId", zValidator("param", projectIdParamsSchema), async (c) => {
-    const { projectId } = c.req.valid("param");
-    const event = await getEvent(c.get("db"), c.get("browserId"), projectId);
+  .get("/:eventId", zValidator("param", eventIdParamsSchema), async (c) => {
+    const { eventId } = c.req.valid("param");
+    const event = await getEvent(c.get("db"), c.get("browserId"), eventId);
     return c.json(event, 200);
   })
 
   // イベント編集。省略したフィールドは変えない
-  .patch("/:projectId", zValidator("param", projectIdParamsSchema), zValidator("json", editReqSchema), async (c) => {
-    const { projectId } = c.req.valid("param");
-    const event = await updateEvent(c.get("db"), c.get("browserId"), projectId, c.req.valid("json"));
+  .patch("/:eventId", zValidator("param", eventIdParamsSchema), zValidator("json", editEventReqSchema), async (c) => {
+    const { eventId } = c.req.valid("param");
+    const event = await updateEvent(c.get("db"), c.get("browserId"), eventId, c.req.valid("json"));
     return c.json({ event }, 200);
   })
 
   // イベント削除
-  .delete("/:projectId", zValidator("param", projectIdParamsSchema), async (c) => {
-    const { projectId } = c.req.valid("param");
-    await deleteEvent(c.get("db"), c.get("browserId"), projectId);
+  .delete("/:eventId", zValidator("param", eventIdParamsSchema), async (c) => {
+    const { eventId } = c.req.valid("param");
+    await deleteEvent(c.get("db"), c.get("browserId"), eventId);
     return c.body(null, 204);
   })
 
   // 日程の提出。
   .post(
-    "/:projectId/submissions",
-    zValidator("param", projectIdParamsSchema),
+    "/:eventId/submissions",
+    zValidator("param", eventIdParamsSchema),
     zValidator("json", submitReqSchema),
     async (c) => {
-      const { projectId } = c.req.valid("param");
+      const { eventId } = c.req.valid("param");
       const { name, comment, slots } = c.req.valid("json");
-      const guest = await submitAvailability(c.get("db"), c.get("browserId"), projectId, { name, comment, slots });
+      const guest = await submitAvailability(c.get("db"), c.get("browserId"), eventId, { name, comment, slots });
       return c.json({ guest }, 201);
     },
   )
 
   // 日程の更新。
   .put(
-    "/:projectId/submissions/mine",
-    zValidator("param", projectIdParamsSchema),
+    "/:eventId/submissions/mine",
+    zValidator("param", eventIdParamsSchema),
     zValidator("json", submitReqSchema),
     async (c) => {
-      const { projectId } = c.req.valid("param");
+      const { eventId } = c.req.valid("param");
       const { name, comment, slots } = c.req.valid("json");
-      const guest = await updateMyAvailability(c.get("db"), c.get("browserId"), projectId, { name, comment, slots });
+      const guest = await updateMyAvailability(c.get("db"), c.get("browserId"), eventId, { name, comment, slots });
       return c.json({ guest }, 200);
     },
   );

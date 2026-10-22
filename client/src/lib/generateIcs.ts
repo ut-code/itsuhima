@@ -13,22 +13,22 @@ function toUtcDateArray(date: Dayjs): DateArray {
 }
 
 export function generateIcs(
-  projectName: string,
+  eventName: string,
   slots: SlotForIcs[],
   eventUrl?: string,
-  projectDescription?: string,
+  eventDescription?: string,
 ): string {
   const description = [
     "イツヒマで提出した参加候補日程です。",
     eventUrl ? `イベントページ: ${eventUrl}` : null,
-    projectDescription ? `\n${projectDescription}` : null,
+    eventDescription ? `\n${eventDescription}` : null,
   ]
     .filter(Boolean)
     .join("\n");
 
   const { error, value } = createEvents(
     slots.map((slot) => ({
-      title: `【候補】${projectName}${slot.label ? `（${slot.label}）` : ""} - イツヒマ`,
+      title: `【候補】${eventName}${slot.label ? `（${slot.label}）` : ""} - イツヒマ`,
       description,
       start: toUtcDateArray(slot.from),
       startInputType: "utc",

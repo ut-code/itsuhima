@@ -1,14 +1,14 @@
 import { and, eq, inArray, isNotNull, notInArray } from "drizzle-orm";
 import type { z } from "zod";
-import type { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/validators.js";
+import type { editEventReqSchema, eventReqSchema, submitReqSchema } from "../../../common/validators.js";
 import { type Db, insertMany, runBatch } from "../db/index.js";
 import * as schema from "../db/schema.js";
 import { nanoid } from "../lib/id.js";
 import { ServiceError } from "./errors.js";
 import { validateSlots } from "./slots.js";
 
-export type CreateEventInput = z.infer<typeof projectReqSchema>;
-export type UpdateEventInput = z.infer<typeof editReqSchema>;
+export type CreateEventInput = z.infer<typeof eventReqSchema>;
+export type UpdateEventInput = z.infer<typeof editEventReqSchema>;
 export type SubmissionInput = z.infer<typeof submitReqSchema>;
 
 /** DB には日時を ISO 8601 の文字列で入れる */
@@ -36,7 +36,7 @@ export async function createEvent(db: Db, browserId: string, input: CreateEventI
     ...insertMany(
       db,
       schema.option,
-      input.participationOptions.map((opt) => ({
+      input.options.map((opt) => ({
         id: opt.id,
         label: opt.label,
         color: opt.color,
@@ -106,7 +106,7 @@ export async function getEvent(db: Db, browserId: string, eventId: string) {
     endDate: event.endDate,
     timezone: event.timezone,
     allowedRanges: event.allowedRanges,
-    participationOptions: event.options,
+    options: event.options,
     hosts: event.participants.filter((p) => p.role === "host").map((p) => ({ id: p.id, eventId: p.eventId })),
     guests: event.participants.filter(hasAnswered).map(toGuest),
     isHost: me?.role === "host",
@@ -160,8 +160,8 @@ export async function updateEvent(db: Db, browserId: string, eventId: string, in
   const statements: Parameters<typeof runBatch>[1] = [];
 
   // 参加形態の更新
-  if (input.participationOptions) {
-    if (input.participationOptions.length === 0) {
+  if (input.options) {
+    if (input.options.length === 0) {
       throw new ServiceError("options_empty", "参加形態は最低1つ必要です。");
     }
 
@@ -170,7 +170,7 @@ export async function updateEvent(db: Db, browserId: string, eventId: string, in
       where: eq(schema.option.eventId, eventId),
       with: { slots: { columns: { id: true } } },
     });
-    const newOptionIds = input.participationOptions.map((o) => o.id);
+    const newOptionIds = input.options.map((o) => o.id);
     const optionsToDelete = existingOptions.filter((o) => !newOptionIds.includes(o.id));
     const undeletableOptions = optionsToDelete.filter((o) => o.slots.length > 0);
     if (undeletableOptions.length > 0) {
@@ -184,7 +184,7 @@ export async function updateEvent(db: Db, browserId: string, eventId: string, in
         .delete(schema.option)
         .where(and(eq(schema.option.eventId, eventId), notInArray(schema.option.id, newOptionIds))),
       // 既存の参加形態を更新または新規作成
-      ...input.participationOptions.map((opt) =>
+      ...input.options.map((opt) =>
         db
           .insert(schema.option)
           .values({ id: opt.id, label: opt.label, color: opt.color, eventId })
@@ -220,14 +220,11 @@ export async function updateEvent(db: Db, browserId: string, eventId: string, in
 
   await runBatch(db, statements);
 
-  const updated = await db.query.event.findFirst({
+  return db.query.event.findFirst({
     where: eq(schema.event.id, eventId),
     columns: { id: true, name: true, description: true, startDate: true, endDate: true },
     with: { allowedRanges: true, options: true },
   });
-  if (!updated) return undefined;
-  const { options, ...rest } = updated;
-  return { ...rest, participationOptions: options };
 }
 
 export async function deleteEvent(db: Db, browserId: string, eventId: string) {

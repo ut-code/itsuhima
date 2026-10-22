@@ -5,14 +5,14 @@ const isoStrToDate = z
   .datetime()
   .transform((str) => new Date(str));
 
-export const participationOptionSchema = z.object({
+export const optionSchema = z.object({
   id: z.string().uuid(),
   label: z.string().min(1).max(50),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
 });
 
 // 作成時（id はフロントエンドで UUID を生成）
-export const participationOptionCreateSchema = z.object({
+export const optionCreateSchema = z.object({
   id: z.string().uuid(), // フロントエンドで生成
   label: z.string().min(1, "ラベルを入力してください").max(50, "ラベルは50文字以内で入力してください"),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "無効なカラーコードです"),
@@ -46,7 +46,7 @@ const isQuarterHour = (time: string): boolean => {
  * イベントの作成・編集の入力。Web UI のフォームと API で共通。
  * 日程は "YYYY-MM-DD"、時間帯は "HH:mm" で、どちらもイベントのタイムゾーンの壁時計で解釈する。
  */
-const baseProjectSchema = z.object({
+const baseEventSchema = z.object({
   name: z.string().min(1, "イベント名を入力してください").max(100, "イベント名は100文字以内で入力してください"),
   description: z.string().max(1000, "説明は1000文字以内で入力してください"),
   startDate: z.string().min(1, "開始日を入力してください").date("開始日の形式が正しくありません"),
@@ -76,7 +76,7 @@ const baseProjectSchema = z.object({
     .refine((ranges) => ranges.every(({ startTime, endTime }) => isQuarterHour(startTime) && isQuarterHour(endTime)), {
       message: "開始時刻と終了時刻は15分単位で入力してください",
     }),
-  participationOptions: z.array(participationOptionCreateSchema).min(1, "参加形態は最低1つ必要です"),
+  options: z.array(optionCreateSchema).min(1, "参加形態は最低1つ必要です"),
 });
 
 const isDateOrdered = (data: { startDate?: string; endDate?: string }) => {
@@ -91,6 +91,6 @@ const dateOrderError = {
   path: ["endDate"],
 };
 
-export const projectReqSchema = baseProjectSchema.refine(isDateOrdered, dateOrderError);
+export const eventReqSchema = baseEventSchema.refine(isDateOrdered, dateOrderError);
 
-export const editReqSchema = baseProjectSchema.partial().refine(isDateOrdered, dateOrderError);
+export const editEventReqSchema = baseEventSchema.partial().refine(isDateOrdered, dateOrderError);

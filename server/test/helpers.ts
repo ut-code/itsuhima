@@ -39,25 +39,25 @@ export type Browser = ReturnType<typeof createBrowser>;
 /**
  * 2026/11/02〜11/04 (JST)、08:00〜23:00 のイベント。
  */
-export function projectInput(overrides: Record<string, unknown> = {}) {
+export function eventInput(overrides: Record<string, unknown> = {}) {
   return {
     name: "テストイベント",
     description: "説明",
     startDate: "2026-11-02",
     endDate: "2026-11-04",
     allowedRanges: [{ startTime: "08:00", endTime: "23:00" }],
-    participationOptions: [{ id: crypto.randomUUID(), label: "参加", color: "#0F82B1" }],
+    options: [{ id: crypto.randomUUID(), label: "参加", color: "#0F82B1" }],
     ...overrides,
   };
 }
 
 /** イベントを作成して、その id と参加形態の id を返す */
-export async function createProject(host: Browser, overrides: Record<string, unknown> = {}) {
-  const input = projectInput(overrides);
-  const res = await host.post("/projects", input);
+export async function createEvent(host: Browser, overrides: Record<string, unknown> = {}) {
+  const input = eventInput(overrides);
+  const res = await host.post("/events", input);
   if (res.status !== 201) throw new Error(`イベントの作成に失敗しました: ${res.status} ${await res.text()}`);
   const { id } = (await res.json()) as { id: string };
-  return { id, input, optionId: input.participationOptions[0].id };
+  return { id, input, optionId: input.options[0].id };
 }
 
 /** 2026/11/02 (JST) 10:00〜12:00 */
