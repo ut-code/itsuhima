@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # 開発サーバー起動（クライアント + サーバー個別）
 npm run dev:client      # Vite dev server → http://localhost:5173
-npm run dev:server      # tsx watch mode → http://localhost:3000
+npm run dev:server      # wrangler dev (Workers + ローカル D1) → http://localhost:3000
 npm run dev:functions   # Cloudflare Pages Functions ローカル実行
 
 # Lint / Format
@@ -17,12 +17,14 @@ npm run fix         # unsafe 修正も含む
 
 # ビルド
 cd client && npm run build        # 本番ビルド
-cd server && npm run build        # サーバービルド
+cd server && npm run build        # サーバービルド (wrangler deploy --dry-run)
 
-# データベース
-docker compose up -d postgres                  # ローカル DB 起動
-cd server && npx prisma migrate dev            # マイグレーション実行
-cd server && npx prisma generate               # Prisma Client 再生成
+# テスト (server、Workers ランタイム + ローカル D1)
+cd server && npm test
+
+# データベース (D1 + Drizzle)
+cd server && npm run db:generate               # schema.ts の変更からマイグレーションを生成
+cd server && npm run db:migrate:local          # ローカル D1 に適用
 ```
 
 ## アーキテクチャ
@@ -32,7 +34,7 @@ cd server && npx prisma generate               # Prisma Client 再生成
 ```
 common/    共有 Zod スキーマと色ユーティリティ
 client/    React 19 + Vite フロントエンド
-server/    Hono + Prisma バックエンド
+server/    Hono + Drizzle バックエンド (Cloudflare Workers + D1)
 ```
 
 ### 型安全な API クライアント
@@ -49,7 +51,7 @@ REST fetch ではなく `client.projects[":projectId"].$get(...)` 形式で呼�
 
 ### 認証（browserId）
 
-ユーザーアカウントなし。サーバーの `browserIdMiddleware` が、初回アクセス時に UUID を生成して署名付き Cookie として保存し、以降のリクエストでは Cookie から `browserId` を復元して `c.set("browserId", ...)` に格納する。Express から Hono への移行時に Cookie の署名形式が変わったため、ミドルウェアは両形式に対応している（`server/src/middleware/browserId.ts`）。
+ユーザーアカウントなし。サーバーの `browserIdMiddleware` が、初回アクセス時に UUID を生成して署名付き Cookie として保存し、以降のリクエストでは Cookie から `browserId` を復元して `c.set("browserId", ...)` に格納する。署名鍵は `COOKIE_SECRET`。ローテーション中は `COOKIE_SECRET_PREVIOUS` の鍵でも検証し、現行の鍵で署名し直す（`server/src/middleware/browserId.ts`）。
 
 ### カレンダーの状態管理（CalendarMatrix）
 

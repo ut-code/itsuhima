@@ -22,30 +22,18 @@
 npm ci
 ```
 
-`server/.env.sample` をコピーして `server/.env` を作成
+`server/.dev.vars.example` をコピーして `server/.dev.vars` を作成
 
 `client/.env.local.sample` をコピーして `client/.env.local` を作成
 
-開発用データベースの起動
-
-```sh
-docker compose up
-```
-
-スキーマの反映
+ローカルの D1 にスキーマを反映
 
 ```sh
 cd server
-npx prisma migrate dev
+npm run db:migrate:local
 ```
 
 ### 起動
-
-開発用データベースの起動
-
-```sh
-docker compose up
-```
 
 サーバー側とクライアント側をそれぞれ起動
 
