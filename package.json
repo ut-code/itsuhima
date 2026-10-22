@@ -11,9 +11,6 @@
     "dev:functions": "cd client && npx wrangler pages dev dist --compatibility-date=2024-12-01",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
-    "dev:db": "docker compose up",
-    "build:server": "cd server && npm run build",
-    "start:server": "node server/dist/server/src/main.js",
     "check": "npx @biomejs/biome check",
     "fix": "npx @biomejs/biome check --fix --unsafe",
     "fix:safe": "npx @biomejs/biome check --fix"
