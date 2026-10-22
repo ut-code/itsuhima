@@ -10,7 +10,7 @@ function isQuarterHour(value: Date): boolean {
 
 type SlotInput = { startAt: Date; endAt: Date; optionId: string };
 
-type Project = {
+type EventForSlots = {
   /** 日付と時間帯は、このタイムゾーンの壁時計で解釈する */
   timezone: string;
   /** "YYYY-MM-DD" */
@@ -19,20 +19,20 @@ type Project = {
   endDate: string;
   /** 時刻は "HH:mm" */
   allowedRanges: { startTime: string; endTime: string }[];
-  participationOptions: { id: string }[];
+  options: { id: string }[];
 };
 
 /**
  * Slot がイベントの日程の範囲・時間帯・15 分単位に収まり、イベントの参加形態を使っているかを検証する。
  * Web UI はカレンダーの構造上これを満たすが、API を直接呼ぶと満たさない Slot を作れてしまう (#91)。
  */
-export function validateSlots(project: Project, slots: SlotInput[]): void {
-  const toWallClock = wallClockIn(project.timezone);
+export function validateSlots(event: EventForSlots, slots: SlotInput[]): void {
+  const toWallClock = wallClockIn(event.timezone);
   // 時間帯は現在 1 つだけ。無ければ終日とみなす
-  const range = project.allowedRanges[0];
+  const range = event.allowedRanges[0];
   const rangeStart = range ? parseMinutes(range.startTime) : 0;
   const rangeEnd = range ? parseMinutes(range.endTime) : MINUTES_PER_DAY;
-  const optionIds = new Set(project.participationOptions.map((o) => o.id));
+  const optionIds = new Set(event.options.map((o) => o.id));
 
   slots.forEach((slot, i) => {
     const invalid = (message: string) => new ServiceError("invalid_slot", `${i + 1} 件目の時間帯: ${message}`);
@@ -51,8 +51,8 @@ export function validateSlots(project: Project, slots: SlotInput[]): void {
     if (lastInstantDate !== start.date) {
       throw invalid("日をまたいでいます。日付ごとに分けてください。");
     }
-    if (start.date < project.startDate || start.date > project.endDate) {
-      throw invalid(`イベントの日程の範囲 (${project.startDate}〜${project.endDate}) の外です。`);
+    if (start.date < event.startDate || start.date > event.endDate) {
+      throw invalid(`イベントの日程の範囲 (${event.startDate}〜${event.endDate}) の外です。`);
     }
     const endMinutes = end.date === start.date ? end.minutes : MINUTES_PER_DAY;
     if (start.minutes < rangeStart || endMinutes > rangeEnd) {

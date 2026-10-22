@@ -7,8 +7,8 @@ import { nanoid } from "../lib/id.js";
 import { ServiceError } from "./errors.js";
 import { validateSlots } from "./slots.js";
 
-export type CreateProjectInput = z.infer<typeof projectReqSchema>;
-export type UpdateProjectInput = z.infer<typeof editReqSchema>;
+export type CreateEventInput = z.infer<typeof projectReqSchema>;
+export type UpdateEventInput = z.infer<typeof editReqSchema>;
 export type SubmissionInput = z.infer<typeof submitReqSchema>;
 
 /** DB には日時を ISO 8601 の文字列で入れる */
@@ -16,8 +16,8 @@ function toIso(value: string | Date): string {
   return new Date(value).toISOString();
 }
 
-export async function createProject(db: Db, browserId: string, input: CreateProjectInput) {
-  const project = {
+export async function createEvent(db: Db, browserId: string, input: CreateEventInput) {
+  const event = {
     id: nanoid(),
     name: input.name,
     description: input.description.trim() || null,
@@ -26,33 +26,33 @@ export async function createProject(db: Db, browserId: string, input: CreateProj
   };
 
   await runBatch(db, [
-    db.insert(schema.project).values(project),
+    db.insert(schema.event).values(event),
     ...insertMany(
       db,
       schema.allowedRange,
-      input.allowedRanges.map((range) => ({ ...range, eventId: project.id })),
+      input.allowedRanges.map((range) => ({ ...range, eventId: event.id })),
     ),
-    db.insert(schema.participant).values({ eventId: project.id, role: "host", browserId }),
+    db.insert(schema.participant).values({ eventId: event.id, role: "host", browserId }),
     ...insertMany(
       db,
-      schema.participationOption,
+      schema.option,
       input.participationOptions.map((opt) => ({
         id: opt.id,
         label: opt.label,
         color: opt.color,
-        eventId: project.id,
+        eventId: event.id,
       })),
     ),
   ]);
 
-  return { id: project.id, name: project.name };
+  return { id: event.id, name: event.name };
 }
 
-/** ホストまたはゲストとして関わるプロジェクト */
-export async function listMyProjects(db: Db, browserId: string) {
-  const projects = await db.query.project.findMany({
+/** ホストまたはゲストとして関わるイベント */
+export async function listMyEvents(db: Db, browserId: string) {
+  const events = await db.query.event.findMany({
     where: inArray(
-      schema.project.id,
+      schema.event.id,
       db
         .select({ id: schema.participant.eventId })
         .from(schema.participant)
@@ -66,7 +66,7 @@ export async function listMyProjects(db: Db, browserId: string) {
     },
   });
 
-  return projects.map((p) => ({
+  return events.map((p) => ({
     id: p.id,
     name: p.name,
     description: p.description ?? "",
@@ -77,13 +77,13 @@ export async function listMyProjects(db: Db, browserId: string) {
   }));
 }
 
-/** プロジェクトの詳細。URL (プロジェクト ID) を知っていれば誰でも見られる。 */
-export async function getProject(db: Db, browserId: string, projectId: string) {
-  const project = await db.query.project.findFirst({
-    where: eq(schema.project.id, projectId),
+/** イベントの詳細。URL (イベント ID) を知っていれば誰でも見られる。 */
+export async function getEvent(db: Db, browserId: string, eventId: string) {
+  const event = await db.query.event.findFirst({
+    where: eq(schema.event.id, eventId),
     with: {
       allowedRanges: true,
-      participationOptions: true,
+      options: true,
       participants: {
         with: {
           slots: true,
@@ -92,23 +92,23 @@ export async function getProject(db: Db, browserId: string, projectId: string) {
     },
   });
 
-  if (!project) {
-    throw new ServiceError("project_not_found", "イベントが見つかりません。");
+  if (!event) {
+    throw new ServiceError("event_not_found", "イベントが見つかりません。");
   }
 
-  const me = project.participants.find((p) => p.browserId === browserId);
+  const me = event.participants.find((p) => p.browserId === browserId);
 
   return {
-    id: project.id,
-    name: project.name,
-    description: project.description ?? "",
-    startDate: project.startDate,
-    endDate: project.endDate,
-    timezone: project.timezone,
-    allowedRanges: project.allowedRanges,
-    participationOptions: project.participationOptions,
-    hosts: project.participants.filter((p) => p.role === "host").map((p) => ({ id: p.id, eventId: p.eventId })),
-    guests: project.participants.filter(hasAnswered).map(toGuest),
+    id: event.id,
+    name: event.name,
+    description: event.description ?? "",
+    startDate: event.startDate,
+    endDate: event.endDate,
+    timezone: event.timezone,
+    allowedRanges: event.allowedRanges,
+    participationOptions: event.options,
+    hosts: event.participants.filter((p) => p.role === "host").map((p) => ({ id: p.id, eventId: p.eventId })),
+    guests: event.participants.filter(hasAnswered).map(toGuest),
     isHost: me?.role === "host",
     meAsGuest: me && hasAnswered(me) ? toGuest(me) : null,
   };
@@ -132,10 +132,10 @@ function toGuest(participant: ParticipantWithSlots & { name: string }) {
   };
 }
 
-async function isHost(db: Db, browserId: string, projectId: string) {
+async function isHost(db: Db, browserId: string, eventId: string) {
   const host = await db.query.participant.findFirst({
     where: and(
-      eq(schema.participant.eventId, projectId),
+      eq(schema.participant.eventId, eventId),
       eq(schema.participant.browserId, browserId),
       eq(schema.participant.role, "host"),
     ),
@@ -144,11 +144,11 @@ async function isHost(db: Db, browserId: string, projectId: string) {
   return host !== undefined;
 }
 
-export async function updateProject(db: Db, browserId: string, projectId: string, input: UpdateProjectInput) {
+export async function updateEvent(db: Db, browserId: string, eventId: string, input: UpdateEventInput) {
   const [host, existingGuest] = await Promise.all([
-    isHost(db, browserId, projectId),
+    isHost(db, browserId, eventId),
     db.query.participant.findFirst({
-      where: and(eq(schema.participant.eventId, projectId), isNotNull(schema.participant.name)),
+      where: and(eq(schema.participant.eventId, eventId), isNotNull(schema.participant.name)),
       columns: { id: true },
     }),
   ]);
@@ -166,8 +166,8 @@ export async function updateProject(db: Db, browserId: string, projectId: string
     }
 
     // 削除対象の参加形態に Slot が紐づいているかチェック
-    const existingOptions = await db.query.participationOption.findMany({
-      where: eq(schema.participationOption.eventId, projectId),
+    const existingOptions = await db.query.option.findMany({
+      where: eq(schema.option.eventId, eventId),
       with: { slots: { columns: { id: true } } },
     });
     const newOptionIds = input.participationOptions.map((o) => o.id);
@@ -181,20 +181,15 @@ export async function updateProject(db: Db, browserId: string, projectId: string
     statements.push(
       // 既存の参加形態で、新しいリストにないものを削除
       db
-        .delete(schema.participationOption)
-        .where(
-          and(
-            eq(schema.participationOption.eventId, projectId),
-            notInArray(schema.participationOption.id, newOptionIds),
-          ),
-        ),
+        .delete(schema.option)
+        .where(and(eq(schema.option.eventId, eventId), notInArray(schema.option.id, newOptionIds))),
       // 既存の参加形態を更新または新規作成
       ...input.participationOptions.map((opt) =>
         db
-          .insert(schema.participationOption)
-          .values({ id: opt.id, label: opt.label, color: opt.color, eventId: projectId })
+          .insert(schema.option)
+          .values({ id: opt.id, label: opt.label, color: opt.color, eventId })
           .onConflictDoUpdate({
-            target: schema.participationOption.id,
+            target: schema.option.id,
             set: { label: opt.label, color: opt.color },
           }),
       ),
@@ -202,129 +197,130 @@ export async function updateProject(db: Db, browserId: string, projectId: string
   }
 
   // 省略したフィールドは変えない。ゲストの回答があれば、日程と時間帯は変えない
-  const projectFields = {
+  const eventFields = {
     name: input.name,
     description: input.description === undefined ? undefined : input.description.trim() || null,
     startDate: existingGuest ? undefined : input.startDate,
     endDate: existingGuest ? undefined : input.endDate,
   };
   // Drizzle は undefined の列を更新しないが、更新する列が 1 つも無いとエラーにする
-  if (Object.values(projectFields).some((value) => value !== undefined)) {
-    statements.push(db.update(schema.project).set(projectFields).where(eq(schema.project.id, projectId)));
+  if (Object.values(eventFields).some((value) => value !== undefined)) {
+    statements.push(db.update(schema.event).set(eventFields).where(eq(schema.event.id, eventId)));
   }
   if (!existingGuest && input.allowedRanges) {
     statements.push(
-      db.delete(schema.allowedRange).where(eq(schema.allowedRange.eventId, projectId)),
+      db.delete(schema.allowedRange).where(eq(schema.allowedRange.eventId, eventId)),
       ...insertMany(
         db,
         schema.allowedRange,
-        input.allowedRanges.map((range) => ({ ...range, eventId: projectId })),
+        input.allowedRanges.map((range) => ({ ...range, eventId })),
       ),
     );
   }
 
   await runBatch(db, statements);
 
-  return db.query.project.findFirst({
-    where: eq(schema.project.id, projectId),
+  const updated = await db.query.event.findFirst({
+    where: eq(schema.event.id, eventId),
     columns: { id: true, name: true, description: true, startDate: true, endDate: true },
-    with: { allowedRanges: true, participationOptions: true },
+    with: { allowedRanges: true, options: true },
   });
+  if (!updated) return undefined;
+  const { options, ...rest } = updated;
+  return { ...rest, participationOptions: options };
 }
 
-export async function deleteProject(db: Db, browserId: string, projectId: string) {
-  if (!(await isHost(db, browserId, projectId))) {
+export async function deleteEvent(db: Db, browserId: string, eventId: string) {
+  if (!(await isHost(db, browserId, eventId))) {
     throw new ServiceError("not_host", "削除権限がありません。");
   }
 
-  await db.delete(schema.project).where(eq(schema.project.id, projectId));
+  await db.delete(schema.event).where(eq(schema.event.id, eventId));
 }
 
-/** Slot の検証に必要な分だけプロジェクトを読む */
-async function findProjectForSlots(db: Db, projectId: string) {
-  const project = await db.query.project.findFirst({
-    where: eq(schema.project.id, projectId),
+/** Slot の検証に必要な分だけイベントを読む */
+async function findEventForSlots(db: Db, eventId: string) {
+  const event = await db.query.event.findFirst({
+    where: eq(schema.event.id, eventId),
     columns: { timezone: true, startDate: true, endDate: true },
     with: {
       allowedRanges: { columns: { startTime: true, endTime: true } },
-      participationOptions: { columns: { id: true } },
+      options: { columns: { id: true } },
     },
   });
-  if (!project) {
-    throw new ServiceError("project_not_found", "イベントが見つかりません。");
+  if (!event) {
+    throw new ServiceError("event_not_found", "イベントが見つかりません。");
   }
   return {
-    timezone: project.timezone,
-    startDate: project.startDate,
-    endDate: project.endDate,
-    allowedRanges: project.allowedRanges,
-    participationOptions: project.participationOptions,
+    timezone: event.timezone,
+    startDate: event.startDate,
+    endDate: event.endDate,
+    allowedRanges: event.allowedRanges,
+    options: event.options,
   };
 }
 
-function findMyParticipant(db: Db, browserId: string, projectId: string) {
+function findMyParticipant(db: Db, browserId: string, eventId: string) {
   return db.query.participant.findFirst({
-    where: and(eq(schema.participant.browserId, browserId), eq(schema.participant.eventId, projectId)),
+    where: and(eq(schema.participant.browserId, browserId), eq(schema.participant.eventId, eventId)),
     with: { slots: true },
   });
 }
 
 /** 自分の回答。回答していなければ null */
-async function findMyGuest(db: Db, browserId: string, projectId: string) {
-  const me = await findMyParticipant(db, browserId, projectId);
+async function findMyGuest(db: Db, browserId: string, eventId: string) {
+  const me = await findMyParticipant(db, browserId, eventId);
   return me && hasAnswered(me) ? toGuest(me) : null;
 }
 
-function slotRows(input: SubmissionInput, projectId: string, participantId: string) {
+function slotRows(input: SubmissionInput, eventId: string, participantId: string) {
   return input.slots.map((slot) => ({
     startAt: toIso(slot.startAt),
     endAt: toIso(slot.endAt),
-    eventId: projectId,
+    eventId,
     participantId,
     optionId: slot.optionId,
   }));
 }
 
-export async function submitAvailability(db: Db, browserId: string, projectId: string, input: SubmissionInput) {
+export async function submitAvailability(db: Db, browserId: string, eventId: string, input: SubmissionInput) {
   // ホストはイベントを作った時点で participant があり、名前を入れると回答したことになる
-  const me = await findMyParticipant(db, browserId, projectId);
+  const me = await findMyParticipant(db, browserId, eventId);
   if (me && hasAnswered(me)) {
     throw new ServiceError("already_submitted", "提出済みです。");
   }
 
-  validateSlots(await findProjectForSlots(db, projectId), input.slots);
+  validateSlots(await findEventForSlots(db, eventId), input.slots);
 
   const answer = { name: input.name, comment: input.comment?.trim() || null };
   const participantId = me?.id ?? crypto.randomUUID();
   await runBatch(db, [
     me
       ? db.update(schema.participant).set(answer).where(eq(schema.participant.id, me.id))
-      : db
-          .insert(schema.participant)
-          .values({ id: participantId, eventId: projectId, role: "guest", browserId, ...answer }),
-    ...insertMany(db, schema.slot, slotRows(input, projectId, participantId)),
+      : db.insert(schema.participant).values({ id: participantId, eventId, role: "guest", browserId, ...answer }),
+    ...insertMany(db, schema.slot, slotRows(input, eventId, participantId)),
   ]);
 
-  return findMyGuest(db, browserId, projectId);
+  return findMyGuest(db, browserId, eventId);
 }
 
-export async function updateMyAvailability(db: Db, browserId: string, projectId: string, input: SubmissionInput) {
-  const myGuest = await findMyGuest(db, browserId, projectId);
+export async function updateMyAvailability(db: Db, browserId: string, eventId: string, input: SubmissionInput) {
+  const myGuest = await findMyGuest(db, browserId, eventId);
 
   if (!myGuest) {
     throw new ServiceError("submission_not_found", "既存の日程が見つかりません。");
   }
 
-  validateSlots(await findProjectForSlots(db, projectId), input.slots);
+  validateSlots(await findEventForSlots(db, eventId), input.slots);
 
   await runBatch(db, [
     db.delete(schema.slot).where(eq(schema.slot.participantId, myGuest.id)),
-    ...insertMany(db, schema.slot, slotRows(input, projectId, myGuest.id)),
+    ...insertMany(db, schema.slot, slotRows(input, eventId, myGuest.id)),
     db
       .update(schema.participant)
       .set({ name: input.name, comment: input.comment?.trim() || null })
       .where(eq(schema.participant.id, myGuest.id)),
   ]);
 
-  return findMyGuest(db, browserId, projectId);
+  return findMyGuest(db, browserId, eventId);
 }

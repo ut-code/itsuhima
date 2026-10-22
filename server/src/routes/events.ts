@@ -4,48 +4,48 @@ import { z } from "zod";
 import { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/validators.js";
 import type { AppEnv } from "../env.js";
 import {
-  createProject,
-  deleteProject,
-  getProject,
-  listMyProjects,
+  createEvent,
+  deleteEvent,
+  getEvent,
+  listMyEvents,
   submitAvailability,
+  updateEvent,
   updateMyAvailability,
-  updateProject,
-} from "../services/projects.js";
+} from "../services/events.js";
 
 const projectIdParamsSchema = z.object({ projectId: z.string().length(21) });
 
 const router = new Hono<AppEnv>()
-  // プロジェクト作成
+  // イベント作成
   .post("/", zValidator("json", projectReqSchema), async (c) => {
-    const project = await createProject(c.get("db"), c.get("browserId"), c.req.valid("json"));
-    return c.json({ id: project.id, name: project.name }, 201);
+    const event = await createEvent(c.get("db"), c.get("browserId"), c.req.valid("json"));
+    return c.json({ id: event.id, name: event.name }, 201);
   })
 
-  // 自分が関連するプロジェクト取得
+  // 自分が関連するイベント取得
   .get("/mine", async (c) => {
-    const projects = await listMyProjects(c.get("db"), c.get("browserId"));
-    return c.json(projects, 200);
+    const events = await listMyEvents(c.get("db"), c.get("browserId"));
+    return c.json(events, 200);
   })
 
-  // プロジェクト取得
+  // イベント取得
   .get("/:projectId", zValidator("param", projectIdParamsSchema), async (c) => {
     const { projectId } = c.req.valid("param");
-    const project = await getProject(c.get("db"), c.get("browserId"), projectId);
-    return c.json(project, 200);
+    const event = await getEvent(c.get("db"), c.get("browserId"), projectId);
+    return c.json(event, 200);
   })
 
-  // プロジェクト編集。省略したフィールドは変えない
+  // イベント編集。省略したフィールドは変えない
   .patch("/:projectId", zValidator("param", projectIdParamsSchema), zValidator("json", editReqSchema), async (c) => {
     const { projectId } = c.req.valid("param");
-    const event = await updateProject(c.get("db"), c.get("browserId"), projectId, c.req.valid("json"));
+    const event = await updateEvent(c.get("db"), c.get("browserId"), projectId, c.req.valid("json"));
     return c.json({ event }, 200);
   })
 
-  // プロジェクト削除
+  // イベント削除
   .delete("/:projectId", zValidator("param", projectIdParamsSchema), async (c) => {
     const { projectId } = c.req.valid("param");
-    await deleteProject(c.get("db"), c.get("browserId"), projectId);
+    await deleteEvent(c.get("db"), c.get("browserId"), projectId);
     return c.body(null, 204);
   })
 
