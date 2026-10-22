@@ -1,0 +1,31 @@
+name = "itsuhima"
+main = "src/main.ts"
+compatibility_date = "2026-10-01"
+
+[dev]
+port = 3000
+
+[vars]
+NODE_ENV = "production"
+DOMAIN = "itsuhima.utcode.net"
+CORS_ALLOW_ORIGINS = "https://itsuhima.utcode.net"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "itsuhima-prod"
+database_id = "6c6a37d0-e641-44d2-ac96-2e7032333303"
+migrations_dir = "migrations"
+
+[env.staging]
+name = "itsuhima-staging"
+
+[env.staging.vars]
+NODE_ENV = "production"
+DOMAIN = "itsuhima-staging.utcode.net"
+CORS_ALLOW_ORIGINS = "https://itsuhima-staging.utcode.net"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "itsuhima-staging"
+database_id = "58fe7064-1e17-4eef-a698-1a156818a835"
+migrations_dir = "migrations"
