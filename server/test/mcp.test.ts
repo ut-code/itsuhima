@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 import { createBrowser, createEvent } from "./helpers.js";
-import { alice, authorize, callMcp, rpcResult } from "./mcpHelpers.js";
+import { alice, authorize, callMcp, mcpUrl, pkce, redirectUri, registerClient, rpcResult } from "./mcpHelpers.js";
 
 describe("/mcp", () => {
   test("トークンが無ければ 401 と、保護リソースのメタデータを指す WWW-Authenticate を返す", async () => {

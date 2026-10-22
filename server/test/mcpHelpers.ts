@@ -5,8 +5,8 @@ import { app } from "../src/main.js";
 import { type Browser, createBrowser } from "./helpers.js";
 
 export const alice = { sub: "google-alice", email: "alice@example.com", name: "Alice" };
-const mcpUrl = `${env.PUBLIC_ORIGIN}/mcp`;
-const redirectUri = "http://127.0.0.1:33418/callback";
+export const mcpUrl = `${env.PUBLIC_ORIGIN}/mcp`;
+export const redirectUri = "http://127.0.0.1:33418/callback";
 
 function base64url(bytes: Uint8Array) {
   return btoa(String.fromCharCode(...bytes))
@@ -15,7 +15,7 @@ function base64url(bytes: Uint8Array) {
     .replace(/\//g, "_");
 }
 
-async function pkce() {
+export async function pkce() {
   const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)));
   const challenge = base64url(
     new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))),
@@ -24,7 +24,7 @@ async function pkce() {
 }
 
 /** 動的クライアント登録 (Claude Code のように、ループバックの redirect_uri を持つ公開クライアント) */
-async function registerClient() {
+export async function registerClient() {
   const res = await app.request(
     "/api/auth/oauth2/register",
     {
