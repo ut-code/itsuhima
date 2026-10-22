@@ -1,0 +1,400 @@
+{
+  "id": "c076aff6-3588-4049-98db-e4add579c6f5",
+  "prevId": "2f574304-0c16-4de2-a604-be7988a01301",
+  "version": "6",
+  "dialect": "sqlite",
+  "tables": {
+    "Guest": {
+      "name": "Guest",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "comment": {
+          "name": "comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "browserId": {
+          "name": "browserId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "Guest_browserId_projectId_key": {
+          "name": "Guest_browserId_projectId_key",
+          "columns": ["browserId", "projectId"],
+          "isUnique": true
+        },
+        "Guest_projectId_idx": {
+          "name": "Guest_projectId_idx",
+          "columns": ["projectId"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "Guest_projectId_event_id_fk": {
+          "name": "Guest_projectId_event_id_fk",
+          "tableFrom": "Guest",
+          "columnsFrom": ["projectId"],
+          "tableTo": "event",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "Host": {
+      "name": "Host",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "browserId": {
+          "name": "browserId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "Host_browserId_projectId_key": {
+          "name": "Host_browserId_projectId_key",
+          "columns": ["browserId", "projectId"],
+          "isUnique": true
+        },
+        "Host_projectId_idx": {
+          "name": "Host_projectId_idx",
+          "columns": ["projectId"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "Host_projectId_event_id_fk": {
+          "name": "Host_projectId_event_id_fk",
+          "tableFrom": "Host",
+          "columnsFrom": ["projectId"],
+          "tableTo": "event",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "allowedRange": {
+      "name": "allowedRange",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "startTime": {
+          "name": "startTime",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "endTime": {
+          "name": "endTime",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "eventId": {
+          "name": "eventId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "allowedRange_eventId_idx": {
+          "name": "allowedRange_eventId_idx",
+          "columns": ["eventId"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "allowedRange_eventId_event_id_fk": {
+          "name": "allowedRange_eventId_event_id_fk",
+          "tableFrom": "allowedRange",
+          "columnsFrom": ["eventId"],
+          "tableTo": "event",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "event": {
+      "name": "event",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "startDate": {
+          "name": "startDate",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "endDate": {
+          "name": "endDate",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'Asia/Tokyo'"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "option": {
+      "name": "option",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "color": {
+          "name": "color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "eventId": {
+          "name": "eventId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "option_eventId_label_key": {
+          "name": "option_eventId_label_key",
+          "columns": ["eventId", "label"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "option_eventId_event_id_fk": {
+          "name": "option_eventId_event_id_fk",
+          "tableFrom": "option",
+          "columnsFrom": ["eventId"],
+          "tableTo": "event",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "slot": {
+      "name": "slot",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "startAt": {
+          "name": "startAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "endAt": {
+          "name": "endAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "eventId": {
+          "name": "eventId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "guestId": {
+          "name": "guestId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "optionId": {
+          "name": "optionId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "slot_eventId_startAt_idx": {
+          "name": "slot_eventId_startAt_idx",
+          "columns": ["eventId", "startAt"],
+          "isUnique": false
+        },
+        "slot_guestId_idx": {
+          "name": "slot_guestId_idx",
+          "columns": ["guestId"],
+          "isUnique": false
+        },
+        "slot_optionId_idx": {
+          "name": "slot_optionId_idx",
+          "columns": ["optionId"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "slot_eventId_event_id_fk": {
+          "name": "slot_eventId_event_id_fk",
+          "tableFrom": "slot",
+          "columnsFrom": ["eventId"],
+          "tableTo": "event",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "cascade"
+        },
+        "slot_guestId_Guest_id_fk": {
+          "name": "slot_guestId_Guest_id_fk",
+          "tableFrom": "slot",
+          "columnsFrom": ["guestId"],
+          "tableTo": "Guest",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "no action"
+        },
+        "slot_optionId_option_id_fk": {
+          "name": "slot_optionId_option_id_fk",
+          "tableFrom": "slot",
+          "columnsFrom": ["optionId"],
+          "tableTo": "option",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

@@ -1,57 +1,54 @@
-// レスポンスの ISO 8601 文字列を Date に変換
+// レスポンスの日付・日時の文字列を Dayjs に変換
 
 import dayjs from "./lib/dayjs";
-import type { BriefProject, ISOStringBriefProject, ISOStringProject, Project } from "./types";
+import type { BriefEvent, Event, ISOStringBriefEvent, ISOStringEvent, Slot } from "./types";
 
 /**
- * Project の日時のプロパティを ISO 文字列から Date オブジェクトに変換する
- * @param project
+ * Event の日時のプロパティを ISO 文字列から Date オブジェクトに変換する
+ * @param event
  * @returns
  */
-export function projectReviver(project: ISOStringProject): Project {
+export function eventReviver(event: ISOStringEvent): Event {
   return {
-    ...project,
-    startDate: dayjs.utc(project.startDate).tz(),
-    endDate: dayjs.utc(project.endDate).tz(),
-    allowedRanges: project.allowedRanges.map((range) => ({
-      ...range,
-      startTime: dayjs.utc(range.startTime).tz(),
-      endTime: dayjs.utc(range.endTime).tz(),
-    })),
-    participationOptions: project.participationOptions.map((opt) => ({ ...opt })),
-    hosts: project.hosts.map((host) => ({ ...host })),
-    guests: project.guests.map((guest) => ({
+    ...event,
+    startDate: dayjs.tz(event.startDate),
+    endDate: dayjs.tz(event.endDate),
+    allowedRanges: event.allowedRanges.map((range) => ({ ...range })),
+    options: event.options.map((opt) => ({ ...opt })),
+    hosts: event.hosts.map((host) => ({ ...host })),
+    guests: event.guests.map((guest) => ({
       ...guest,
       comment: guest.comment ?? undefined,
-      slots: guest.slots.map((slot) => ({
-        ...slot,
-        from: dayjs.utc(slot.from).tz(),
-        to: dayjs.utc(slot.to).tz(),
-      })),
+      slots: guest.slots.map(slotReviver),
     })),
-    meAsGuest: project.meAsGuest
+    meAsGuest: event.meAsGuest
       ? {
-          ...project.meAsGuest,
-          comment: project.meAsGuest.comment ?? undefined,
-          slots: project.meAsGuest.slots.map((slot) => ({
-            ...slot,
-            from: dayjs.utc(slot.from).tz(),
-            to: dayjs.utc(slot.to).tz(),
-          })),
+          ...event.meAsGuest,
+          comment: event.meAsGuest.comment ?? undefined,
+          slots: event.meAsGuest.slots.map(slotReviver),
         }
       : null,
   };
 }
 
+function slotReviver({ startAt, endAt, optionId, ...slot }: ISOStringEvent["guests"][number]["slots"][number]): Slot {
+  return {
+    ...slot,
+    from: dayjs.utc(startAt).tz(),
+    to: dayjs.utc(endAt).tz(),
+    participationOptionId: optionId,
+  };
+}
+
 /**
- * BriefProject の日時のプロパティを ISO 文字列から Date オブジェクトに変換する
- * @param project
+ * BriefEvent の日時のプロパティを ISO 文字列から Date オブジェクトに変換する
+ * @param event
  * @returns
  */
-export function briefProjectReviver(project: ISOStringBriefProject): BriefProject {
+export function briefEventReviver(event: ISOStringBriefEvent): BriefEvent {
   return {
-    ...project,
-    startDate: dayjs.utc(project.startDate).tz(),
-    endDate: dayjs.utc(project.endDate).tz(),
+    ...event,
+    startDate: dayjs.tz(event.startDate),
+    endDate: dayjs.tz(event.endDate),
   };
 }

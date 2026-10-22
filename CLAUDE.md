@@ -47,7 +47,23 @@ import type { AppType } from "../../../../server/src/main";
 const client = hc<AppType>(API_ENDPOINT);
 ```
 
-REST fetch ではなく `client.projects[":projectId"].$get(...)` 形式で呼び出す。
+REST fetch ではなく `client.events[":eventId"].$get(...)` 形式で呼び出す。
+
+### データモデル（D1）
+
+`server/src/db/schema.ts`。テーブル名は小文字の単数形・camelCase。
+
+- `event`: 日程調整のイベント。`startDate` / `endDate` は `"YYYY-MM-DD"`（`endDate` を含む）、`timezone` は IANA のタイムゾーン名（現在は全件 `Asia/Tokyo`）。
+- `allowedRange`: 入力できる時間帯（現在はイベントにつき 1 つ）。`startTime` / `endTime` は `"HH:mm"`。終わりは `"24:00"` もありうる。
+- `option`: 参加形態。
+- `participant`: 参加者。`role` でホストとゲストを区別する。`name` が null なら未回答（イベントを作っただけのホスト）。ホストが回答しても 1 行のまま。
+- `slot`: 参加者が参加できる時間帯。`startAt` / `endAt` は UTC の ISO 8601 で、日をまたがない。
+
+日付と時間帯は、イベントの `timezone` の壁時計の値で持つ。Slot だけは実際の時刻なので UTC で持つ。API も同じ形式で受け取って返す。
+
+API のレスポンスでは、参加者を `hosts`（ホスト）、`guests` と `meAsGuest`（回答した参加者）に分けて返し、Slot の参加者 ID は `guestId` として返す。
+
+マイグレーションは `server/migrations/`。データの変換を伴うものは `drizzle-kit generate --custom` で作って SQL を手で書き、`server/test/migrations.test.ts` に移行のテストを足す。D1 は外部キーを常に強制し、`DROP TABLE` の暗黙の DELETE で `ON DELETE CASCADE` が発火するので、他のテーブルから参照されるテーブルは作り直さない（`RENAME` や `ADD COLUMN` で変える）。
 
 ### 認証（browserId）
 
@@ -57,12 +73,13 @@ REST fetch ではなく `client.projects[":projectId"].$get(...)` 形式で呼�
 
 `client/src/lib/CalendarMatrix.ts` に核となるデータ構造がある。カレンダーの選択状態は 2D 行列で管理される（行=日、列=15分単位のスロット）：
 
-- **`EditingMatrix`**: 自分の入力中スロット。セル値は `participationOptionId`（文字列）。
+- **`EditingMatrix`**: 自分の入力中スロット。セル値は参加形態の id（文字列）。
 - **`ViewingMatrix`**: 全ゲストの既存スロット。セル値は `{ [guestId]: optionId }` のレコード。
+- **`HighlightMatrix`**: 「最多人数」や特定のゲストの強調表示に使う、条件を満たすセル。
 
-どちらも `getSlots()` で連続するセルをまとめてイベント単位に変換（run-length encoding 的な処理）して返す。
+いずれも `getSlots()` で連続するセルをまとめて区間に変換（run-length encoding 的な処理）して返す。
 
-`Calendar.tsx` はこのマトリックスを `useRef` で保持し、スロット変更時に `editingSlots → matrix → CalendarEvent[]` の順で再計算して FullCalendar に渡す。
+`Calendar.tsx` は `EditingMatrix` を `useRef` で保持し、`editingSlots` が変わると行列を作り直して区間を再計算する。`ViewingMatrix` は `viewingSlots` から `useMemo` で作る。どちらの区間も、グリッドの上に絶対配置で直接描画する。区間の終わりは 24:00（翌日の 0:00）になりうるので、位置は開始からの経過時間で求める。
 
 ### dayjs のインポート制限
 
@@ -75,10 +92,10 @@ import dayjs from "dayjs";
 import dayjs from "../lib/dayjs";
 ```
 
-### 参加形態（ParticipationOption）の流れ
+### 参加形態（option）の流れ
 
 - 作成時: フロントエンドで `crypto.randomUUID()` を生成して `id` を確定。サーバーは受け取った id をそのまま使用。
-- デフォルト: 参加形態が0件の場合は `common/colors.ts` の `DEFAULT_PARTICIPATION_OPTION` を使用してデフォルトを自動作成（label: "参加", color: "#0F82B1"）。
+- デフォルト: イベントの作成フォームの初期値に、`common/colors.ts` の `DEFAULT_PARTICIPATION_OPTION`（label: "参加", color: "#0F82B1"）を 1 つ入れる。API は参加形態を最低 1 つ要求する。
 - 削除制限: Slot が紐づいている参加形態は削除不可（サーバー側で検証）。
 
 ### Cloudflare Pages Functions

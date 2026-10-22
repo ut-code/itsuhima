@@ -3,11 +3,11 @@ import { cors } from "hono/cors";
 import { createDb } from "./db/index.js";
 import type { AppEnv } from "./env.js";
 import { browserIdMiddleware } from "./middleware/browserId.js";
-import projectsRoutes from "./routes/projects.js";
+import eventsRoutes from "./routes/events.js";
 import { ServiceError, type ServiceErrorReason } from "./services/errors.js";
 
 const serviceErrorStatus = {
-  project_not_found: 404,
+  event_not_found: 404,
   submission_not_found: 404,
   not_host: 403,
   already_submitted: 409,
@@ -32,7 +32,7 @@ export const app = new Hono<AppEnv>()
   .get("/", (c) => {
     return c.json({ message: "Hello! イツヒマ？" });
   })
-  .route("/projects", projectsRoutes)
+  .route("/events", eventsRoutes)
   .onError((err, c) => {
     if (err instanceof ServiceError) {
       return c.json({ message: err.message }, serviceErrorStatus[err.reason]);
