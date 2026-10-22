@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
-import { app } from "../src/app.js";
+import { app } from "../src/main.js";
 import type { Bindings } from "../src/env.js";
 
 function browserIdCookie(res: Response) {

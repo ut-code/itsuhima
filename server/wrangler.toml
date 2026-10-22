@@ -5,6 +5,14 @@ compatibility_date = "2026-10-01"
 [dev]
 port = 3000
 
+# client のビルド結果を配信する。run_worker_first に当たるパスだけ Worker を通し、それ以外のアセットは Worker を通さない
+# (Worker を通らないリクエストは、無料枠のリクエスト数に数えられない)
+[assets]
+directory = "../client/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api", "/api/*", "/e/*", "/og/*", "/"]
+
 [vars]
 NODE_ENV = "production"
 DOMAIN = "itsuhima.utcode.net"

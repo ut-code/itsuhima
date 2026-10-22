@@ -35,5 +35,3 @@ export const api = new Hono<AppEnv>()
   });
 
 export type AppType = typeof api;
-
-export const app = new Hono<AppEnv>().route("/api", api);

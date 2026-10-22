@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { serializeSigned } from "hono/utils/cookie";
-import { app } from "../src/app.js";
+import { app } from "../src/main.js";
 
 /**
  * 1 つのブラウザを再現する。browserId を決めて署名済みの Cookie を作り、すべてのリクエストに付ける。
