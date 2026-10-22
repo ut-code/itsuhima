@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { createBrowser, createEvent, submissionInput } from "./helpers.js";
-import { alice, callTool, loginAndAuthorize } from "./mcpHelpers.js";
+import { alice, callMcp, callTool, loginAndAuthorize, rpcResult } from "./mcpHelpers.js";
 
 const bob = { sub: "google-bob", email: "bob@example.com", name: "Bob" };
 
@@ -446,5 +446,44 @@ describe("create_event", () => {
 
     expect(isError).toBe(true);
     expect(text).toContain("「create」");
+  });
+});
+
+describe("Resource と Prompt", () => {
+  test("自分のイベントを Resource として一覧し、読める", async () => {
+    const { browser, token } = await loginAndAuthorize(alice);
+    const { id } = await createEvent(browser, { name: "定例会" });
+    const uri = `itsuhima://event/${id}`;
+
+    const list = await rpcResult(await callMcp(token, "resources/list", {}));
+    expect(list.result.resources).toEqual([expect.objectContaining({ uri, name: "定例会" })]);
+
+    const read = await rpcResult(await callMcp(token, "resources/read", { uri }));
+    expect(read.result.contents[0].text).toContain(`event_id: ${id}`);
+    expect(read.result.contents[0].text).toContain("あなたの立場: 主催者");
+  });
+
+  test("無いイベントの Resource はエラー", async () => {
+    const { token } = await loginAndAuthorize(alice);
+
+    const read = await rpcResult(await callMcp(token, "resources/read", { uri: `itsuhima://event/${"a".repeat(21)}` }));
+
+    expect(read.error).toBeDefined();
+  });
+
+  test("Prompt に event_id を渡すと、手順に入る", async () => {
+    const { token } = await loginAndAuthorize(alice);
+
+    const list = await rpcResult(await callMcp(token, "prompts/list", {}));
+    expect(list.result.prompts.map((p: { name: string }) => p.name).sort()).toEqual([
+      "find_best_slot",
+      "submit_availability",
+    ]);
+
+    const prompt = await rpcResult(
+      await callMcp(token, "prompts/get", { name: "find_best_slot", arguments: { event_id: "event-1" } }),
+    );
+    expect(prompt.result.messages[0].content.text).toContain("イベント event-1");
+    expect(prompt.result.messages[0].content.text).toContain("find_common_availability");
   });
 });
