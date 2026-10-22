@@ -4,7 +4,7 @@ import { index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 const uuid = () => crypto.randomUUID();
 
 /** 日程調整プロジェクト。ユーザには「イベント」と表示。 */
-export const project = sqliteTable("Project", {
+export const project = sqliteTable("event", {
   id: text().primaryKey(),
   name: text().notNull(),
   description: text(),
@@ -21,7 +21,7 @@ export const project = sqliteTable("Project", {
 
 /** 日程調整プロジェクトにおいて入力が許可された時間帯。(注: 現在は 1 つの日程調整プロジェクトにつき 1 つのみ設定可能) */
 export const allowedRange = sqliteTable(
-  "AllowedRange",
+  "allowedRange",
   {
     id: text().primaryKey().$defaultFn(uuid),
     /** イベントのタイムゾーンでの時刻 ("HH:mm") */
@@ -37,7 +37,7 @@ export const allowedRange = sqliteTable(
 
 /** あるゲストが参加可能な時間帯の 1 つ。日を跨がない。 */
 export const slot = sqliteTable(
-  "Slot",
+  "slot",
   {
     id: text().primaryKey().$defaultFn(uuid),
     from: text().notNull(),
@@ -97,7 +97,7 @@ export const guest = sqliteTable(
 
 /** 参加形態。 */
 export const participationOption = sqliteTable(
-  "ParticipationOption",
+  "option",
   {
     id: text().primaryKey().$defaultFn(uuid),
     label: text().notNull(),
