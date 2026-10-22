@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { createAuth } from "./auth.js";
 import { createDb } from "./db/index.js";
 import type { AppEnv } from "./env.js";
 import { browserIdMiddleware } from "./middleware/browserId.js";
@@ -25,6 +26,8 @@ export const api = new Hono<AppEnv>()
   .get("/", (c) => {
     return c.json({ message: "Hello! イツヒマ？" });
   })
+  // ログイン (Better Auth)。Google の OAuth、セッションなど
+  .on(["GET", "POST"], "/auth/*", (c) => createAuth(c.env, c.get("db")).handler(c.req.raw))
   .route("/events", eventsRoutes)
   .onError((err, c) => {
     if (err instanceof ServiceError) {
