@@ -7,7 +7,7 @@
     "dev": "vite",
     "build:local:watch": "tsc -b && vite build --watch --mode dev",
     "build:local": "tsc -b && vite build --mode dev",
-    "build:preview": "tsc -b && vite build --mode preview",
+    "build:staging": "tsc -b && vite build --mode staging",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
