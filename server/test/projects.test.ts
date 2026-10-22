@@ -76,6 +76,30 @@ describe("POST /projects", () => {
 
     expect(res.status).toBe(400);
   });
+
+  test("日付が ISO 8601 の日時でなければ 400", async () => {
+    const res = await createBrowser().post("/projects", projectInput({ startDate: "2026-11-02" }));
+
+    expect(res.status).toBe(400);
+  });
+
+  test("時間帯が ISO 8601 の日時でなければ 400", async () => {
+    const res = await createBrowser().post(
+      "/projects",
+      projectInput({ allowedRanges: [{ startTime: "09:00", endTime: "18:00" }] }),
+    );
+
+    expect(res.status).toBe(400);
+  });
+
+  test("時間帯が 15 分単位でなければ 400", async () => {
+    const res = await createBrowser().post(
+      "/projects",
+      projectInput({ allowedRanges: [{ startTime: "2026-11-01T23:10:00.000Z", endTime: "2026-11-04T14:00:00.000Z" }] }),
+    );
+
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("GET /projects/mine", () => {
@@ -203,6 +227,15 @@ describe("PUT /projects/:projectId", () => {
     const res = await createBrowser().put(`/projects/${missingProjectId}`, { name: "x" });
 
     expect(res.status).toBe(403);
+  });
+
+  test("時間帯が ISO 8601 の日時でなければ 400", async () => {
+    const host = createBrowser();
+    const { id } = await createProject(host);
+
+    const res = await host.put(`/projects/${id}`, { allowedRanges: [{ startTime: "09:00", endTime: "18:00" }] });
+
+    expect(res.status).toBe(400);
   });
 
   test("ゲストがいなければ、名前・説明・日程・時間帯を更新できる", async () => {

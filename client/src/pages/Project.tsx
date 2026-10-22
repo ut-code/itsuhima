@@ -17,7 +17,7 @@ import {
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
 import { DEFAULT_PARTICIPATION_OPTION, generateDistinctColor } from "../../../common/colors";
-import { editReqSchema, projectReqSchema } from "../../../common/validators";
+import { editFormSchema, projectFormSchema, type projectReqSchema } from "../../../common/validators";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
 import { EXTERNAL_LINKS } from "../constants/links";
@@ -32,7 +32,7 @@ export default function ProjectPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
 
-  const formSchema = eventId ? editReqSchema : projectReqSchema;
+  const formSchema = eventId ? editFormSchema : projectFormSchema;
   type FormSchemaType = z.infer<typeof formSchema>;
 
   const [project, setProject] = useState<Project | null>(null);
