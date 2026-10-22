@@ -1,11 +1,10 @@
 import { zValidator } from "@hono/zod-validator";
-import dotenv from "dotenv";
 import { Hono } from "hono";
 import { z } from "zod";
 import { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/validators.js";
-import { type AppVariables, nanoid, prisma } from "../main.js";
-
-dotenv.config();
+import type { AppVariables } from "../app.js";
+import { prisma } from "../db.js";
+import { nanoid } from "../lib/id.js";
 
 const projectIdParamsSchema = z.object({ projectId: z.string().length(21) });
 

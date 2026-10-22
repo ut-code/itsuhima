@@ -1,6 +1,6 @@
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
-import { cookieOptions } from "../main.js";
+import { cookieOptions } from "../config.js";
 
 const COOKIE_NAME = "browserId";
 
@@ -9,13 +9,13 @@ const COOKIE_NAME = "browserId";
  * @returns 検証できた browserId。Cookie が無ければ undefined。Cookie はあるがどの鍵でも検証できなければ false
  */
 async function readBrowserId(c: Context, secrets: string[]) {
-  if (getCookie(c, COOKIE_NAME) === undefined) { 
+  if (getCookie(c, COOKIE_NAME) === undefined) {
     return undefined;
   }
 
   for (const secret of secrets) {
     const value = await getSignedCookie(c, secret, COOKIE_NAME);
-    if (value) { 
+    if (value) {
       return value;
     }
   }
