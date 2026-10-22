@@ -2,6 +2,7 @@ import { useState } from "react";
 import { LuMenu, LuX } from "react-icons/lu";
 import { NavLink } from "react-router";
 import { EXTERNAL_LINKS } from "../constants/links";
+import AccountMenu from "./AccountMenu";
 
 export default function Header({ compact = false }: { compact?: boolean }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -37,6 +38,7 @@ export default function Header({ compact = false }: { compact?: boolean }) {
           >
             使い方
           </a>
+          <AccountMenu />
         </nav>
 
         <div className="flex items-center md:hidden">
@@ -82,6 +84,7 @@ export default function Header({ compact = false }: { compact?: boolean }) {
             >
               ご意見・バグ報告
             </a>
+            <AccountMenu className="mt-2 px-3" />
           </div>
         </div>
       )}
