@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { createAuth } from "./auth.js";
 import { createDb } from "./db/index.js";
 import type { AppEnv } from "./env.js";
 import { actorMiddleware } from "./middleware/actor.js";
@@ -28,9 +27,11 @@ export const api = new Hono<AppEnv>()
     return c.json({ message: "Hello! イツヒマ？" });
   })
   // ログイン (Better Auth)。Google の OAuth、セッションなど
-  .on(["GET", "POST"], "/auth/*", (c) =>
-    createAuth(c.env, c.get("db"), { browserId: c.get("browserId") }).handler(c.req.raw),
-  )
+  .on(["GET", "POST"], "/auth/*", async (c) => {
+    // Better Auth は大きいので、使うときだけ読み込む (ほかのリクエストのコールドスタートを遅くしない)
+    const { createAuth } = await import("./auth.js");
+    return createAuth(c.env, c.get("db"), { browserId: c.get("browserId") }).handler(c.req.raw);
+  })
   // ここから下のルートは、操作する本人 (actor) を使う
   .use("*", actorMiddleware)
   .route("/events", eventsRoutes)
