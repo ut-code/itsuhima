@@ -3,7 +3,8 @@ import { env } from "cloudflare:workers";
 
 /**
  * マイグレーションのテスト用に、`name` の直前までのマイグレーションを当てた DB を用意する。
- * 返り値の `db` に旧スキーマのデータを入れてから `migrate()` で残りを当て、データの変換を確かめる。
+ * 返り値の `db` に旧スキーマのデータを入れてから `migrate()` で `name` を当て、データの変換を確かめる。
+ * 後のマイグレーションは当てないので、マイグレーションを足しても前のテストは影響を受けない。
  * @param name マイグレーションのファイル名 (例: "0001_add_timezone.sql")
  */
 export async function migrateUntil(name: string) {
@@ -16,8 +17,8 @@ export async function migrateUntil(name: string) {
 
   return {
     db,
-    /** 残りのマイグレーションをすべて当てる */
-    migrate: () => applyD1Migrations(db, env.TEST_MIGRATIONS),
+    /** `name` のマイグレーションを当てる */
+    migrate: () => applyD1Migrations(db, env.TEST_MIGRATIONS.slice(0, index + 1)),
   };
 }
 

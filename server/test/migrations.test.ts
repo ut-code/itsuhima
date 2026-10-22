@@ -2,26 +2,27 @@ import { describe, expect, test } from "vitest";
 import { migrateUntil, tableNames } from "./migrations.js";
 
 describe("migrateUntil", () => {
-  test("指定したマイグレーションの直前まで当て、migrate() で残りを当てる", async () => {
+  test("指定したマイグレーションの直前まで当て、migrate() でそのマイグレーションだけを当てる", async () => {
     const { db, migrate } = await migrateUntil("0000_init.sql");
     expect(await tableNames(db)).toEqual(["d1_migrations"]);
 
     await migrate();
 
-    expect(await tableNames(db)).toEqual(expect.arrayContaining(["event", "Guest", "slot"]));
+    const names = await tableNames(db);
+    expect(names).toEqual(expect.arrayContaining(["Project", "Guest", "Slot"]));
+    // 後のマイグレーションで作るテーブルは無い
+    expect(names).not.toContain("participant");
   });
 
   test("前のテストのデータを残さない", async () => {
     const first = await migrateUntil("0000_init.sql");
     await first.migrate();
-    await first.db
-      .prepare(`INSERT INTO "event" (id, name, startDate, endDate, createdAt) VALUES ('p', 'name', 's', 'e', 'c')`)
-      .run();
+    await first.db.prepare(`INSERT INTO "Project" (id, name, startDate, endDate) VALUES ('p', 'name', 's', 'e')`).run();
 
     const second = await migrateUntil("0000_init.sql");
     await second.migrate();
 
-    expect(await second.db.prepare(`SELECT * FROM "event"`).all()).toMatchObject({ results: [] });
+    expect(await second.db.prepare(`SELECT * FROM "Project"`).all()).toMatchObject({ results: [] });
   });
 });
 
@@ -41,13 +42,13 @@ describe("0001_add_project_timezone_created_at", () => {
     await migrate();
 
     const project = await db
-      .prepare(`SELECT timezone, createdAt FROM "event"`)
+      .prepare(`SELECT timezone, createdAt FROM "Project"`)
       .first<{ timezone: string; createdAt: string }>();
     expect(project?.timezone).toBe("Asia/Tokyo");
     expect(project?.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     expect(new Date(project?.createdAt ?? "").getTime()).toBeGreaterThanOrEqual(Math.floor(before / 1000) * 1000);
     // 子のテーブルの行は残る
-    expect(await db.prepare(`SELECT id FROM "allowedRange"`).all()).toMatchObject({ results: [{ id: "a" }] });
+    expect(await db.prepare(`SELECT id FROM "AllowedRange"`).all()).toMatchObject({ results: [{ id: "a" }] });
   });
 });
 
@@ -66,7 +67,7 @@ describe("0002_allowed_range_time_of_day", () => {
 
     await migrate();
 
-    expect(await db.prepare(`SELECT startTime, endTime FROM "allowedRange"`).first()).toEqual({
+    expect(await db.prepare(`SELECT startTime, endTime FROM "AllowedRange"`).first()).toEqual({
       startTime: "08:00",
       endTime: "23:00",
     });
@@ -85,7 +86,7 @@ describe("0003_project_dates", () => {
 
     await migrate();
 
-    expect(await db.prepare(`SELECT startDate, endDate FROM "event"`).first()).toEqual({
+    expect(await db.prepare(`SELECT startDate, endDate FROM "Project"`).first()).toEqual({
       startDate: "2026-11-02",
       endDate: "2026-11-04",
     });
@@ -174,5 +175,86 @@ describe("0005_rename_columns", () => {
     // 外部キーの CASCADE も新しい列名で効く
     await db.batch([db.prepare(`DELETE FROM "slot"`), db.prepare(`DELETE FROM "event"`)]);
     expect(await db.prepare(`SELECT count(*) AS n FROM "allowedRange"`).first()).toEqual({ n: 0 });
+  });
+});
+
+describe("0006_merge_host_guest_into_participant", () => {
+  test("Host と Guest を participant にまとめ、slot を participant に付け替える", async () => {
+    const { db, migrate } = await migrateUntil("0006_merge_host_guest_into_participant.sql");
+    await db.batch([
+      db.prepare(`INSERT INTO "event" (id, name, startDate, endDate) VALUES ('p', 'name', '2026-11-02', '2026-11-04')`),
+      db.prepare(`INSERT INTO "option" VALUES ('o', '参加', '#0F82B1', 'p')`),
+      // ホストかつゲスト、ホストだけ、ゲストだけ
+      db.prepare(`INSERT INTO "Host" VALUES ('h1', 'both', 'p')`),
+      db.prepare(`INSERT INTO "Guest" VALUES ('g1', 'ホスト', 'よろしく', 'both', 'p')`),
+      db.prepare(`INSERT INTO "Host" VALUES ('h2', 'hostOnly', 'p')`),
+      db.prepare(`INSERT INTO "Guest" VALUES ('g2', 'ゲスト', NULL, 'guestOnly', 'p')`),
+      db.prepare(
+        `INSERT INTO "slot" VALUES ('s1', '2026-11-02T00:00:00.000Z', '2026-11-02T01:00:00.000Z', 'p', 'g1', 'o')`,
+      ),
+      db.prepare(
+        `INSERT INTO "slot" VALUES ('s2', '2026-11-02T01:00:00.000Z', '2026-11-02T02:00:00.000Z', 'p', 'g2', 'o')`,
+      ),
+    ]);
+    const before = Date.now();
+
+    await migrate();
+
+    const { results: participants } = await db
+      .prepare(`SELECT id, eventId, role, name, comment, browserId, updatedAt FROM "participant" ORDER BY browserId`)
+      .all<{ updatedAt: string }>();
+    expect(participants).toEqual([
+      {
+        id: "g1",
+        eventId: "p",
+        role: "host",
+        name: "ホスト",
+        comment: "よろしく",
+        browserId: "both",
+        updatedAt: expect.any(String),
+      },
+      {
+        id: "g2",
+        eventId: "p",
+        role: "guest",
+        name: "ゲスト",
+        comment: null,
+        browserId: "guestOnly",
+        updatedAt: expect.any(String),
+      },
+      {
+        id: "h2",
+        eventId: "p",
+        role: "host",
+        name: null,
+        comment: null,
+        browserId: "hostOnly",
+        updatedAt: expect.any(String),
+      },
+    ]);
+    for (const p of participants) {
+      expect(new Date(p.updatedAt).getTime()).toBeGreaterThanOrEqual(Math.floor(before / 1000) * 1000);
+    }
+    const { results: slots } = await db.prepare(`SELECT id, participantId FROM "slot" ORDER BY id`).all();
+    expect(slots).toEqual([
+      { id: "s1", participantId: "g1" },
+      { id: "s2", participantId: "g2" },
+    ]);
+    const names = await tableNames(db);
+    expect(names).not.toContain("Host");
+    expect(names).not.toContain("Guest");
+    const { results: fks } = await db.prepare(`PRAGMA foreign_key_list("slot")`).all<{ table: string }>();
+    expect(fks.map((r) => r.table).sort()).toEqual(["event", "option", "participant"]);
+
+    // 同じイベントに同じ browserId の参加者は作れず、role は host か guest だけ
+    await expect(
+      db.prepare(`INSERT INTO "participant" VALUES ('x', 'p', 'guest', NULL, NULL, 'both', 'now')`).run(),
+    ).rejects.toThrow(/UNIQUE/);
+    await expect(
+      db.prepare(`INSERT INTO "participant" VALUES ('y', 'p', 'owner', NULL, NULL, 'other', 'now')`).run(),
+    ).rejects.toThrow(/CHECK/);
+    // 参加者を消すと、その Slot も消える
+    await db.prepare(`DELETE FROM "participant" WHERE id = 'g2'`).run();
+    expect(await db.prepare(`SELECT id FROM "slot"`).all()).toMatchObject({ results: [{ id: "s1" }] });
   });
 });

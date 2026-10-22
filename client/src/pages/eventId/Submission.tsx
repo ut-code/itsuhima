@@ -155,7 +155,6 @@ export default function SubmissionPage() {
       const payload = {
         name: guestName,
         comment: comment.trim() || null,
-        projectId: projectId || "",
         slots: slots.map((slot) => ({
           startAt: slot.start.toISOString(),
           endAt: slot.end.toISOString(),

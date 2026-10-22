@@ -57,8 +57,8 @@ const router = new Hono<AppEnv>()
     async (c) => {
       const { projectId } = c.req.valid("param");
       const { name, comment, slots } = c.req.valid("json");
-      await submitAvailability(c.get("db"), c.get("browserId"), projectId, { name, comment, slots });
-      return c.json("日程が提出されました。", 201);
+      const guest = await submitAvailability(c.get("db"), c.get("browserId"), projectId, { name, comment, slots });
+      return c.json({ guest }, 201);
     },
   )
 
@@ -71,7 +71,7 @@ const router = new Hono<AppEnv>()
       const { projectId } = c.req.valid("param");
       const { name, comment, slots } = c.req.valid("json");
       const guest = await updateMyAvailability(c.get("db"), c.get("browserId"), projectId, { name, comment, slots });
-      return c.json({ message: "日程が更新されました。", guest }, 200);
+      return c.json({ guest }, 200);
     },
   );
 

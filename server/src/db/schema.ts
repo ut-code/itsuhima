@@ -1,5 +1,5 @@
-import { relations } from "drizzle-orm";
-import { index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { relations, sql } from "drizzle-orm";
+import { check, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const uuid = () => crypto.randomUUID();
 
@@ -35,7 +35,7 @@ export const allowedRange = sqliteTable(
   (t) => [index("allowedRange_eventId_idx").on(t.eventId)],
 );
 
-/** あるゲストが参加可能な時間帯の 1 つ。日を跨がない。 */
+/** ある参加者が参加可能な時間帯の 1 つ。日を跨がない。 */
 export const slot = sqliteTable(
   "slot",
   {
@@ -47,53 +47,43 @@ export const slot = sqliteTable(
     eventId: text()
       .notNull()
       .references(() => project.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    // Postgres では RESTRICT だったが、SQLite の RESTRICT は即時に検査されるため、Project の削除からの CASCADE で
-    // Guest と Slot を同時に消すと失敗しうる。文の終わりに検査する NO ACTION (既定) にする
-    guestId: text()
+    participantId: text()
       .notNull()
-      .references(() => guest.id, { onUpdate: "cascade" }),
+      .references(() => participant.id, { onDelete: "cascade", onUpdate: "cascade" }),
     optionId: text()
       .notNull()
       .references(() => participationOption.id, { onUpdate: "cascade" }),
   },
   (t) => [
     index("slot_eventId_startAt_idx").on(t.eventId, t.startAt),
-    index("slot_guestId_idx").on(t.guestId),
+    index("slot_participantId_idx").on(t.participantId),
     index("slot_optionId_idx").on(t.optionId),
   ],
 );
 
-/** 日程調整プロジェクトの作成者。 */
-export const host = sqliteTable(
-  "Host",
+/**
+ * イベントの参加者。ホスト (作成者) とゲストを role で区別する。
+ * name が null なら、まだ回答していない (イベントを作っただけのホスト)。
+ */
+export const participant = sqliteTable(
+  "participant",
   {
     id: text().primaryKey().$defaultFn(uuid),
-    browserId: text().notNull(),
-    projectId: text()
+    eventId: text()
       .notNull()
       .references(() => project.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  },
-  (t) => [
-    uniqueIndex("Host_browserId_projectId_key").on(t.browserId, t.projectId),
-    index("Host_projectId_idx").on(t.projectId),
-  ],
-);
-
-/** 日程調整プロジェクトの参加者。 */
-export const guest = sqliteTable(
-  "Guest",
-  {
-    id: text().primaryKey().$defaultFn(uuid),
-    name: text().notNull(),
+    role: text({ enum: ["host", "guest"] }).notNull(),
+    name: text(),
     comment: text(),
     browserId: text().notNull(),
-    projectId: text()
+    updatedAt: text()
       .notNull()
-      .references(() => project.id, { onDelete: "cascade", onUpdate: "cascade" }),
+      .$defaultFn(() => new Date().toISOString())
+      .$onUpdateFn(() => new Date().toISOString()),
   },
   (t) => [
-    uniqueIndex("Guest_browserId_projectId_key").on(t.browserId, t.projectId),
-    index("Guest_projectId_idx").on(t.projectId),
+    uniqueIndex("participant_eventId_browserId_key").on(t.eventId, t.browserId),
+    check("participant_role_check", sql`${t.role} IN ('host', 'guest')`),
   ],
 );
 
@@ -114,8 +104,7 @@ export const participationOption = sqliteTable(
 export const projectRelations = relations(project, ({ many }) => ({
   allowedRanges: many(allowedRange),
   slots: many(slot),
-  hosts: many(host),
-  guests: many(guest),
+  participants: many(participant),
   participationOptions: many(participationOption),
 }));
 
@@ -125,19 +114,15 @@ export const allowedRangeRelations = relations(allowedRange, ({ one }) => ({
 
 export const slotRelations = relations(slot, ({ one }) => ({
   project: one(project, { fields: [slot.eventId], references: [project.id] }),
-  guest: one(guest, { fields: [slot.guestId], references: [guest.id] }),
+  participant: one(participant, { fields: [slot.participantId], references: [participant.id] }),
   participationOption: one(participationOption, {
     fields: [slot.optionId],
     references: [participationOption.id],
   }),
 }));
 
-export const hostRelations = relations(host, ({ one }) => ({
-  project: one(project, { fields: [host.projectId], references: [project.id] }),
-}));
-
-export const guestRelations = relations(guest, ({ one, many }) => ({
-  project: one(project, { fields: [guest.projectId], references: [project.id] }),
+export const participantRelations = relations(participant, ({ one, many }) => ({
+  project: one(project, { fields: [participant.eventId], references: [project.id] }),
   slots: many(slot),
 }));
 

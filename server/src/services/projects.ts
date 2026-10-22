@@ -1,4 +1,4 @@
-import { and, eq, inArray, notInArray, or } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, notInArray } from "drizzle-orm";
 import type { z } from "zod";
 import type { editReqSchema, projectReqSchema, submitReqSchema } from "../../../common/validators.js";
 import { type Db, insertMany, runBatch } from "../db/index.js";
@@ -9,7 +9,7 @@ import { validateSlots } from "./slots.js";
 
 export type CreateProjectInput = z.infer<typeof projectReqSchema>;
 export type UpdateProjectInput = z.infer<typeof editReqSchema>;
-export type SubmissionInput = Omit<z.infer<typeof submitReqSchema>, "projectId">;
+export type SubmissionInput = z.infer<typeof submitReqSchema>;
 
 /** DB には日時を ISO 8601 の文字列で入れる */
 function toIso(value: string | Date): string {
@@ -32,7 +32,7 @@ export async function createProject(db: Db, browserId: string, input: CreateProj
       schema.allowedRange,
       input.allowedRanges.map((range) => ({ ...range, eventId: project.id })),
     ),
-    db.insert(schema.host).values({ browserId, projectId: project.id }),
+    db.insert(schema.participant).values({ eventId: project.id, role: "host", browserId }),
     ...insertMany(
       db,
       schema.participationOption,
@@ -51,19 +51,17 @@ export async function createProject(db: Db, browserId: string, input: CreateProj
 /** ホストまたはゲストとして関わるプロジェクト */
 export async function listMyProjects(db: Db, browserId: string) {
   const projects = await db.query.project.findMany({
-    where: or(
-      inArray(
-        schema.project.id,
-        db.select({ id: schema.host.projectId }).from(schema.host).where(eq(schema.host.browserId, browserId)),
-      ),
-      inArray(
-        schema.project.id,
-        db.select({ id: schema.guest.projectId }).from(schema.guest).where(eq(schema.guest.browserId, browserId)),
-      ),
+    where: inArray(
+      schema.project.id,
+      db
+        .select({ id: schema.participant.eventId })
+        .from(schema.participant)
+        .where(eq(schema.participant.browserId, browserId)),
     ),
     with: {
-      hosts: {
-        columns: { browserId: true },
+      participants: {
+        where: eq(schema.participant.browserId, browserId),
+        columns: { role: true },
       },
     },
   });
@@ -75,7 +73,7 @@ export async function listMyProjects(db: Db, browserId: string) {
     startDate: p.startDate,
     endDate: p.endDate,
     timezone: p.timezone,
-    isHost: p.hosts.some((host) => host.browserId === browserId),
+    isHost: p.participants.some((me) => me.role === "host"),
   }));
 }
 
@@ -86,12 +84,11 @@ export async function getProject(db: Db, browserId: string, projectId: string) {
     with: {
       allowedRanges: true,
       participationOptions: true,
-      guests: {
+      participants: {
         with: {
           slots: true,
         },
       },
-      hosts: true,
     },
   });
 
@@ -99,7 +96,7 @@ export async function getProject(db: Db, browserId: string, projectId: string) {
     throw new ServiceError("project_not_found", "イベントが見つかりません。");
   }
 
-  const guest = project.guests.find((g) => g.browserId === browserId);
+  const me = project.participants.find((p) => p.browserId === browserId);
 
   return {
     id: project.id,
@@ -110,25 +107,49 @@ export async function getProject(db: Db, browserId: string, projectId: string) {
     timezone: project.timezone,
     allowedRanges: project.allowedRanges,
     participationOptions: project.participationOptions,
-    hosts: project.hosts.map(omitBrowserId),
-    guests: project.guests.map(omitBrowserId),
-    isHost: project.hosts.some((h) => h.browserId === browserId),
-    meAsGuest: guest ? omitBrowserId(guest) : null,
+    hosts: project.participants.filter((p) => p.role === "host").map((p) => ({ id: p.id, eventId: p.eventId })),
+    guests: project.participants.filter(hasAnswered).map(toGuest),
+    isHost: me?.role === "host",
+    meAsGuest: me && hasAnswered(me) ? toGuest(me) : null,
   };
 }
 
-function omitBrowserId<T extends { browserId: string }>(entity: T): Omit<T, "browserId"> {
-  const { browserId: _, ...rest } = entity;
-  return rest;
+type ParticipantWithSlots = typeof schema.participant.$inferSelect & { slots: (typeof schema.slot.$inferSelect)[] };
+
+/** 回答したか。name が null なら、まだ回答していない (イベントを作っただけのホスト) */
+function hasAnswered<T extends { name: string | null }>(participant: T): participant is T & { name: string } {
+  return participant.name !== null;
+}
+
+/** API では、回答した参加者を guest として返す。Slot の participantId は guestId として返す */
+function toGuest(participant: ParticipantWithSlots & { name: string }) {
+  return {
+    id: participant.id,
+    name: participant.name,
+    comment: participant.comment,
+    eventId: participant.eventId,
+    slots: participant.slots.map(({ participantId, ...slot }) => ({ ...slot, guestId: participantId })),
+  };
+}
+
+async function isHost(db: Db, browserId: string, projectId: string) {
+  const host = await db.query.participant.findFirst({
+    where: and(
+      eq(schema.participant.eventId, projectId),
+      eq(schema.participant.browserId, browserId),
+      eq(schema.participant.role, "host"),
+    ),
+    columns: { id: true },
+  });
+  return host !== undefined;
 }
 
 export async function updateProject(db: Db, browserId: string, projectId: string, input: UpdateProjectInput) {
   const [host, existingGuest] = await Promise.all([
-    db.query.host.findFirst({
-      where: and(eq(schema.host.browserId, browserId), eq(schema.host.projectId, projectId)),
-    }),
-    db.query.guest.findFirst({
-      where: eq(schema.guest.projectId, projectId),
+    isHost(db, browserId, projectId),
+    db.query.participant.findFirst({
+      where: and(eq(schema.participant.eventId, projectId), isNotNull(schema.participant.name)),
+      columns: { id: true },
     }),
   ]);
 
@@ -212,11 +233,7 @@ export async function updateProject(db: Db, browserId: string, projectId: string
 }
 
 export async function deleteProject(db: Db, browserId: string, projectId: string) {
-  const host = await db.query.host.findFirst({
-    where: and(eq(schema.host.browserId, browserId), eq(schema.host.projectId, projectId)),
-  });
-
-  if (!host) {
+  if (!(await isHost(db, browserId, projectId))) {
     throw new ServiceError("not_host", "削除権限がありません。");
   }
 
@@ -245,66 +262,69 @@ async function findProjectForSlots(db: Db, projectId: string) {
   };
 }
 
-/** 自分の回答。呼び出し元がそのまま返せるよう、browserId は含めない */
-function findGuest(db: Db, browserId: string, projectId: string) {
-  return db.query.guest.findFirst({
-    where: and(eq(schema.guest.browserId, browserId), eq(schema.guest.projectId, projectId)),
-    columns: { browserId: false },
+function findMyParticipant(db: Db, browserId: string, projectId: string) {
+  return db.query.participant.findFirst({
+    where: and(eq(schema.participant.browserId, browserId), eq(schema.participant.eventId, projectId)),
     with: { slots: true },
   });
 }
 
-function slotRows(input: SubmissionInput, projectId: string, guestId: string) {
+/** 自分の回答。回答していなければ null */
+async function findMyGuest(db: Db, browserId: string, projectId: string) {
+  const me = await findMyParticipant(db, browserId, projectId);
+  return me && hasAnswered(me) ? toGuest(me) : null;
+}
+
+function slotRows(input: SubmissionInput, projectId: string, participantId: string) {
   return input.slots.map((slot) => ({
     startAt: toIso(slot.startAt),
     endAt: toIso(slot.endAt),
     eventId: projectId,
-    guestId,
+    participantId,
     optionId: slot.optionId,
   }));
 }
 
 export async function submitAvailability(db: Db, browserId: string, projectId: string, input: SubmissionInput) {
-  const existingGuest = await findGuest(db, browserId, projectId);
-  if (existingGuest) {
+  // ホストはイベントを作った時点で participant があり、名前を入れると回答したことになる
+  const me = await findMyParticipant(db, browserId, projectId);
+  if (me && hasAnswered(me)) {
     throw new ServiceError("already_submitted", "提出済みです。");
   }
 
   validateSlots(await findProjectForSlots(db, projectId), input.slots);
 
-  const guestId = crypto.randomUUID();
+  const answer = { name: input.name, comment: input.comment?.trim() || null };
+  const participantId = me?.id ?? crypto.randomUUID();
   await runBatch(db, [
-    db.insert(schema.guest).values({
-      id: guestId,
-      name: input.name,
-      comment: input.comment?.trim() || null,
-      browserId,
-      projectId,
-    }),
-    ...insertMany(db, schema.slot, slotRows(input, projectId, guestId)),
+    me
+      ? db.update(schema.participant).set(answer).where(eq(schema.participant.id, me.id))
+      : db
+          .insert(schema.participant)
+          .values({ id: participantId, eventId: projectId, role: "guest", browserId, ...answer }),
+    ...insertMany(db, schema.slot, slotRows(input, projectId, participantId)),
   ]);
 
-  return findGuest(db, browserId, projectId);
+  return findMyGuest(db, browserId, projectId);
 }
 
 export async function updateMyAvailability(db: Db, browserId: string, projectId: string, input: SubmissionInput) {
-  const existingGuest = await findGuest(db, browserId, projectId);
+  const myGuest = await findMyGuest(db, browserId, projectId);
 
-  if (!existingGuest) {
+  if (!myGuest) {
     throw new ServiceError("submission_not_found", "既存の日程が見つかりません。");
   }
 
   validateSlots(await findProjectForSlots(db, projectId), input.slots);
 
-  // Prisma 版では Slot の削除と回答の更新が別のクエリだった。batch で 1 つのトランザクションにまとめる
   await runBatch(db, [
-    db.delete(schema.slot).where(eq(schema.slot.guestId, existingGuest.id)),
-    ...insertMany(db, schema.slot, slotRows(input, projectId, existingGuest.id)),
+    db.delete(schema.slot).where(eq(schema.slot.participantId, myGuest.id)),
+    ...insertMany(db, schema.slot, slotRows(input, projectId, myGuest.id)),
     db
-      .update(schema.guest)
+      .update(schema.participant)
       .set({ name: input.name, comment: input.comment?.trim() || null })
-      .where(eq(schema.guest.id, existingGuest.id)),
+      .where(eq(schema.participant.id, myGuest.id)),
   ]);
 
-  return findGuest(db, browserId, projectId);
+  return findMyGuest(db, browserId, projectId);
 }

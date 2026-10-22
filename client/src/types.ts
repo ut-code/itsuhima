@@ -28,13 +28,13 @@ type AllowedRange = {
 
 type Host = {
   id: string;
-  projectId: string;
+  eventId: string;
 };
 
 type Guest = {
   id: string;
   name: string;
-  projectId: string;
+  eventId: string;
   comment?: string;
   slots: Slot[];
 };
@@ -83,7 +83,7 @@ export type ISOStringProject = {
   guests: {
     id: string;
     name: string;
-    projectId: string;
+    eventId: string;
     comment: string | null;
     slots: {
       id: string;
@@ -100,7 +100,7 @@ export type ISOStringProject = {
   meAsGuest: {
     id: string;
     name: string;
-    projectId: string;
+    eventId: string;
     comment: string | null;
     slots: {
       id: string;

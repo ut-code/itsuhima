@@ -20,7 +20,6 @@ export const participationOptionCreateSchema = z.object({
 
 export const submitReqSchema = z.object({
   name: z.string().min(1, "名前を入力してください").max(50, "名前は50文字以内で入力してください"),
-  projectId: z.string().length(21),
   comment: z.string().max(500, "コメントは500文字以内で入力してください").nullable().optional(),
   slots: z.array(
     z.object({

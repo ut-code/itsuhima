@@ -63,10 +63,9 @@ export async function createProject(host: Browser, overrides: Record<string, unk
 /** 2026/11/02 (JST) 10:00〜12:00 */
 export const slotOnNov2 = { startAt: "2026-11-02T01:00:00.000Z", endAt: "2026-11-02T03:00:00.000Z" };
 
-export function submissionInput(projectId: string, optionId: string, overrides: Record<string, unknown> = {}) {
+export function submissionInput(optionId: string, overrides: Record<string, unknown> = {}) {
   return {
     name: "ゲスト",
-    projectId,
     comment: "コメント",
     slots: [{ ...slotOnNov2, optionId }],
     ...overrides,

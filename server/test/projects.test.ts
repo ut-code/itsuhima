@@ -11,7 +11,7 @@ async function getProject(browser: Browser, projectId: string) {
 }
 
 async function submit(guest: Browser, projectId: string, optionId: string, overrides: Record<string, unknown> = {}) {
-  const res = await guest.post(`/projects/${projectId}/submissions`, submissionInput(projectId, optionId, overrides));
+  const res = await guest.post(`/projects/${projectId}/submissions`, submissionInput(optionId, overrides));
   expect(res.status).toBe(201);
 }
 
@@ -43,7 +43,7 @@ describe("POST /projects", () => {
         },
       ],
       participationOptions: [{ ...input.participationOptions[0], eventId: body.id }],
-      hosts: [{ id: expect.any(String), projectId: body.id }],
+      hosts: [{ id: expect.any(String), eventId: body.id }],
       guests: [],
       isHost: true,
       meAsGuest: null,
@@ -197,7 +197,7 @@ describe("GET /projects/:projectId", () => {
       id: expect.any(String),
       name: "ゲスト",
       comment: "よろしく",
-      projectId: id,
+      eventId: id,
       slots: [
         {
           id: expect.any(String),
@@ -437,11 +437,12 @@ describe("POST /projects/:projectId/submissions", () => {
     const { id, optionId } = await createProject(createBrowser());
     const guest = createBrowser();
 
-    const res = await guest.post(`/projects/${id}/submissions`, submissionInput(id, optionId));
+    const res = await guest.post(`/projects/${id}/submissions`, submissionInput(optionId));
 
     expect(res.status).toBe(201);
-    expect(await res.json()).toBe("日程が提出されました。");
-    expect((await getProject(guest, id)).meAsGuest).toMatchObject({ name: "ゲスト", comment: "コメント" });
+    const { meAsGuest } = await getProject(guest, id);
+    expect(meAsGuest).toMatchObject({ name: "ゲスト", comment: "コメント" });
+    expect(await res.json()).toEqual({ guest: meAsGuest });
   });
 
   test("空白だけのコメントは null になる", async () => {
@@ -458,7 +459,7 @@ describe("POST /projects/:projectId/submissions", () => {
     const guest = createBrowser();
     await submit(guest, id, optionId);
 
-    const res = await guest.post(`/projects/${id}/submissions`, submissionInput(id, optionId));
+    const res = await guest.post(`/projects/${id}/submissions`, submissionInput(optionId));
 
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ message: "提出済みです。" });
@@ -473,7 +474,8 @@ describe("POST /projects/:projectId/submissions", () => {
     const project = await getProject(host, id);
     expect(project.isHost).toBe(true);
     expect(project.meAsGuest).not.toBeNull();
-    expect(project.hosts).toEqual([{ id: expect.any(String), projectId: id }]);
+    // ホストとゲストを別々の人として数えない
+    expect(project.hosts).toEqual([{ id: project.meAsGuest.id, eventId: id }]);
     expect(project.guests).toEqual([project.meAsGuest]);
   });
 
@@ -490,7 +492,7 @@ describe("POST /projects/:projectId/submissions", () => {
   test("名前が空なら 400", async () => {
     const { id, optionId } = await createProject(createBrowser());
 
-    const res = await createBrowser().post(`/projects/${id}/submissions`, submissionInput(id, optionId, { name: "" }));
+    const res = await createBrowser().post(`/projects/${id}/submissions`, submissionInput(optionId, { name: "" }));
 
     expect(res.status).toBe(400);
   });
@@ -498,7 +500,7 @@ describe("POST /projects/:projectId/submissions", () => {
   test("存在しないイベントに回答すると 404", async () => {
     const res = await createBrowser().post(
       `/projects/${missingProjectId}/submissions`,
-      submissionInput(missingProjectId, crypto.randomUUID(), { slots: [] }),
+      submissionInput(crypto.randomUUID(), { slots: [] }),
     );
 
     expect(res.status).toBe(404);
@@ -513,7 +515,7 @@ describe("日程の提出・更新での Slot の検証", () => {
 
     const res = await createBrowser().post(
       `/projects/${id}/submissions`,
-      submissionInput(id, optionId, {
+      submissionInput(optionId, {
         // 11/01 10:00〜12:00
         slots: [{ startAt: "2026-11-01T01:00:00.000Z", endAt: "2026-11-01T03:00:00.000Z", optionId }],
       }),
@@ -527,7 +529,7 @@ describe("日程の提出・更新での Slot の検証", () => {
     const { id } = await createProject(createBrowser());
     const other = await createProject(createBrowser());
 
-    const res = await createBrowser().post(`/projects/${id}/submissions`, submissionInput(id, other.optionId));
+    const res = await createBrowser().post(`/projects/${id}/submissions`, submissionInput(other.optionId));
 
     expect(res.status).toBe(400);
   });
@@ -539,7 +541,7 @@ describe("日程の提出・更新での Slot の検証", () => {
 
     const res = await guest.put(
       `/projects/${id}/submissions/mine`,
-      submissionInput(id, optionId, {
+      submissionInput(optionId, {
         name: "新しい名前",
         // 11/01 10:00〜12:00
         slots: [{ startAt: "2026-11-01T01:00:00.000Z", endAt: "2026-11-01T03:00:00.000Z", optionId }],
@@ -559,7 +561,7 @@ describe("PUT /projects/:projectId/submissions/mine", () => {
   test("回答していなければ 404", async () => {
     const { id, optionId } = await createProject(createBrowser());
 
-    const res = await createBrowser().put(`/projects/${id}/submissions/mine`, submissionInput(id, optionId));
+    const res = await createBrowser().put(`/projects/${id}/submissions/mine`, submissionInput(optionId));
 
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ message: "既存の日程が見つかりません。" });
@@ -577,17 +579,16 @@ describe("PUT /projects/:projectId/submissions/mine", () => {
 
     const res = await guest.put(
       `/projects/${id}/submissions/mine`,
-      submissionInput(id, optionId, { name: "新しい名前", comment: "", slots: [newSlot] }),
+      submissionInput(optionId, { name: "新しい名前", comment: "", slots: [newSlot] }),
     );
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
-      message: "日程が更新されました。",
       guest: {
         id: expect.any(String),
         name: "新しい名前",
         comment: null,
-        projectId: id,
+        eventId: id,
         slots: [
           {
             id: expect.any(String),
@@ -622,7 +623,7 @@ describe("PUT /projects/:projectId/submissions/mine", () => {
       }),
     );
 
-    const res = await guest.put(`/projects/${id}/submissions/mine`, submissionInput(id, optionId, { slots }));
+    const res = await guest.put(`/projects/${id}/submissions/mine`, submissionInput(optionId, { slots }));
 
     expect(res.status).toBe(200);
     expect((await getProject(guest, id)).meAsGuest.slots).toHaveLength(45);
@@ -635,7 +636,7 @@ describe("PUT /projects/:projectId/submissions/mine", () => {
     await submit(guest, id, optionId);
     await submit(other, id, optionId, { name: "他の人" });
 
-    await guest.put(`/projects/${id}/submissions/mine`, submissionInput(id, optionId, { slots: [] }));
+    await guest.put(`/projects/${id}/submissions/mine`, submissionInput(optionId, { slots: [] }));
 
     const { meAsGuest } = await getProject(other, id);
     expect(meAsGuest).toMatchObject({ name: "他の人", slots: [expect.anything()] });
