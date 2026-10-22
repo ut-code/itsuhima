@@ -37,14 +37,14 @@ export function createBrowser() {
 export type Browser = ReturnType<typeof createBrowser>;
 
 /**
- * 2026/11/02〜11/04 (JST)、08:00〜23:00 のイベント。Web UI と同じく、日程は ISO 文字列 (UTC)、時間帯は "HH:mm" で送る。
+ * 2026/11/02〜11/04 (JST)、08:00〜23:00 のイベント。
  */
 export function projectInput(overrides: Record<string, unknown> = {}) {
   return {
     name: "テストイベント",
     description: "説明",
-    startDate: "2026-11-01T15:00:00.000Z",
-    endDate: "2026-11-04T14:59:59.999Z",
+    startDate: "2026-11-02",
+    endDate: "2026-11-04",
     allowedRanges: [{ startTime: "08:00", endTime: "23:00" }],
     participationOptions: [{ id: crypto.randomUUID(), label: "参加", color: "#0F82B1" }],
     ...overrides,

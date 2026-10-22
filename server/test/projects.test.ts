@@ -31,8 +31,9 @@ describe("POST /projects", () => {
       id: body.id,
       name: "テストイベント",
       description: "説明",
-      startDate: "2026-11-01T15:00:00.000Z",
-      endDate: "2026-11-04T14:59:59.999Z",
+      startDate: "2026-11-02",
+      endDate: "2026-11-04",
+      timezone: "Asia/Tokyo",
       allowedRanges: [
         {
           id: expect.any(String),
@@ -65,7 +66,7 @@ describe("POST /projects", () => {
   test("開始日が終了日より後なら 400", async () => {
     const res = await createBrowser().post(
       "/projects",
-      projectInput({ startDate: "2026-11-05T15:00:00.000Z", endDate: "2026-11-04T14:59:59.999Z" }),
+      projectInput({ startDate: "2026-11-06", endDate: "2026-11-04" }),
     );
 
     expect(res.status).toBe(400);
@@ -77,8 +78,8 @@ describe("POST /projects", () => {
     expect(res.status).toBe(400);
   });
 
-  test("日付が ISO 8601 の日時でなければ 400", async () => {
-    const res = await createBrowser().post("/projects", projectInput({ startDate: "2026-11-02" }));
+  test("日付が YYYY-MM-DD の形式でなければ 400", async () => {
+    const res = await createBrowser().post("/projects", projectInput({ startDate: "2026-11-01T15:00:00.000Z" }));
 
     expect(res.status).toBe(400);
   });
@@ -145,16 +146,18 @@ describe("GET /projects/mine", () => {
         id: hosted.id,
         name: "主催",
         description: "説明",
-        startDate: "2026-11-01T15:00:00.000Z",
-        endDate: "2026-11-04T14:59:59.999Z",
+        startDate: "2026-11-02",
+        endDate: "2026-11-04",
+        timezone: "Asia/Tokyo",
         isHost: true,
       },
       {
         id: joined.id,
         name: "参加",
         description: "説明",
-        startDate: "2026-11-01T15:00:00.000Z",
-        endDate: "2026-11-04T14:59:59.999Z",
+        startDate: "2026-11-02",
+        endDate: "2026-11-04",
+        timezone: "Asia/Tokyo",
         isHost: false,
       },
     ]);
@@ -273,8 +276,8 @@ describe("PATCH /projects/:projectId", () => {
     const res = await host.patch(`/projects/${id}`, {
       name: "新しい名前",
       description: "  新しい説明  ",
-      startDate: "2026-11-09T15:00:00.000Z",
-      endDate: "2026-11-10T14:59:59.999Z",
+      startDate: "2026-11-10",
+      endDate: "2026-11-10",
       allowedRanges: [{ startTime: "09:00", endTime: "18:00" }],
     });
 
@@ -285,8 +288,8 @@ describe("PATCH /projects/:projectId", () => {
       id,
       name: "新しい名前",
       description: "新しい説明",
-      startDate: "2026-11-09T15:00:00.000Z",
-      endDate: "2026-11-10T14:59:59.999Z",
+      startDate: "2026-11-10",
+      endDate: "2026-11-10",
       allowedRanges: [
         {
           id: expect.any(String),
@@ -306,8 +309,8 @@ describe("PATCH /projects/:projectId", () => {
 
     const res = await host.patch(`/projects/${id}`, {
       name: "新しい名前",
-      startDate: "2026-11-09T15:00:00.000Z",
-      endDate: "2026-11-10T14:59:59.999Z",
+      startDate: "2026-11-10",
+      endDate: "2026-11-10",
       allowedRanges: [{ startTime: "09:00", endTime: "18:00" }],
     });
 
@@ -315,8 +318,8 @@ describe("PATCH /projects/:projectId", () => {
     const project = await getProject(host, id);
     expect(project).toMatchObject({
       name: "新しい名前",
-      startDate: "2026-11-01T15:00:00.000Z",
-      endDate: "2026-11-04T14:59:59.999Z",
+      startDate: "2026-11-02",
+      endDate: "2026-11-04",
       allowedRanges: [{ startTime: "08:00", endTime: "23:00" }],
     });
   });
@@ -331,8 +334,8 @@ describe("PATCH /projects/:projectId", () => {
     expect(await getProject(host, id)).toMatchObject({
       name: "新しい名前",
       description: "説明",
-      startDate: "2026-11-01T15:00:00.000Z",
-      endDate: "2026-11-04T14:59:59.999Z",
+      startDate: "2026-11-02",
+      endDate: "2026-11-04",
       allowedRanges: [{ startTime: "08:00", endTime: "23:00" }],
       participationOptions: [{ label: "参加" }],
     });

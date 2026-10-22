@@ -17,7 +17,7 @@ import {
 import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
 import { DEFAULT_PARTICIPATION_OPTION, generateDistinctColor } from "../../../common/colors";
-import { editFormSchema, projectFormSchema, type projectReqSchema } from "../../../common/validators";
+import { editReqSchema, projectReqSchema } from "../../../common/validators";
 import type { AppType } from "../../../server/src/main";
 import Header from "../components/Header";
 import { EXTERNAL_LINKS } from "../constants/links";
@@ -32,7 +32,7 @@ export default function ProjectPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
 
-  const formSchema = eventId ? editFormSchema : projectFormSchema;
+  const formSchema = eventId ? editReqSchema : projectReqSchema;
   type FormSchemaType = z.infer<typeof formSchema>;
 
   const [project, setProject] = useState<Project | null>(null);
@@ -154,8 +154,8 @@ export default function ProjectPage() {
     reset({
       name: project.name,
       description: project.description,
-      startDate: project.startDate.tz().format("YYYY-MM-DD"),
-      endDate: project.endDate.tz().format("YYYY-MM-DD"),
+      startDate: project.startDate.format("YYYY-MM-DD"),
+      endDate: project.endDate.format("YYYY-MM-DD"),
       allowedRanges: [
         // 時間帯が無いイベントは終日とみなす
         range ? { startTime: range.startTime, endTime: range.endTime } : { startTime: "00:00", endTime: "24:00" },
@@ -172,14 +172,11 @@ export default function ProjectPage() {
   const onSubmit = async (data: FormSchemaType) => {
     setSubmitLoading(true);
 
-    const startDtISO = dayjs.tz(data.startDate).startOf("day").toISOString();
-    const endDtISO = dayjs.tz(data.endDate).endOf("day").toISOString();
-
     const eventData = {
       name: data.name ?? "",
       description: data.description ?? "",
-      startDate: startDtISO,
-      endDate: endDtISO,
+      startDate: data.startDate ?? "",
+      endDate: data.endDate ?? "",
       allowedRanges: data.allowedRanges ?? [],
       participationOptions: (data.participationOptions ?? []).map((opt) => ({
         id: opt.id,

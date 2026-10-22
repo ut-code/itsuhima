@@ -5,8 +5,8 @@ import { validateSlots } from "../src/services/slots.js";
 // 2026/11/02〜11/04 (JST)、08:00〜23:00 のイベント。時刻はコメントに JST で書く
 const project = {
   timezone: "Asia/Tokyo",
-  startDate: new Date("2026-11-01T15:00:00.000Z"),
-  endDate: new Date("2026-11-04T14:59:59.999Z"),
+  startDate: "2026-11-02",
+  endDate: "2026-11-04",
   allowedRanges: [{ startTime: "08:00", endTime: "23:00" }],
   participationOptions: [{ id: "option" }],
 };

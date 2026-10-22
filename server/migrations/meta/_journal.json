@@ -22,6 +22,13 @@
       "when": 1792693843461,
       "tag": "0002_allowed_range_time_of_day",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792696463507,
+      "tag": "0003_project_dates",
+      "breakpoints": true
     }
   ]
 }

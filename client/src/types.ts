@@ -42,8 +42,12 @@ export type Project = {
   id: string;
   name: string;
   description: string;
+  /** その日の 0:00 (イベントのタイムゾーン) */
   startDate: Dayjs;
+  /** その日の 0:00 (イベントのタイムゾーン)。この日を含む */
   endDate: Dayjs;
+  /** IANA のタイムゾーン名 */
+  timezone: string;
   allowedRanges: AllowedRange[];
   participationOptions: ParticipationOption[];
   hosts: Host[];
@@ -57,8 +61,11 @@ export type ISOStringProject = {
   id: string;
   name: string;
   description: string;
+  /** "YYYY-MM-DD" */
   startDate: string;
+  /** "YYYY-MM-DD" */
   endDate: string;
+  timezone: string;
   allowedRanges: {
     id: string;
     projectId: string;
@@ -103,5 +110,8 @@ export type ISOStringProject = {
   } | null;
 };
 
-export type BriefProject = Pick<Project, "id" | "name" | "startDate" | "endDate" | "isHost">;
-export type ISOStringBriefProject = Pick<ISOStringProject, "id" | "name" | "startDate" | "endDate" | "isHost">;
+export type BriefProject = Pick<Project, "id" | "name" | "startDate" | "endDate" | "timezone" | "isHost">;
+export type ISOStringBriefProject = Pick<
+  ISOStringProject,
+  "id" | "name" | "startDate" | "endDate" | "timezone" | "isHost"
+>;

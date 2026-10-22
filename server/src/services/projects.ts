@@ -21,8 +21,8 @@ export async function createProject(db: Db, browserId: string, input: CreateProj
     id: nanoid(),
     name: input.name,
     description: input.description.trim() || null,
-    startDate: toIso(input.startDate),
-    endDate: toIso(input.endDate),
+    startDate: input.startDate,
+    endDate: input.endDate,
   };
 
   await runBatch(db, [
@@ -74,6 +74,7 @@ export async function listMyProjects(db: Db, browserId: string) {
     description: p.description ?? "",
     startDate: p.startDate,
     endDate: p.endDate,
+    timezone: p.timezone,
     isHost: p.hosts.some((host) => host.browserId === browserId),
   }));
 }
@@ -106,6 +107,7 @@ export async function getProject(db: Db, browserId: string, projectId: string) {
     description: project.description ?? "",
     startDate: project.startDate,
     endDate: project.endDate,
+    timezone: project.timezone,
     allowedRanges: project.allowedRanges,
     participationOptions: project.participationOptions,
     hosts: project.hosts.map(omitBrowserId),
@@ -182,8 +184,8 @@ export async function updateProject(db: Db, browserId: string, projectId: string
   const projectFields = {
     name: input.name,
     description: input.description === undefined ? undefined : input.description.trim() || null,
-    startDate: existingGuest || !input.startDate ? undefined : toIso(input.startDate),
-    endDate: existingGuest || !input.endDate ? undefined : toIso(input.endDate),
+    startDate: existingGuest ? undefined : input.startDate,
+    endDate: existingGuest ? undefined : input.endDate,
   };
   // Drizzle は undefined の列を更新しないが、更新する列が 1 つも無いとエラーにする
   if (Object.values(projectFields).some((value) => value !== undefined)) {
@@ -236,8 +238,8 @@ async function findProjectForSlots(db: Db, projectId: string) {
   }
   return {
     timezone: project.timezone,
-    startDate: new Date(project.startDate),
-    endDate: new Date(project.endDate),
+    startDate: project.startDate,
+    endDate: project.endDate,
     allowedRanges: project.allowedRanges,
     participationOptions: project.participationOptions,
   };

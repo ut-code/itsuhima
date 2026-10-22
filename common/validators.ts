@@ -44,56 +44,40 @@ const isQuarterHour = (time: string): boolean => {
 };
 
 /**
- * イベントの作成・編集の入力。フォームと API で、日付の形式だけが異なる。
- * フォームは "YYYY-MM-DD"、API は ISO 8601 の日時で受け取る (Web UI が変換して送る)。
- * 時間帯はどちらも、イベントのタイムゾーンでの "HH:mm" で受け取る。
+ * イベントの作成・編集の入力。Web UI のフォームと API で共通。
+ * 日程は "YYYY-MM-DD"、時間帯は "HH:mm" で、どちらもイベントのタイムゾーンの壁時計で解釈する。
  */
-function baseProjectSchema({ startDate, endDate }: { startDate: z.ZodString; endDate: z.ZodString }) {
-  return z.object({
-    name: z.string().min(1, "イベント名を入力してください").max(100, "イベント名は100文字以内で入力してください"),
-    description: z.string().max(1000, "説明は1000文字以内で入力してください"),
-    startDate,
-    // TODO: 新規作成時のみ、過去日付を制限する必要
-    // .refine(
-    //   (startDate) => {
-    //     const inputDate = new Date(startDate);
-    //     const today = new Date();
-    //     today.setHours(0, 0, 0, 0);
-    //     return inputDate >= today;
-    //   },
-    //   {
-    //     message: "過去の日付は指定できません",
-    //   },
-    // ),
-    endDate,
-    allowedRanges: z
-      .array(
-        z.object({
-          startTime,
-          endTime,
-        }),
-      )
-      .refine((ranges) => ranges.every(({ startTime, endTime }) => startTime < endTime), {
-        message: "開始時刻は終了時刻より前でなければなりません",
-      })
-      .refine(
-        (ranges) => ranges.every(({ startTime, endTime }) => isQuarterHour(startTime) && isQuarterHour(endTime)),
-        {
-          message: "開始時刻と終了時刻は15分単位で入力してください",
-        },
-      ),
-    participationOptions: z.array(participationOptionCreateSchema).min(1, "参加形態は最低1つ必要です"),
-  });
-}
-
-const baseProjectFormSchema = baseProjectSchema({
+const baseProjectSchema = z.object({
+  name: z.string().min(1, "イベント名を入力してください").max(100, "イベント名は100文字以内で入力してください"),
+  description: z.string().max(1000, "説明は1000文字以内で入力してください"),
   startDate: z.string().min(1, "開始日を入力してください").date("開始日の形式が正しくありません"),
+  // TODO: 新規作成時のみ、過去日付を制限する必要
+  // .refine(
+  //   (startDate) => {
+  //     const inputDate = new Date(startDate);
+  //     const today = new Date();
+  //     today.setHours(0, 0, 0, 0);
+  //     return inputDate >= today;
+  //   },
+  //   {
+  //     message: "過去の日付は指定できません",
+  //   },
+  // ),
   endDate: z.string().min(1, "終了日を入力してください").date("終了日の形式が正しくありません"),
-});
-
-const baseProjectReqSchema = baseProjectSchema({
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
+  allowedRanges: z
+    .array(
+      z.object({
+        startTime,
+        endTime,
+      }),
+    )
+    .refine((ranges) => ranges.every(({ startTime, endTime }) => startTime < endTime), {
+      message: "開始時刻は終了時刻より前でなければなりません",
+    })
+    .refine((ranges) => ranges.every(({ startTime, endTime }) => isQuarterHour(startTime) && isQuarterHour(endTime)), {
+      message: "開始時刻と終了時刻は15分単位で入力してください",
+    }),
+  participationOptions: z.array(participationOptionCreateSchema).min(1, "参加形態は最低1つ必要です"),
 });
 
 const isDateOrdered = (data: { startDate?: string; endDate?: string }) => {
@@ -108,10 +92,6 @@ const dateOrderError = {
   path: ["endDate"],
 };
 
-export const projectFormSchema = baseProjectFormSchema.refine(isDateOrdered, dateOrderError);
+export const projectReqSchema = baseProjectSchema.refine(isDateOrdered, dateOrderError);
 
-export const editFormSchema = baseProjectFormSchema.partial().refine(isDateOrdered, dateOrderError);
-
-export const projectReqSchema = baseProjectReqSchema.refine(isDateOrdered, dateOrderError);
-
-export const editReqSchema = baseProjectReqSchema.partial().refine(isDateOrdered, dateOrderError);
+export const editReqSchema = baseProjectSchema.partial().refine(isDateOrdered, dateOrderError);

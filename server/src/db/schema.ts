@@ -8,9 +8,9 @@ export const project = sqliteTable("Project", {
   id: text().primaryKey(),
   name: text().notNull(),
   description: text(),
-  /** 注: 日付部分のみ利用。時間は考慮しない。 */
+  /** イベントのタイムゾーンでの日付 ("YYYY-MM-DD") */
   startDate: text().notNull(),
-  /** 注: 日付部分のみ利用。時間は考慮しない。 */
+  /** イベントのタイムゾーンでの日付 ("YYYY-MM-DD")。この日を含む */
   endDate: text().notNull(),
   /** 日付と時間帯は、このタイムゾーンの壁時計で解釈する (IANA のタイムゾーン名) */
   timezone: text().notNull().default("Asia/Tokyo"),

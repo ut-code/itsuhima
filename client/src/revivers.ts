@@ -1,4 +1,4 @@
-// レスポンスの ISO 8601 文字列を Date に変換
+// レスポンスの日付・日時の文字列を Dayjs に変換
 
 import dayjs from "./lib/dayjs";
 import type { BriefProject, ISOStringBriefProject, ISOStringProject, Project } from "./types";
@@ -11,8 +11,8 @@ import type { BriefProject, ISOStringBriefProject, ISOStringProject, Project } f
 export function projectReviver(project: ISOStringProject): Project {
   return {
     ...project,
-    startDate: dayjs.utc(project.startDate).tz(),
-    endDate: dayjs.utc(project.endDate).tz(),
+    startDate: dayjs.tz(project.startDate),
+    endDate: dayjs.tz(project.endDate),
     allowedRanges: project.allowedRanges.map((range) => ({ ...range })),
     participationOptions: project.participationOptions.map((opt) => ({ ...opt })),
     hosts: project.hosts.map((host) => ({ ...host })),
@@ -47,7 +47,7 @@ export function projectReviver(project: ISOStringProject): Project {
 export function briefProjectReviver(project: ISOStringBriefProject): BriefProject {
   return {
     ...project,
-    startDate: dayjs.utc(project.startDate).tz(),
-    endDate: dayjs.utc(project.endDate).tz(),
+    startDate: dayjs.tz(project.startDate),
+    endDate: dayjs.tz(project.endDate),
   };
 }

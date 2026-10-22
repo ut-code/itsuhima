@@ -13,8 +13,10 @@ type SlotInput = { start: Date; end: Date; participationOptionId: string };
 type Project = {
   /** 日付と時間帯は、このタイムゾーンの壁時計で解釈する */
   timezone: string;
-  startDate: Date;
-  endDate: Date;
+  /** "YYYY-MM-DD" */
+  startDate: string;
+  /** "YYYY-MM-DD"。この日を含む */
+  endDate: string;
   /** 時刻は "HH:mm" */
   allowedRanges: { startTime: string; endTime: string }[];
   participationOptions: { id: string }[];
@@ -26,8 +28,6 @@ type Project = {
  */
 export function validateSlots(project: Project, slots: SlotInput[]): void {
   const toWallClock = wallClockIn(project.timezone);
-  const firstDate = toWallClock(project.startDate).date;
-  const lastDate = toWallClock(project.endDate).date;
   // 時間帯は現在 1 つだけ。無ければ終日とみなす
   const range = project.allowedRanges[0];
   const rangeStart = range ? parseMinutes(range.startTime) : 0;
@@ -51,8 +51,8 @@ export function validateSlots(project: Project, slots: SlotInput[]): void {
     if (lastInstantDate !== start.date) {
       throw invalid("日をまたいでいます。日付ごとに分けてください。");
     }
-    if (start.date < firstDate || start.date > lastDate) {
-      throw invalid(`イベントの日程の範囲 (${firstDate}〜${lastDate}) の外です。`);
+    if (start.date < project.startDate || start.date > project.endDate) {
+      throw invalid(`イベントの日程の範囲 (${project.startDate}〜${project.endDate}) の外です。`);
     }
     const endMinutes = end.date === start.date ? end.minutes : MINUTES_PER_DAY;
     if (start.minutes < rangeStart || endMinutes > rangeEnd) {

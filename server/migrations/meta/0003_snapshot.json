@@ -1,0 +1,400 @@
+{
+  "id": "ecc1a63a-5e09-404c-960b-be5e99a01778",
+  "prevId": "ea2b5fd9-7b9f-4c3e-825e-d63e2309f7cb",
+  "version": "6",
+  "dialect": "sqlite",
+  "tables": {
+    "AllowedRange": {
+      "name": "AllowedRange",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "startTime": {
+          "name": "startTime",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "endTime": {
+          "name": "endTime",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "AllowedRange_projectId_idx": {
+          "name": "AllowedRange_projectId_idx",
+          "columns": ["projectId"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "AllowedRange_projectId_Project_id_fk": {
+          "name": "AllowedRange_projectId_Project_id_fk",
+          "tableFrom": "AllowedRange",
+          "columnsFrom": ["projectId"],
+          "tableTo": "Project",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "Guest": {
+      "name": "Guest",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "comment": {
+          "name": "comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "browserId": {
+          "name": "browserId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "Guest_browserId_projectId_key": {
+          "name": "Guest_browserId_projectId_key",
+          "columns": ["browserId", "projectId"],
+          "isUnique": true
+        },
+        "Guest_projectId_idx": {
+          "name": "Guest_projectId_idx",
+          "columns": ["projectId"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "Guest_projectId_Project_id_fk": {
+          "name": "Guest_projectId_Project_id_fk",
+          "tableFrom": "Guest",
+          "columnsFrom": ["projectId"],
+          "tableTo": "Project",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "Host": {
+      "name": "Host",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "browserId": {
+          "name": "browserId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "Host_browserId_projectId_key": {
+          "name": "Host_browserId_projectId_key",
+          "columns": ["browserId", "projectId"],
+          "isUnique": true
+        },
+        "Host_projectId_idx": {
+          "name": "Host_projectId_idx",
+          "columns": ["projectId"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "Host_projectId_Project_id_fk": {
+          "name": "Host_projectId_Project_id_fk",
+          "tableFrom": "Host",
+          "columnsFrom": ["projectId"],
+          "tableTo": "Project",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ParticipationOption": {
+      "name": "ParticipationOption",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "color": {
+          "name": "color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ParticipationOption_projectId_label_key": {
+          "name": "ParticipationOption_projectId_label_key",
+          "columns": ["projectId", "label"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "ParticipationOption_projectId_Project_id_fk": {
+          "name": "ParticipationOption_projectId_Project_id_fk",
+          "tableFrom": "ParticipationOption",
+          "columnsFrom": ["projectId"],
+          "tableTo": "Project",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "Project": {
+      "name": "Project",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "startDate": {
+          "name": "startDate",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "endDate": {
+          "name": "endDate",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'Asia/Tokyo'"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "Slot": {
+      "name": "Slot",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "from": {
+          "name": "from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "to": {
+          "name": "to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "guestId": {
+          "name": "guestId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "participationOptionId": {
+          "name": "participationOptionId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "Slot_projectId_idx": {
+          "name": "Slot_projectId_idx",
+          "columns": ["projectId"],
+          "isUnique": false
+        },
+        "Slot_guestId_idx": {
+          "name": "Slot_guestId_idx",
+          "columns": ["guestId"],
+          "isUnique": false
+        },
+        "Slot_participationOptionId_idx": {
+          "name": "Slot_participationOptionId_idx",
+          "columns": ["participationOptionId"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "Slot_projectId_Project_id_fk": {
+          "name": "Slot_projectId_Project_id_fk",
+          "tableFrom": "Slot",
+          "columnsFrom": ["projectId"],
+          "tableTo": "Project",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "cascade"
+        },
+        "Slot_guestId_Guest_id_fk": {
+          "name": "Slot_guestId_Guest_id_fk",
+          "tableFrom": "Slot",
+          "columnsFrom": ["guestId"],
+          "tableTo": "Guest",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "no action"
+        },
+        "Slot_participationOptionId_ParticipationOption_id_fk": {
+          "name": "Slot_participationOptionId_ParticipationOption_id_fk",
+          "tableFrom": "Slot",
+          "columnsFrom": ["participationOptionId"],
+          "tableTo": "ParticipationOption",
+          "columnsTo": ["id"],
+          "onUpdate": "cascade",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
