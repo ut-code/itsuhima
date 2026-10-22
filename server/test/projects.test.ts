@@ -23,7 +23,7 @@ describe("POST /projects", () => {
     const res = await host.post("/projects", input);
 
     expect(res.status).toBe(201);
-    const body = await res.json();
+    const body = (await res.json()) as { id: string; name: string };
     expect(body).toEqual({ id: expect.stringMatching(/^[0-9A-Za-z]{21}$/), name: "テストイベント" });
 
     const project = await getProject(host, body.id);
@@ -218,7 +218,8 @@ describe("PUT /projects/:projectId", () => {
     });
 
     expect(res.status).toBe(200);
-    const { event } = await res.json();
+    // biome-ignore lint/suspicious/noExplicitAny: レスポンスの形そのものを検証するため
+    const { event } = (await res.json()) as any;
     expect(event).toMatchObject({
       id,
       name: "新しい名前",
