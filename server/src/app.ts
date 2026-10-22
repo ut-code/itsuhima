@@ -10,7 +10,7 @@ const serviceErrorStatus = {
   project_not_found: 404,
   submission_not_found: 404,
   not_host: 403,
-  already_submitted: 403, // 本来は 409 だが、現状の挙動に合わせている
+  already_submitted: 409,
   options_empty: 400,
   option_in_use: 400,
   invalid_slot: 400,

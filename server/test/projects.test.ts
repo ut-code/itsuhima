@@ -366,14 +366,14 @@ describe("POST /projects/:projectId/submissions", () => {
     expect((await getProject(guest, id)).meAsGuest.comment).toBeNull();
   });
 
-  test("同じブラウザから 2 回目は 403", async () => {
+  test("同じブラウザから 2 回目は 409", async () => {
     const { id, optionId } = await createProject(createBrowser());
     const guest = createBrowser();
     await submit(guest, id, optionId);
 
     const res = await guest.post(`/projects/${id}/submissions`, submissionInput(id, optionId));
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ message: "提出済みです。" });
   });
 
