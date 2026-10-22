@@ -12,6 +12,11 @@ export const project = sqliteTable("Project", {
   startDate: text().notNull(),
   /** 注: 日付部分のみ利用。時間は考慮しない。 */
   endDate: text().notNull(),
+  /** 日付と時間帯は、このタイムゾーンの壁時計で解釈する (IANA のタイムゾーン名) */
+  timezone: text().notNull().default("Asia/Tokyo"),
+  createdAt: text()
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
 });
 
 /** 日程調整プロジェクトにおいて入力が許可された時間帯。(注: 現在は 1 つの日程調整プロジェクトにつき 1 つのみ設定可能) */

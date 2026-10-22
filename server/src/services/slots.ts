@@ -1,29 +1,24 @@
 import { ServiceError } from "./errors.js";
 
-/**
- * イベントの日付と時刻は、このタイムゾーンの壁時計で解釈する (AllowedRange は日付部分を使わず、時刻だけを使う)。
- * M3 で event.timezone に置き換える。
- */
-const TIMEZONE = "Asia/Tokyo";
-
 const MINUTES_PER_DAY = 24 * 60;
 
-const wallClockFormat = new Intl.DateTimeFormat("en-CA", {
-  timeZone: TIMEZONE,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
-
-/** TIMEZONE での日付 ("YYYY-MM-DD") と、0 時からの経過分 */
-function toWallClock(value: Date): { date: string; minutes: number } {
-  const parts = Object.fromEntries(wallClockFormat.formatToParts(value).map((p) => [p.type, p.value]));
-  return {
-    date: `${parts.year}-${parts.month}-${parts.day}`,
-    minutes: Number(parts.hour) * 60 + Number(parts.minute),
+/** timezone での日付 ("YYYY-MM-DD") と、0 時からの経過分を求める関数を作る */
+function wallClockIn(timezone: string): (value: Date) => { date: string; minutes: number } {
+  const format = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  return (value) => {
+    const parts = Object.fromEntries(format.formatToParts(value).map((p) => [p.type, p.value]));
+    return {
+      date: `${parts.year}-${parts.month}-${parts.day}`,
+      minutes: Number(parts.hour) * 60 + Number(parts.minute),
+    };
   };
 }
 
@@ -31,7 +26,7 @@ function formatMinutes(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
-/** 秒以下が 0 で、分が 15 の倍数か。TIMEZONE のオフセットは 15 分の倍数なので UTC で判定してよい。 */
+/** 秒以下が 0 で、分が 15 の倍数か。タイムゾーンのオフセットはどれも 15 分の倍数なので UTC で判定してよい。 */
 function isQuarterHour(value: Date): boolean {
   return value.getTime() % (15 * 60 * 1000) === 0;
 }
@@ -39,6 +34,8 @@ function isQuarterHour(value: Date): boolean {
 type SlotInput = { start: Date; end: Date; participationOptionId: string };
 
 type Project = {
+  /** 日付と時間帯は、このタイムゾーンの壁時計で解釈する (AllowedRange は日付部分を使わず、時刻だけを使う) */
+  timezone: string;
   startDate: Date;
   endDate: Date;
   allowedRanges: { startTime: Date; endTime: Date }[];
@@ -50,6 +47,7 @@ type Project = {
  * Web UI はカレンダーの構造上これを満たすが、API を直接呼ぶと満たさない Slot を作れてしまう (#91)。
  */
 export function validateSlots(project: Project, slots: SlotInput[]): void {
+  const toWallClock = wallClockIn(project.timezone);
   const firstDate = toWallClock(project.startDate).date;
   const lastDate = toWallClock(project.endDate).date;
   // 時間帯は現在 1 つだけ。無ければ終日とみなす

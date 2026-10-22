@@ -4,6 +4,7 @@ import { validateSlots } from "../src/services/slots.js";
 
 // 2026/11/02〜11/04 (JST)、08:00〜23:00 のイベント。時刻はコメントに JST で書く
 const project = {
+  timezone: "Asia/Tokyo",
   startDate: new Date("2026-11-01T15:00:00.000Z"),
   endDate: new Date("2026-11-04T14:59:59.999Z"),
   allowedRanges: [{ startTime: new Date("2026-11-01T23:00:00.000Z"), endTime: new Date("2026-11-04T14:00:00.000Z") }],
@@ -121,6 +122,16 @@ describe("validateSlots", () => {
         slot("2026-11-04T14:45:00.000Z", "2026-11-04T15:00:00.000Z"),
       ]),
     ).not.toThrow();
+  });
+
+  test("日付はイベントのタイムゾーンで判定する", () => {
+    // JST では 11/03 08:30〜09:30 だが、UTC では 11/02 23:30〜11/03 00:30 で日をまたぐ
+    const target = slot("2026-11-02T23:30:00.000Z", "2026-11-03T00:30:00.000Z");
+
+    expect(() => validateSlots(allDayProject, [target])).not.toThrow();
+    expect(validationError(() => validateSlots({ ...allDayProject, timezone: "UTC" }, [target])).message).toBe(
+      "1 件目の時間帯: 日をまたいでいます。日付ごとに分けてください。",
+    );
   });
 
   test("イベントに無い参加形態は弾く", () => {

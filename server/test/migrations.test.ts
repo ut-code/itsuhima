@@ -14,11 +14,35 @@ describe("migrateUntil", () => {
   test("前のテストのデータを残さない", async () => {
     const first = await migrateUntil("0000_init.sql");
     await first.migrate();
-    await first.db.prepare(`INSERT INTO "Project" VALUES ('p', 'name', NULL, 's', 'e')`).run();
+    await first.db
+      .prepare(`INSERT INTO "Project" (id, name, startDate, endDate, createdAt) VALUES ('p', 'name', 's', 'e', 'c')`)
+      .run();
 
     const second = await migrateUntil("0000_init.sql");
     await second.migrate();
 
     expect(await second.db.prepare(`SELECT * FROM "Project"`).all()).toMatchObject({ results: [] });
+  });
+});
+
+describe("0001_add_project_timezone_created_at", () => {
+  test("既存のイベントは Asia/Tokyo になり、作成日時はマイグレーションを当てた時刻で埋まる", async () => {
+    const { db, migrate } = await migrateUntil("0001_add_project_timezone_created_at.sql");
+    await db.batch([
+      db.prepare(`INSERT INTO "Project" VALUES ('p', 'name', NULL, 's', 'e')`),
+      db.prepare(`INSERT INTO "AllowedRange" VALUES ('a', 's', 'e', 'p')`),
+    ]);
+    const before = Date.now();
+
+    await migrate();
+
+    const project = await db
+      .prepare(`SELECT timezone, createdAt FROM "Project"`)
+      .first<{ timezone: string; createdAt: string }>();
+    expect(project?.timezone).toBe("Asia/Tokyo");
+    expect(project?.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    expect(new Date(project?.createdAt ?? "").getTime()).toBeGreaterThanOrEqual(Math.floor(before / 1000) * 1000);
+    // 子のテーブルの行は残る
+    expect(await db.prepare(`SELECT id FROM "AllowedRange"`).all()).toMatchObject({ results: [{ id: "a" }] });
   });
 });

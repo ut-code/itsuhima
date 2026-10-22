@@ -220,6 +220,7 @@ export async function updateProject(db: Db, browserId: string, projectId: string
 
   return db.query.project.findFirst({
     where: eq(schema.project.id, projectId),
+    columns: { id: true, name: true, description: true, startDate: true, endDate: true },
     with: { allowedRanges: true, participationOptions: true },
   });
 }
@@ -240,7 +241,7 @@ export async function deleteProject(db: Db, browserId: string, projectId: string
 async function findProjectForSlots(db: Db, projectId: string) {
   const project = await db.query.project.findFirst({
     where: eq(schema.project.id, projectId),
-    columns: { startDate: true, endDate: true },
+    columns: { timezone: true, startDate: true, endDate: true },
     with: {
       allowedRanges: { columns: { startTime: true, endTime: true } },
       participationOptions: { columns: { id: true } },
@@ -250,6 +251,7 @@ async function findProjectForSlots(db: Db, projectId: string) {
     throw new ServiceError("project_not_found", "イベントが見つかりません。");
   }
   return {
+    timezone: project.timezone,
     startDate: new Date(project.startDate),
     endDate: new Date(project.endDate),
     allowedRanges: project.allowedRanges.map((r) => ({
