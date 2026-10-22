@@ -27,13 +27,14 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250610.0",
+    "@cloudflare/workers-types": "^5.20261022.1",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
     "daisyui": "^5.0.3",
     "hono": "^4.9.6",
     "typescript": "~5.7.2",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "wrangler": "^4.151.3"
   }
 }
