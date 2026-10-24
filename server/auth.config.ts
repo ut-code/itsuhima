@@ -9,9 +9,11 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
+import { authPlugins } from "./src/authPlugins.js";
 
 export const auth = betterAuth({
   // camelCase: 列名をこのリポジトリの規則 (camelCase) にする
   database: drizzleAdapter(drizzle({} as never), { provider: "sqlite", camelCase: true }),
   socialProviders: { google: { clientId: "x", clientSecret: "x" } },
+  plugins: authPlugins("https://example.com"),
 });

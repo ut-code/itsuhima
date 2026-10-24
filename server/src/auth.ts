@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { authPlugins } from "./authPlugins.js";
 import type { Db } from "./db/index.js";
 import * as schema from "./db/schema.js";
 import type { Bindings } from "./env.js";
@@ -43,6 +44,9 @@ export function createAuth(env: Bindings, db: Db, { browserId }: { browserId?: s
       // パスワードがないので、ログインして 1 日 (freshAge の既定) 以内のセッションでだけ消せる
       deleteUser: { enabled: true },
     },
+    plugins: authPlugins(env.PUBLIC_ORIGIN),
+    // jwt プラグインの /token は、OAuth の /oauth2/token と紛らわしく、使わないので閉じる
+    disabledPaths: ["/token"],
     session: {
       // ログインは任意なので長めに持つ。延長の書き込み (D1) は 7 日に 1 回まで
       expiresIn: 60 * 60 * 24 * 60,

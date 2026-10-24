@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { api } from "./app.js";
 import type { AppEnv } from "./env.js";
+import oauthDiscovery from "./routes/oauthDiscovery.js";
 import pages from "./routes/pages.js";
 
 /**
@@ -10,6 +11,12 @@ import pages from "./routes/pages.js";
 export const app = new Hono<AppEnv>()
   .route("/api", api)
   .route("/", pages)
+  .route("/", oauthDiscovery)
+  // MCP の SDK と Better Auth は大きいので、/mcp に来たときだけ読み込む
+  .on(["POST", "GET", "DELETE"], "/mcp", async (c) => {
+    const { default: mcp } = await import("./routes/mcp.js");
+    return mcp.fetch(c.req.raw, c.env);
+  })
   // OG 画像の生成 (wasm など) は重いので、/og に来たときだけ読み込む。ほかのリクエストのコールドスタートを遅くしない
   .get("/og/:eventId", async (c) => {
     const { default: ogImage } = await import("./routes/ogImage.js");

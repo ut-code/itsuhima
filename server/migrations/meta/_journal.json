@@ -71,6 +71,13 @@
       "when": 1792853683415,
       "tag": "0009_nullable_participant_browser_id",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1792861889866,
+      "tag": "0010_add_oauth_tables",
+      "breakpoints": true
     }
   ]
 }

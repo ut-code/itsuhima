@@ -1,4 +1,4 @@
-import { formatMinutes, parseMinutes, wallClockIn } from "../lib/wallClock.js";
+import { formatMinutes, parseMinutes, wallClockIn } from "../../../common/wallClock.js";
 import { ServiceError } from "./errors.js";
 
 const MINUTES_PER_DAY = 24 * 60;

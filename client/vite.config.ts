@@ -12,6 +12,9 @@ export default defineConfig(({ mode }) => {
       // 本番と同じく、API を同じオリジンの /api で呼ぶ。wrangler dev (server) に転送する
       proxy: {
         "/api": "http://localhost:3000",
+        // MCP サーバーと、OAuth のメタデータ
+        "/mcp": "http://localhost:3000",
+        "/.well-known": "http://localhost:3000",
       },
     },
   };

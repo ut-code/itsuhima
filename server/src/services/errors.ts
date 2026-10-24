@@ -6,6 +6,7 @@ export type ServiceErrorReason =
   | "submission_not_found"
   | "not_host"
   | "already_submitted"
+  | "version_conflict"
   | "options_empty"
   | "option_in_use"
   | "invalid_slot";

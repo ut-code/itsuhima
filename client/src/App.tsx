@@ -3,7 +3,9 @@ import EventFormPage from "./pages/EventForm.tsx";
 import SubmissionPage from "./pages/eventId/Submission.tsx";
 import HomePage from "./pages/Home.tsx";
 import LandingPage from "./pages/Landing.tsx";
+import LoginPage from "./pages/Login.tsx";
 import NotFoundPage from "./pages/NotFound.tsx";
+import ConsentPage from "./pages/oauth/Consent.tsx";
 import PrivacyPage from "./pages/Privacy.tsx";
 import TermsPage from "./pages/Terms.tsx";
 
@@ -46,6 +48,9 @@ export default function App() {
         <Route path="terms" element={<TermsPage />} />
         <Route path="home" element={<HomePage />} />
         <Route path="new" element={<EventFormPage />} />
+        {/* MCP クライアント (Claude など) との接続 (OAuth) のログインと同意 */}
+        <Route path="login" element={<LoginPage />} />
+        <Route path="oauth/consent" element={<ConsentPage />} />
         <Route path="e">
           <Route path=":eventId" element={<Outlet />}>
             <Route index element={<SubmissionPage />} />

@@ -66,21 +66,27 @@ export async function listMyEvents(db: Db, actor: Actor) {
     ),
     with: {
       participants: {
-        where: ownedBy(actor),
-        columns: { role: true },
+        columns: { role: true, name: true, browserId: true, userId: true },
       },
     },
   });
 
-  return events.map((p) => ({
-    id: p.id,
-    name: p.name,
-    description: p.description ?? "",
-    startDate: p.startDate,
-    endDate: p.endDate,
-    timezone: p.timezone,
-    isHost: p.participants.some((me) => me.role === "host"),
-  }));
+  return events.map((p) => {
+    const mine = p.participants.filter((participant) => isMine(actor, participant));
+    return {
+      id: p.id,
+      name: p.name,
+      description: p.description ?? "",
+      startDate: p.startDate,
+      endDate: p.endDate,
+      timezone: p.timezone,
+      isHost: mine.some((me) => me.role === "host"),
+      /** 自分が回答したか (ホストはイベントを作っただけでは回答していない) */
+      hasAnswered: mine.some(hasAnswered),
+      /** 回答した人数 (自分を含む) */
+      guestCount: p.participants.filter(hasAnswered).length,
+    };
+  });
 }
 
 /** イベントの詳細。URL (イベント ID) を知っていれば誰でも見られる。 */
@@ -117,7 +123,7 @@ export async function getEvent(db: Db, actor: Actor, eventId: string) {
     guests: event.participants.filter(hasAnswered).map(toGuest),
     // 自分の参加者が 2 人いる (紐づけなかった) とき、me がゲストでも、もう 1 人がホストならホストとして扱う (isHost() と同じ)
     isHost: event.participants.some((p) => isMine(actor, p) && p.role === "host"),
-    meAsGuest: me && hasAnswered(me) ? toGuest(me) : null,
+    meAsGuest: me && hasAnswered(me) ? toMyGuest(me) : null,
   };
 }
 
@@ -146,6 +152,14 @@ function toGuest(participant: ParticipantWithSlots & { name: string }) {
     eventId: participant.eventId,
     slots: participant.slots.map(({ participantId, ...slot }) => ({ ...slot, guestId: participantId })),
   };
+}
+
+/**
+ * 自分の回答。version (最後に回答を変えた日時) を付ける。
+ * 回答を更新するときに basedOnVersion として渡すと、その間に別の端末で変えられていないかを確かめられる。
+ */
+function toMyGuest(participant: ParticipantWithSlots & { name: string }) {
+  return { ...toGuest(participant), version: participant.updatedAt };
 }
 
 async function isHost(db: Db, actor: Actor, eventId: string) {
@@ -280,7 +294,7 @@ async function findMyParticipant(db: Db, actor: Actor, eventId: string) {
 /** 自分の回答。回答していなければ null */
 async function findMyGuest(db: Db, actor: Actor, eventId: string) {
   const me = await findMyParticipant(db, actor, eventId);
-  return me && hasAnswered(me) ? toGuest(me) : null;
+  return me && hasAnswered(me) ? toMyGuest(me) : null;
 }
 
 function slotRows(input: SubmissionInput, eventId: string, participantId: string) {
@@ -329,11 +343,25 @@ export async function submitAvailability(db: Db, actor: Actor, eventId: string, 
   return findMyGuest(db, actor, eventId);
 }
 
-export async function updateMyAvailability(db: Db, actor: Actor, eventId: string, input: SubmissionInput) {
+/**
+ * 自分の回答を置き換える。
+ * @param basedOnVersion 回答を読んだときの version。違っていれば (別の端末で変えられていれば) 更新しない。
+ *   省略すると確かめない (Web UI)。読んでから書くまでの間は確かめていないが、ぶつかるのは同じ人の別の端末どうしだけなので、これでよしとする。
+ */
+export async function updateMyAvailability(
+  db: Db,
+  actor: Actor,
+  eventId: string,
+  input: SubmissionInput,
+  basedOnVersion?: string,
+) {
   const myGuest = await findMyGuest(db, actor, eventId);
 
   if (!myGuest) {
     throw new ServiceError("submission_not_found", "既存の日程が見つかりません。");
+  }
+  if (basedOnVersion !== undefined && basedOnVersion !== myGuest.version) {
+    throw new ServiceError("version_conflict", "別の端末で日程が更新されています。読み込み直してください。");
   }
 
   validateSlots(await findEventForSlots(db, eventId), input.slots);

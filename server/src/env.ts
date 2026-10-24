@@ -1,6 +1,6 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import type { Db } from "./db/index.js";
-import type { Actor } from "./services/actor.js";
+import type { WebActor } from "./services/actor.js";
 
 /** Worker のバインディングと環境変数。値は `wrangler.toml` の vars と、`wrangler secret put` で入れる。 */
 export type Bindings = {
@@ -27,7 +27,7 @@ export type AppVariables = {
   browserId: string;
   db: Db;
   /** 操作する本人 (actorMiddleware が入れる) */
-  actor: Actor;
+  actor: WebActor;
 };
 
 export type AppEnv = { Bindings: Bindings; Variables: AppVariables };
