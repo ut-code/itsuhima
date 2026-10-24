@@ -6,20 +6,17 @@ import { createEvent, getEvent } from "../../services/events.js";
 import { type McpContext, missingScope } from "../context.js";
 import { serviceErrorResult } from "../errors.js";
 import { formatEventDetail } from "../eventDetail.js";
-import { toolError, toolText } from "../format.js";
-
-/** イベントのタイムゾーン (今は全件これ) */
-const TIMEZONE = "Asia/Tokyo";
+import { EVENT_TIMEZONE, toolError, toolText } from "../format.js";
 
 const dateSchema = (role: string) =>
-  z.iso.date().describe(`${role} (${TIMEZONE} の日付、YYYY-MM-DD。例: 2026-11-02)。`);
+  z.iso.date().describe(`${role} (${EVENT_TIMEZONE} の日付、YYYY-MM-DD。例: 2026-11-02)。`);
 
 const timeSchema = (role: string, defaultTime: string) =>
   z
     .string()
     .regex(/^(([01]\d|2[0-3]):(00|15|30|45)|24:00)$/, "HH:mm で、15 分単位 (:00 / :15 / :30 / :45) で指定してください")
     .default(defaultTime)
-    .describe(`${role} (${TIMEZONE} の時刻、HH:mm、15 分単位。既定は ${defaultTime})。`);
+    .describe(`${role} (${EVENT_TIMEZONE} の時刻、HH:mm、15 分単位。既定は ${defaultTime})。`);
 
 export function registerCreateEvent(server: McpServer, ctx: McpContext) {
   server.registerTool(
@@ -28,6 +25,7 @@ export function registerCreateEvent(server: McpServer, ctx: McpContext) {
       title: "イベントを作る",
       description:
         "日程調整のイベントを新しく作る。作った人が主催者になる。日付と時刻は Asia/Tokyo の壁時計として扱う。" +
+        "「来週」などの相対的な日付は、先に list_events で現在日時を確かめてから直し、解釈が分かれるとき (例: 日曜の「来週」) はユーザーに確かめること。" +
         "作ったら、返される共有 URL を参加者に送ってもらう。",
       inputSchema: z.object({
         name: z.string().min(1).max(100).describe("イベント名。"),

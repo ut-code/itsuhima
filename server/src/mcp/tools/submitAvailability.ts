@@ -55,7 +55,7 @@ export function registerSubmitAvailability(server: McpServer, ctx: McpContext) {
       description:
         "イベントに、自分が参加できる時間帯を新しく回答する。回答済みなら update_availability を使うこと。" +
         "先に get_event で日程の範囲・入力できる時間帯・参加形態の ID を確かめ、時間帯はその中に 15 分単位で収め、" +
-        "日をまたぐ時間帯は日付ごとに分けること。",
+        "日をまたぐ時間帯は日付ごとに分けること (外れた時間帯があれば、切り詰めずにエラーになる)。",
       inputSchema: z.object({
         event_id: eventIdSchema,
         name: nameSchema.describe("参加者として表示される自分の名前。"),
@@ -88,7 +88,9 @@ export function registerSubmitAvailability(server: McpServer, ctx: McpContext) {
       title: "回答を更新する",
       description:
         "自分の回答を置き換える。ranges は差分ではなく全体の置き換えなので、残したい時間帯も必ず含めること。" +
-        "先に get_event で今の回答と version を取得し、その version を based_on_version に渡すこと。",
+        "先に get_event で今の回答と version を取得し、その version を based_on_version に渡すこと。" +
+        "時間帯を足すときは、get_event の「登録した時間帯」に新しい時間帯を加えて渡す。" +
+        "ユーザーの依頼が、今の時間帯に足すのか置き換えるのか分からないとき (例: 「木曜なら空いてる」) は、ユーザーに確かめること。",
       inputSchema: z.object({
         event_id: eventIdSchema,
         based_on_version: z

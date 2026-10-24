@@ -23,6 +23,23 @@ export function availabilityOf(event: EventDetail) {
   );
 }
 
+/** 集計の人数の数え方の注記。回答が 1 人だけなら、それも書く */
+export function headcountNotes(event: EventDetail): string[] {
+  return [
+    "人数は回答した人の中で数える。まだ回答していない人は数に入らない。",
+    ...(event.guests.length === 1 ? ["まだ 1 人しか回答していないので、みんなの共通の時間帯とは言えない。"] : []),
+  ];
+}
+
+/** 候補の時間帯の 1 行 ("1. 2026-11-02(月) 10:00〜12:00 — 2 人 / 回答した 3 人中 (option <id>: 2 人)") */
+export function formatCandidate(
+  candidate: { startAt: string; endAt: string; members: { optionId: string }[] },
+  rank: number,
+  event: EventDetail,
+): string {
+  return `${rank}. ${formatInterval(candidate, event.timezone)} — ${candidate.members.length} 人 / 回答した ${event.guests.length} 人中 (${formatByOption(candidate.members)})`;
+}
+
 /** 参加形態ごとの人数 ("option <id>: 2 人, option <id>: 1 人") */
 export function formatByOption(members: { optionId: string }[]): string {
   const counts = new Map<string, number>();
@@ -76,12 +93,12 @@ export function formatEventDetail(ctx: McpContext, event: EventDetail, { include
       `## 参加できる人数の集計 (上位 ${TOP_CANDIDATES} 件、30 分以上続く時間帯)`,
       ...(event.guests.length === 0
         ? ["まだ誰も回答していません。"]
-        : candidates.length === 0
-          ? ["30 分以上続く時間帯はありません。find_common_availability で条件を変えて探せます。"]
-          : candidates.map(
-              (c, i) =>
-                `${i + 1}. ${formatInterval(c, tz)} — ${c.members.length} 人 / ${event.guests.length} 人中 (${formatByOption(c.members)})`,
-            )),
+        : [
+            ...headcountNotes(event),
+            ...(candidates.length === 0
+              ? ["30 分以上続く時間帯はありません。find_common_availability で条件を変えて探せます。"]
+              : candidates.map((c, i) => formatCandidate(c, i + 1, event))),
+          ]),
     );
   } else {
     facts.push("", "## 参加できる人数の集計", "他の参加者の回答は、自分が回答すると見られるようになります。");

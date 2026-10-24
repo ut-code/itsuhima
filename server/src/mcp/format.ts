@@ -1,5 +1,8 @@
 import { formatMinutes, wallClockIn } from "../../../common/wallClock.js";
 
+/** イベントのタイムゾーン (今は全件これ) */
+export const EVENT_TIMEZONE = "Asia/Tokyo";
+
 /**
  * ツールの出力の整形。
  *

@@ -26,6 +26,8 @@ describe("list_events", () => {
 
     const all = await callTool(token, "list_events", {});
     expect(all.isError).toBe(false);
+    // イベントを作る前にも、相対的な日付を直せるよう、現在日時を返す
+    expect(all.text).toMatch(/^現在日時: \d{4}-\d{2}-\d{2}\(.\) \d{2}:\d{2} \(UTC\+09:00\)/);
     expect(all.text).toContain(`event_id: ${hosted.id}`);
     expect(all.text).toContain(`event_id: ${answered.id}`);
     expect(all.text).not.toContain(other.id);
@@ -38,10 +40,11 @@ describe("list_events", () => {
     expect(hostOnly.text).not.toContain(answered.id);
   });
 
-  test("イベントが無ければその旨を返す", async () => {
+  test("イベントが無ければその旨を、現在日時とともに返す", async () => {
     const { token } = await loginAndAuthorize(alice);
 
-    expect((await callTool(token, "list_events", {})).text).toBe("該当するイベントはありません。");
+    const { text } = await callTool(token, "list_events", {});
+    expect(text).toMatch(/^現在日時: .+\n該当するイベントはありません。$/);
   });
 });
 
@@ -60,7 +63,7 @@ describe("get_event", () => {
     expect(text).toContain("日程の範囲: 2026-11-02(月) 〜 2026-11-04(水)");
     expect(text).toContain("入力できる時間帯: 08:00 〜 23:00");
     expect(text).toContain("回答した人数: 2");
-    expect(text).toContain(`1. 2026-11-02(月) 11:00〜12:00 — 2 人 / 2 人中 (option ${optionId}: 2 人)`);
+    expect(text).toContain(`1. 2026-11-02(月) 11:00〜12:00 — 2 人 / 回答した 2 人中 (option ${optionId}: 2 人)`);
     expect(text).toContain("あなたの回答: なし");
     expect(text).not.toContain("Carol");
 
@@ -126,10 +129,25 @@ describe("find_common_availability", () => {
     const { text, isError } = await callTool(token, "find_common_availability", { event_id: id });
 
     expect(isError).toBe(false);
-    expect(text).toContain("1. 2026-11-02(月) 11:00〜12:00 — 2 人 / 2 人中");
-    expect(text).toContain("2. 2026-11-02(月) 10:00〜11:00 — 1 人 / 2 人中");
+    expect(text).toContain("1. 2026-11-02(月) 11:00〜12:00 — 2 人 / 回答した 2 人中");
+    expect(text).toContain("2. 2026-11-02(月) 10:00〜11:00 — 1 人 / 回答した 2 人中");
     expect(text).toContain('候補[1] 参加できる人: "Carol", "Dave"');
     expect(text).toContain('候補[2] 参加できない人: "Dave"');
+    expect(text).toContain("まだ回答していない人は数に入らない");
+    expect(text).not.toContain("1 人しか回答していない");
+  });
+
+  test("回答が 1 人だけなら、共通の時間帯とは言えないと添える", async () => {
+    const { browser, token } = await loginAndAuthorize(alice);
+    const { id, optionId } = await createEvent(browser);
+    await answerOnWeb(id, optionId, "Carol", [["10:00", "12:00"]]);
+
+    const found = await callTool(token, "find_common_availability", { event_id: id });
+    expect(found.text).toContain("1. 2026-11-02(月) 10:00〜12:00 — 1 人 / 回答した 1 人中");
+    expect(found.text).toContain("まだ 1 人しか回答していない");
+
+    const detail = await callTool(token, "get_event", { event_id: id });
+    expect(detail.text).toContain("まだ 1 人しか回答していない");
   });
 
   test("条件で絞る", async () => {

@@ -4,8 +4,8 @@ import { findCandidates } from "../../../../common/availability.js";
 import { getEvent } from "../../services/events.js";
 import { type McpContext, missingScope } from "../context.js";
 import { serviceErrorResult } from "../errors.js";
-import { availabilityOf, formatByOption, isMember } from "../eventDetail.js";
-import { formatInterval, sanitize, toolError, toolText, untrustedBlock } from "../format.js";
+import { availabilityOf, formatCandidate, headcountNotes, isMember } from "../eventDetail.js";
+import { sanitize, toolError, toolText, untrustedBlock } from "../format.js";
 import { eventIdSchema } from "../schemas.js";
 
 export function registerFindCommonAvailability(server: McpServer, ctx: McpContext) {
@@ -15,7 +15,10 @@ export function registerFindCommonAvailability(server: McpServer, ctx: McpContex
       title: "参加できる時間帯を探す",
       description:
         "回答を集計し、参加できる人数が多い時間帯を多い順に返す (同じ人数なら早い順)。" +
-        "主催者か、回答した参加者だけが使える。",
+        "主催者か、回答した参加者だけが使える。" +
+        "get_event にも集計 (上位 5 件、30 分以上) があるので、それで足りなければ、件数や条件を変えて探すときに使う。" +
+        "人数は回答した人の中で数え、まだ回答していない人は数に入らない。" +
+        "回答した全員が参加できる時間帯だけに絞るには、min_people に回答した人数 (get_event の「回答した人数」) を渡す。",
       inputSchema: z.object({
         event_id: eventIdSchema,
         min_duration_minutes: z
@@ -60,11 +63,7 @@ export function registerFindCommonAvailability(server: McpServer, ctx: McpContex
         );
       }
 
-      const tz = event.timezone;
-      const facts = candidates.map(
-        (c, i) =>
-          `${i + 1}. ${formatInterval(c, tz)} — ${c.members.length} 人 / ${event.guests.length} 人中 (${formatByOption(c.members)})`,
-      );
+      const facts = candidates.map((c, i) => formatCandidate(c, i + 1, event));
       const untrusted = candidates.flatMap((c, i) => {
         const ids = new Set(c.members.map((m) => m.participantId));
         const absent = event.guests.filter((g) => !ids.has(g.id));
@@ -74,7 +73,13 @@ export function registerFindCommonAvailability(server: McpServer, ctx: McpContex
         ];
       });
       return toolText(
-        [`参加できる人数の多い時間帯 (timezone: ${tz}):`, ...facts, "", untrustedBlock(untrusted)].join("\n"),
+        [
+          `参加できる人数の多い時間帯 (timezone: ${event.timezone}):`,
+          ...headcountNotes(event),
+          ...facts,
+          "",
+          untrustedBlock(untrusted),
+        ].join("\n"),
       );
     },
   );
