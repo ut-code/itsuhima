@@ -2,13 +2,25 @@ name = "itsuhima"
 main = "src/main.ts"
 compatibility_date = "2026-10-01"
 
+# Pages から付け替える。Pages にドメインが付いている間は、デプロイが失敗する (先に Pages から外す)
+routes = [{ pattern = "itsuhima.utcode.net", custom_domain = true }]
+# 移行の間は workers.dev の URL も残す
+workers_dev = true
+
 [dev]
 port = 3000
+
+# client のビルド結果を配信する。run_worker_first に当たるパスだけ Worker を通し、それ以外のアセットは Worker を通さない
+# (Worker を通らないリクエストは、無料枠のリクエスト数に数えられない)
+[assets]
+directory = "../client/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api", "/api/*", "/e/*", "/og/*", "/"]
 
 [vars]
 NODE_ENV = "production"
 DOMAIN = "itsuhima.utcode.net"
-CORS_ALLOW_ORIGINS = "https://itsuhima.utcode.net"
 
 [[d1_databases]]
 binding = "DB"
@@ -18,11 +30,12 @@ migrations_dir = "migrations"
 
 [env.staging]
 name = "itsuhima-staging"
+routes = [{ pattern = "itsuhima-staging.utcode.net", custom_domain = true }]
+workers_dev = true
 
 [env.staging.vars]
 NODE_ENV = "production"
 DOMAIN = "itsuhima-staging.utcode.net"
-CORS_ALLOW_ORIGINS = "https://itsuhima-staging.utcode.net"
 
 [[env.staging.d1_databases]]
 binding = "DB"

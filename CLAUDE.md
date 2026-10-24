@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # 開発サーバー起動（クライアント + サーバー個別）
-npm run dev:client      # Vite dev server → http://localhost:5173
+npm run dev:client      # Vite dev server → http://localhost:5173 (/api は wrangler dev に転送)
 npm run dev:server      # wrangler dev (Workers + ローカル D1) → http://localhost:3000
-npm run dev:functions   # Cloudflare Pages Functions ローカル実行
+npm run dev:worker      # client をビルドして wrangler dev。画面も Worker から配信 (本番と同じ構成) → http://localhost:3000
 
 # Lint / Format
 npm run check       # Biome でチェックのみ
@@ -16,8 +16,8 @@ npm run fix:safe    # 安全な自動修正（pre-commit フックで自動実�
 npm run fix         # unsafe 修正も含む
 
 # ビルド
-cd client && npm run build        # 本番ビルド
-cd server && npm run build        # サーバービルド (wrangler deploy --dry-run)
+cd server && npm run build        # client をビルドしてから wrangler deploy --dry-run
+cd server && npm run deploy       # 本番にデプロイ (deploy:staging でステージング)
 
 # テスト (server、Workers ランタイム + ローカル D1)
 cd server && npm test
@@ -34,17 +34,28 @@ cd server && npm run db:migrate:local          # ローカル D1 に適用
 ```
 common/    共有 Zod スキーマと色ユーティリティ
 client/    React 19 + Vite フロントエンド
-server/    Hono + Drizzle バックエンド (Cloudflare Workers + D1)
+server/    Hono + Drizzle バックエンド (Cloudflare Workers + D1)。client のビルド結果も静的アセットとして配信する
 ```
+
+### Worker の構成
+
+1 つの Worker (`server/src/main.ts`) が、画面と API を同じオリジンで配信する。
+
+- 静的アセット (`client/dist`) は Worker を通らずに配信する。SPA のパスは `index.html` になる。
+- `server/wrangler.toml` の `run_worker_first` に当たるパスだけ Worker を通る:
+  - `/api/*`: API (`server/src/app.ts`)
+  - `/e/:eventId`: `index.html` の OG メタタグにイベント名と日程を入れる (`server/src/routes/pages.ts`)
+  - `/og/:eventId`: OG 画像を生成し、Cache API にキャッシュする (`server/src/routes/ogImage.tsx`。重いので動的に import する)
+  - `/`: 使ったことがあれば (browserId の Cookie があれば) `/home` にリダイレクトする
 
 ### 型安全な API クライアント
 
-クライアントは `hono/client` による RPC で型安全にサーバーと通信する。サーバーの `AppType` を直接 import することで、エンドポイントの型が共有される。
+クライアントは `hono/client` による RPC で型安全にサーバーと通信する。サーバーの `AppType` (API の型) を直接 import することで、エンドポイントの型が共有される。import するのは `server/src/app.ts` (API だけ)。`main.ts` は OG 画像なども含むので、client の型チェックに入れない。
 
 ```ts
 // client/src/pages/eventId/Submission.tsx
-import type { AppType } from "../../../../server/src/main";
-const client = hc<AppType>(API_ENDPOINT);
+import type { AppType } from "../../../../server/src/app";
+const client = hc<AppType>(API_ENDPOINT); // API_ENDPOINT は "/api"
 ```
 
 REST fetch ではなく `client.events[":eventId"].$get(...)` 形式で呼び出す。
@@ -97,7 +108,3 @@ import dayjs from "../lib/dayjs";
 - 作成時: フロントエンドで `crypto.randomUUID()` を生成して `id` を確定。サーバーは受け取った id をそのまま使用。
 - デフォルト: イベントの作成フォームの初期値に、`common/colors.ts` の `DEFAULT_PARTICIPATION_OPTION`（label: "参加", color: "#0F82B1"）を 1 つ入れる。API は参加形態を最低 1 つ要求する。
 - 削除制限: Slot が紐づいている参加形態は削除不可（サーバー側で検証）。
-
-### Cloudflare Pages Functions
-
-`client/functions/[[path]].ts` が catch-all ルートとして動作し、`/e/:eventId` パターンの OG メタタグを動的に書き換える。ローカル確認は `npm run dev:functions` を使う（`npm run dev:client` の Vite dev server では Functions は動作しない）。

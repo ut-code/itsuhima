@@ -15,7 +15,7 @@ import {
   LuX,
 } from "react-icons/lu";
 import { NavLink, useParams } from "react-router";
-import type { AppType } from "../../../../server/src/main";
+import type { AppType } from "../../../../server/src/app";
 import { AddToCalendar } from "../../components/AddToCalendar";
 import { Calendar, type Highlight } from "../../components/Calendar";
 import Header from "../../components/Header";

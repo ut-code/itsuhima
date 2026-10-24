@@ -2,7 +2,7 @@ import { hc } from "hono/client";
 import { useEffect, useState } from "react";
 import { LuCalendar, LuChevronRight, LuLayoutList, LuPlus, LuUser, LuUsers, LuX } from "react-icons/lu";
 import { NavLink } from "react-router";
-import type { AppType } from "../../../server/src/main";
+import type { AppType } from "../../../server/src/app";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { briefEventReviver } from "../revivers";

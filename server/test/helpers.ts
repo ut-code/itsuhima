@@ -1,10 +1,11 @@
 import { env } from "cloudflare:workers";
 import { serializeSigned } from "hono/utils/cookie";
-import { app } from "../src/app.js";
+import { app } from "../src/main.js";
 
 /**
  * 1 つのブラウザを再現する。browserId を決めて署名済みの Cookie を作り、すべてのリクエストに付ける。
  * サーバーは同じ browserId で Cookie を再発行するだけなので、レスポンスの Set-Cookie は見ない。
+ * パスは API の `/api` を除いたもの (`/events` など) を渡す。
  */
 export function createBrowser() {
   const browserId = crypto.randomUUID();
@@ -15,7 +16,7 @@ export function createBrowser() {
     cookie ??= serializeSigned("browserId", browserId, env.COOKIE_SECRET);
     const headers = new Headers(init.headers);
     headers.set("Cookie", await cookie);
-    return app.request(path, { ...init, headers }, env);
+    return app.request(`/api${path}`, { ...init, headers }, env);
   };
   const send = (method: string, path: string, body?: unknown) =>
     request(path, {
