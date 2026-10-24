@@ -259,3 +259,28 @@ describe("ログアウト・同じブラウザでの別のユーザー", () => {
     expect(event.guests.map((g: { name: string }) => g.name).sort()).toEqual(["Alice", "Bob"]);
   });
 });
+
+describe("アカウントの削除", () => {
+  test("消しても、作ったイベントと回答は残り、誰も操作できなくなる", async () => {
+    const host = createBrowser();
+    const other = await createEvent(host);
+    const pc = createBrowser();
+    await pc.login(alice);
+    const { id } = await createEvent(pc);
+    await pc.post(`/events/${other.id}/submissions`, submissionInput(other.optionId, { name: "Alice" }));
+
+    expect((await pc.post("/auth/delete-user", {})).status).toBe(200);
+
+    // 作ったイベントは残るが、ホストとして操作できる人はいない
+    expect(await json(await pc.get(`/events/${id}`))).toMatchObject({ isHost: false });
+    expect((await pc.delete(`/events/${id}`)).status).toBe(403);
+    // 回答は名前ごと残る
+    const event = await json(await host.get(`/events/${other.id}`));
+    expect(event.guests.map((g: { name: string }) => g.name)).toEqual(["Alice"]);
+    expect(await json(await pc.get(`/events/${other.id}`))).toMatchObject({ meAsGuest: null });
+
+    // 同じ Google アカウントでログインし直すと、新しいユーザーになり、消す前のものには触れない
+    await pc.login(alice);
+    expect(await json(await pc.get("/events/mine"))).toEqual([]);
+  });
+});

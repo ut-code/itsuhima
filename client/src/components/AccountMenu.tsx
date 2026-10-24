@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { LuCircleUserRound } from "react-icons/lu";
 import { authClient, LOGIN_ENABLED, signInWithGoogle } from "../lib/auth";
+import DeleteAccountDialog from "./DeleteAccountDialog";
 
 /**
  * ヘッダーの右端に置く、アカウントのアイコンとドロップダウン。ログインは任意。
@@ -16,6 +17,7 @@ function AccountMenuInner({ compact }: { compact: boolean }) {
   const size = compact ? "h-6 w-6" : "h-8 w-8";
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const deleteDialogRef = useRef<HTMLDialogElement>(null);
 
   // 外側を押すか Esc で閉じる
   useEffect(() => {
@@ -73,6 +75,16 @@ function AccountMenuInner({ compact }: { compact: boolean }) {
               >
                 ログアウト
               </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs mt-2 w-full text-error"
+                onClick={() => {
+                  setIsOpen(false);
+                  deleteDialogRef.current?.showModal();
+                }}
+              >
+                アカウントを削除
+              </button>
             </>
           ) : (
             <>
@@ -86,6 +98,7 @@ function AccountMenuInner({ compact }: { compact: boolean }) {
           )}
         </div>
       )}
+      {session && <DeleteAccountDialog ref={deleteDialogRef} />}
     </div>
   );
 }

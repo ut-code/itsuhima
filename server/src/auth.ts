@@ -38,6 +38,11 @@ export function createAuth(env: Bindings, db: Db, { browserId }: { browserId?: s
         ...(acceptAnyIdToken ? { verifyIdToken: async () => true } : {}),
       },
     },
+    user: {
+      // ユーザーを消しても、作ったイベントと回答は残る (participant.userId が null になり、誰も操作できなくなる)。
+      // パスワードがないので、ログインして 1 日 (freshAge の既定) 以内のセッションでだけ消せる
+      deleteUser: { enabled: true },
+    },
     session: {
       // ログインは任意なので長めに持つ。延長の書き込み (D1) は 7 日に 1 回まで
       expiresIn: 60 * 60 * 24 * 60,
