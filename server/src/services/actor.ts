@@ -14,6 +14,11 @@ export function ownedBy(actor: Actor) {
   return actor.userId ? or(eq(schema.participant.userId, actor.userId), byBrowser) : byBrowser;
 }
 
+/** 本人の参加者か (`ownedBy` と同じ条件) */
+export function isMine(actor: Actor, participant: { browserId: string; userId: string | null }) {
+  return (actor.userId !== null && participant.userId === actor.userId) || participant.browserId === actor.browserId;
+}
+
 /**
  * 本人の参加者のうち 1 人を選ぶ。1 つのイベントで、userId で一致する参加者 (別の端末で回答した) と、
  * browserId で一致する参加者 (まだ紐づいていない) の両方がありうるので、userId で一致する方を優先する。

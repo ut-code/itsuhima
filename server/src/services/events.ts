@@ -4,7 +4,7 @@ import type { editEventReqSchema, eventReqSchema, submitReqSchema } from "../../
 import { type Db, insertMany, runBatch } from "../db/index.js";
 import * as schema from "../db/schema.js";
 import { nanoid } from "../lib/id.js";
-import { type Actor, ownedBy, pickMine } from "./actor.js";
+import { type Actor, isMine, ownedBy, pickMine } from "./actor.js";
 import { ServiceError } from "./errors.js";
 import { validateSlots } from "./slots.js";
 
@@ -109,7 +109,8 @@ export async function getEvent(db: Db, actor: Actor, eventId: string) {
     options: event.options,
     hosts: event.participants.filter((p) => p.role === "host").map((p) => ({ id: p.id, eventId: p.eventId })),
     guests: event.participants.filter(hasAnswered).map(toGuest),
-    isHost: me?.role === "host",
+    // 自分の参加者が 2 人いる (紐づけなかった) とき、me がゲストでも、もう 1 人がホストならホストとして扱う (isHost() と同じ)
+    isHost: event.participants.some((p) => isMine(actor, p) && p.role === "host"),
     meAsGuest: me && hasAnswered(me) ? toGuest(me) : null,
   };
 }

@@ -99,6 +99,22 @@ describe("ログインしたときの紐づけ", () => {
     expect(await json(await tablet.get(`/events/${id}`))).toMatchObject({ meAsGuest: { name: "Alice (PC)" } });
   });
 
+  test("このブラウザで作ったイベントに、アカウントではゲストとして回答済みでも、ホストとして扱われる", async () => {
+    const tablet = createBrowser();
+    const { id, optionId } = await createEvent(tablet);
+    const laptop = createBrowser();
+    await laptop.login(alice);
+    await laptop.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice (PC)" }));
+
+    await tablet.login(alice);
+
+    expect(await json(await tablet.get(`/events/${id}`))).toMatchObject({
+      isHost: true,
+      meAsGuest: { name: "Alice (PC)" },
+    });
+    expect((await tablet.patch(`/events/${id}`, { name: "新しい名前" })).status).toBe(200);
+  });
+
   test("ぶつかって紐づけなかった参加者は、そのブラウザで知らせるために取れる", async () => {
     const host = createBrowser();
     const { id, optionId } = await createEvent(host, { name: "合宿" });
