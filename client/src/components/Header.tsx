@@ -39,10 +39,11 @@ export default function Header({ compact = false }: { compact?: boolean }) {
           >
             使い方
           </a>
-          <AccountMenu />
+          <AccountMenu compact={compact} />
         </nav>
 
-        <div className="flex items-center md:hidden">
+        <div className="flex items-center gap-1 md:hidden">
+          <AccountMenu compact={compact} />
           <button
             type="button"
             className="rounded-lg p-2 text-base-content/70 hover:bg-base-200"
@@ -85,7 +86,6 @@ export default function Header({ compact = false }: { compact?: boolean }) {
             >
               ご意見・バグ報告
             </a>
-            <AccountMenu className="mt-2 px-3" />
           </div>
         </div>
       )}
