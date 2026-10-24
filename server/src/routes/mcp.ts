@@ -4,7 +4,7 @@ import { APIError } from "better-auth/api";
 import { verifyJwsAccessToken } from "better-auth/oauth2";
 import { Hono } from "hono";
 import { createAuth } from "../auth.js";
-import { mcpResource } from "../authPlugins.js";
+import { MCP_SCOPES, mcpResource } from "../authPlugins.js";
 import { createDb } from "../db/index.js";
 import type { AppEnv } from "../env.js";
 import type { McpPrincipal } from "../mcp/context.js";
@@ -45,7 +45,8 @@ async function authenticate(request: Request, auth: ReturnType<typeof createAuth
     };
     return { principal };
   } catch (e) {
-    const challenge = createResourceServerChallenge(e, resource, { challengeScopes: ["read"] });
+    // MCP クライアントは、ここで示したスコープをそのまま要求する (read だけだと回答や作成ができない)
+    const challenge = createResourceServerChallenge(e, resource, { challengeScopes: [...MCP_SCOPES] });
     if (!challenge) throw e;
     const response = Response.json(
       { jsonrpc: "2.0", error: { code: -32001, message: challenge.message }, id: null },

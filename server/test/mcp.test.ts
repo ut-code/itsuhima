@@ -11,6 +11,8 @@ describe("/mcp", () => {
     const challenge = res.headers.get("WWW-Authenticate") ?? "";
     expect(challenge).toMatch(/^Bearer /);
     expect(challenge).toContain(`resource_metadata="${env.PUBLIC_ORIGIN}/.well-known/oauth-protected-resource/mcp"`);
+    // MCP クライアントはこのスコープをそのまま要求するので、全部を示す
+    expect(challenge).toContain('scope="read submit create"');
     expect(res.headers.get("Set-Cookie")).toBeNull();
   });
 
