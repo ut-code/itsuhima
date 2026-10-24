@@ -460,6 +460,35 @@ describe("POST /events/:eventId/submissions", () => {
     expect(await res.json()).toEqual({ message: "提出済みです。" });
   });
 
+  test("同じブラウザから同時に 2 回送っても、500 にならず、回答は 1 つ", async () => {
+    const host = createBrowser();
+    const { id, optionId } = await createEvent(host);
+    const guest = createBrowser();
+
+    const statuses = await Promise.all([
+      guest.post(`/events/${id}/submissions`, submissionInput(optionId)),
+      guest.post(`/events/${id}/submissions`, submissionInput(optionId)),
+    ]).then((responses) => responses.map((r) => r.status).sort());
+
+    expect(statuses).toEqual([201, 409]);
+    expect((await getEvent(host, id)).guests).toHaveLength(1);
+  });
+
+  test("ホストが同時に 2 回送っても、予定は二重にならない", async () => {
+    const host = createBrowser();
+    const { id, optionId } = await createEvent(host);
+
+    const responses = await Promise.all([
+      host.post(`/events/${id}/submissions`, submissionInput(optionId)),
+      host.post(`/events/${id}/submissions`, submissionInput(optionId)),
+    ]);
+
+    expect(responses.every((r) => r.status === 201 || r.status === 409)).toBe(true);
+    const event = await getEvent(host, id);
+    expect(event.guests).toHaveLength(1);
+    expect(event.guests[0].slots).toHaveLength(1);
+  });
+
   test("ホストも回答できる", async () => {
     const host = createBrowser();
     const { id, optionId } = await createEvent(host);

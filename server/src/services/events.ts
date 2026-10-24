@@ -12,6 +12,14 @@ export type CreateEventInput = z.infer<typeof eventReqSchema>;
 export type UpdateEventInput = z.infer<typeof editEventReqSchema>;
 export type SubmissionInput = z.infer<typeof submitReqSchema>;
 
+/** 一意制約の違反か。D1 のエラーは Drizzle のエラーの cause に入る */
+function isUniqueViolation(error: unknown): boolean {
+  for (let e = error; e instanceof Error; e = (e as { cause?: unknown }).cause) {
+    if (e.message.includes("UNIQUE constraint failed")) return true;
+  }
+  return false;
+}
+
 /** DB には日時を ISO 8601 の文字列で入れる */
 function toIso(value: string | Date): string {
   return new Date(value).toISOString();
@@ -295,19 +303,28 @@ export async function submitAvailability(db: Db, actor: Actor, eventId: string, 
   validateSlots(await findEventForSlots(db, eventId), input.slots);
 
   const answer = { name: input.name, comment: input.comment?.trim() || null };
-  const participantId = me?.id ?? crypto.randomUUID();
-  await runBatch(db, [
-    me
-      ? db.update(schema.participant).set(answer).where(eq(schema.participant.id, me.id))
-      : db.insert(schema.participant).values({
-          id: participantId,
-          eventId,
-          role: "guest",
-          ...ownerOf(actor),
-          ...answer,
-        }),
-    ...insertMany(db, schema.slot, slotRows(input, eventId, participantId)),
-  ]);
+  if (me) {
+    // 二重送信で、上の確認を両方が通っても、予定が二重にならないよう、入れる前に消す (後に届いた方の内容になる)
+    await runBatch(db, [
+      db.update(schema.participant).set(answer).where(eq(schema.participant.id, me.id)),
+      db.delete(schema.slot).where(eq(schema.slot.participantId, me.id)),
+      ...insertMany(db, schema.slot, slotRows(input, eventId, me.id)),
+    ]);
+  } else {
+    const participantId = crypto.randomUUID();
+    try {
+      await runBatch(db, [
+        db
+          .insert(schema.participant)
+          .values({ id: participantId, eventId, role: "guest", ...ownerOf(actor), ...answer }),
+        ...insertMany(db, schema.slot, slotRows(input, eventId, participantId)),
+      ]);
+    } catch (e) {
+      // 二重送信で、上の確認を両方が通ったときは、後の方が (browserId, eventId)・(userId, eventId) の一意制約に当たる
+      if (isUniqueViolation(e)) throw new ServiceError("already_submitted", "提出済みです。");
+      throw e;
+    }
+  }
 
   return findMyGuest(db, actor, eventId);
 }
