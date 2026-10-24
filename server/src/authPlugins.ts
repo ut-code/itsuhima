@@ -1,8 +1,8 @@
 import { mcp } from "@better-auth/mcp";
 import { jwt } from "better-auth/plugins";
 
-/** MCP のツールのスコープ。read: 読み取り、submit: 回答、create: イベントの作成・変更・削除 */
-export const MCP_SCOPES = ["read", "submit", "create"] as const;
+/** MCP のツールのスコープ。read: 読み取り、submit: 回答、manage: 主催するイベントの作成・変更・削除 */
+export const MCP_SCOPES = ["read", "submit", "manage"] as const;
 
 /** MCP サーバーの URL。接続済みのコネクタはこの URL を覚えるので、変えない */
 export function mcpResource(origin: string) {

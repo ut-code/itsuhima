@@ -42,7 +42,7 @@ export function registerCreateEvent(server: McpServer, ctx: McpContext) {
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
     async ({ name, start_date, end_date, start_time, end_time, description, participation_options }) => {
-      const scopeError = missingScope(ctx, "create");
+      const scopeError = missingScope(ctx, "manage");
       if (scopeError) return toolError(scopeError);
 
       const labels = participation_options?.map((o) => o.label) ?? [DEFAULT_PARTICIPATION_OPTION.label];

@@ -12,7 +12,7 @@ describe("/mcp", () => {
     expect(challenge).toMatch(/^Bearer /);
     expect(challenge).toContain(`resource_metadata="${env.PUBLIC_ORIGIN}/.well-known/oauth-protected-resource/mcp"`);
     // MCP クライアントはこのスコープをそのまま要求するので、全部を示す
-    expect(challenge).toContain('scope="read submit create"');
+    expect(challenge).toContain('scope="read submit manage"');
     expect(res.headers.get("Set-Cookie")).toBeNull();
   });
 

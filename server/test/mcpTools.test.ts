@@ -474,7 +474,7 @@ describe("create_event", () => {
     expect(isError).toBe(true);
   });
 
-  test("create を許可していなければエラー", async () => {
+  test("manage を許可していなければエラー", async () => {
     const { token } = await loginAndAuthorize(alice, "openid read submit");
 
     const { text, isError } = await callTool(token, "create_event", {
@@ -484,7 +484,7 @@ describe("create_event", () => {
     });
 
     expect(isError).toBe(true);
-    expect(text).toContain("「create」");
+    expect(text).toContain("「manage」");
   });
 });
 
@@ -543,14 +543,14 @@ describe("update_event", () => {
     expect(empty.isError).toBe(true);
   });
 
-  test("create を許可していなければエラー", async () => {
+  test("manage を許可していなければエラー", async () => {
     const { browser, token } = await loginAndAuthorize(alice, "openid read submit");
     const { id } = await createEvent(browser);
 
     const { text, isError } = await callTool(token, "update_event", { event_id: id, name: "会" });
 
     expect(isError).toBe(true);
-    expect(text).toContain("「create」");
+    expect(text).toContain("「manage」");
   });
 });
 
@@ -580,14 +580,14 @@ describe("delete_event", () => {
     expect((await other.get(`/events/${id}`)).status).toBe(200);
   });
 
-  test("create を許可していなければエラー", async () => {
+  test("manage を許可していなければエラー", async () => {
     const { browser, token } = await loginAndAuthorize(alice, "openid read submit");
     const { id } = await createEvent(browser);
 
     const { text, isError } = await callTool(token, "delete_event", { event_id: id });
 
     expect(isError).toBe(true);
-    expect(text).toContain("「create」");
+    expect(text).toContain("「manage」");
     expect((await browser.get(`/events/${id}`)).status).toBe(200);
   });
 });

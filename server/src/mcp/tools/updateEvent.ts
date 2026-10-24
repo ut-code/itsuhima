@@ -33,7 +33,7 @@ export function registerUpdateEvent(server: McpServer, ctx: McpContext) {
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async ({ event_id, name, description, start_date, end_date, start_time, end_time }) => {
-      const scopeError = missingScope(ctx, "create");
+      const scopeError = missingScope(ctx, "manage");
       if (scopeError) return toolError(scopeError);
 
       const changesSchedule = [start_date, end_date, start_time, end_time].some((v) => v !== undefined);

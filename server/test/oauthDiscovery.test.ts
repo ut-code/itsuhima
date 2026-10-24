@@ -16,7 +16,7 @@ describe("OAuth のメタデータ", () => {
       expect(status).toBe(200);
       expect(body.resource).toBe(`${env.PUBLIC_ORIGIN}/mcp`);
       expect(body.authorization_servers).toEqual([env.PUBLIC_ORIGIN]);
-      expect(body.scopes_supported).toEqual(expect.arrayContaining(["read", "submit", "create"]));
+      expect(body.scopes_supported).toEqual(expect.arrayContaining(["read", "submit", "manage"]));
       // browserId は発行しない
       expect(headers.get("Set-Cookie")).toBeNull();
     }
@@ -32,7 +32,7 @@ describe("OAuth のメタデータ", () => {
     expect(body.registration_endpoint).toBe(`${env.PUBLIC_ORIGIN}/api/auth/oauth2/register`);
     expect(body.authorization_endpoint).toBe(`${env.PUBLIC_ORIGIN}/api/auth/oauth2/authorize`);
     expect(body.token_endpoint).toBe(`${env.PUBLIC_ORIGIN}/api/auth/oauth2/token`);
-    expect(body.scopes_supported).toEqual(expect.arrayContaining(["offline_access", "read", "submit", "create"]));
+    expect(body.scopes_supported).toEqual(expect.arrayContaining(["offline_access", "read", "submit", "manage"]));
   });
 
   test("OpenID の設定", async () => {

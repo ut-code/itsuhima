@@ -138,7 +138,7 @@ export async function callTool(accessToken: string, name: string, args: Record<s
 /** ログインしたブラウザで、指定したスコープのアクセストークンを得る */
 export async function loginAndAuthorize(
   user: { sub: string; email: string; name: string },
-  scope = "openid offline_access read submit create",
+  scope = "openid offline_access read submit manage",
 ) {
   const browser = createBrowser();
   await browser.login(user);

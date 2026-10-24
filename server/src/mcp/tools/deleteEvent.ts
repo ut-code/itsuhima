@@ -21,7 +21,7 @@ export function registerDeleteEvent(server: McpServer, ctx: McpContext) {
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },
     async ({ event_id }) => {
-      const scopeError = missingScope(ctx, "create");
+      const scopeError = missingScope(ctx, "manage");
       if (scopeError) return toolError(scopeError);
 
       try {
