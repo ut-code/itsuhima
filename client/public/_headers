@@ -1,10 +1,4 @@
 # Worker の静的アセットに付けるヘッダ。Worker が返すレスポンス (/e/*、/og/* など) には、Worker の側で付ける
-# ステージングと workers.dev (本番と同じ内容) は検索に載せない
+# ステージングは検索に載せない
 https://itsuhima-staging.utcode.net/*
-  X-Robots-Tag: noindex
-
-https://itsuhima-staging.ut-code.workers.dev/*
-  X-Robots-Tag: noindex
-
-https://itsuhima.ut-code.workers.dev/*
   X-Robots-Tag: noindex
