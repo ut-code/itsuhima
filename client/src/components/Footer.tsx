@@ -1,3 +1,4 @@
+import { NavLink } from "react-router";
 import { EXTERNAL_LINKS } from "../constants/links";
 
 export default function Footer() {
@@ -34,6 +35,16 @@ export default function Footer() {
                 >
                   ご意見・バグ報告
                 </a>
+              </li>
+              <li className="mt-3">
+                <NavLink to="/privacy" className="hover:text-neutral-content/50">
+                  プライバシーポリシー
+                </NavLink>
+              </li>
+              <li className="mt-3">
+                <NavLink to="/terms" className="hover:text-neutral-content/50">
+                  利用規約
+                </NavLink>
               </li>
             </ul>
           </div>
