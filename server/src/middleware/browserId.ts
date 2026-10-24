@@ -7,7 +7,7 @@ const COOKIE_NAME = "browserId";
 
 /**
  * 署名鍵のローテーションに対応するため、現行の鍵、前の鍵の順に検証する。
- * @returns 検証できた browserId。Cookie が無ければ undefined。Cookie はあるがどの鍵でも検証できなければ false
+ * @returns 検証できた browserId。Cookie が無いか、どの鍵でも検証できなければ undefined
  */
 async function readBrowserId(c: Context<AppEnv>, secrets: string[]) {
   if (getCookie(c, COOKIE_NAME) === undefined) {
@@ -20,7 +20,9 @@ async function readBrowserId(c: Context<AppEnv>, secrets: string[]) {
       return value;
     }
   }
-  return false;
+  // 鍵を外した後の古い Cookie など。作り直せば使い続けられるので、エラーにはしない
+  console.warn("browserId Cookie の署名を検証できなかったので、新しく発行します");
+  return undefined;
 }
 
 export const browserIdMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
@@ -36,13 +38,7 @@ export const browserIdMiddleware: MiddlewareHandler<AppEnv> = async (c, next) =>
 
   const browserId = await readBrowserId(c, [cookieSecret, ...previousSecrets]);
 
-  // Cookie はあるがどの鍵でも検証できなかった
-  if (browserId === false) {
-    console.warn("browserId Cookie の署名を検証できませんでした");
-    return c.json({ message: "ブラウザのCookie設定に問題があります。" }, 400);
-  }
-
-  // 初回アクセスでの新規発行
+  // 初回アクセス (または検証できなかった) での新規発行
   if (browserId === undefined) {
     const newBrowserId = crypto.randomUUID();
     await setSignedCookie(c, COOKIE_NAME, newBrowserId, cookieSecret, cookieOptions(c.env));

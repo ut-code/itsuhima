@@ -12,13 +12,15 @@ function requestWithCookie(cookie?: string, vars: Partial<Bindings> = {}) {
 }
 
 describe("browserIdMiddleware", () => {
-  test("署名が不正な Cookie には 400 を返す", async () => {
+  test("署名を検証できない Cookie は、新しい browserId で発行し直す", async () => {
     const cookie = browserIdCookie(await requestWithCookie());
 
     const res = await requestWithCookie(`${cookie}x`);
 
-    expect(res.status).toBe(400);
-    expect(res.headers.get("Set-Cookie")).toBeNull();
+    expect(res.status).toBe(200);
+    const newCookie = browserIdCookie(res);
+    expect(newCookie?.split(".")[0]).not.toBe(cookie?.split(".")[0]);
+    expect((await requestWithCookie(newCookie)).status).toBe(200);
   });
 
   test("前の鍵で署名された Cookie は、同じ browserId を現行の鍵で署名し直して発行する", async () => {
