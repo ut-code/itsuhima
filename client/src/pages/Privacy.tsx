@@ -39,7 +39,6 @@ export default function PrivacyPage() {
             アドレス、ブラウザの種類 (User-Agent)。
           </li>
         </List>
-        <p>Google アカウントについては、上記のほか (カレンダーや連絡先など) の情報を取得しません。</p>
       </Section>
 
       <Section title="2. 利用目的">
