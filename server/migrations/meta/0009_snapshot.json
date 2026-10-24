@@ -389,7 +389,7 @@
           "tableTo": "user",
           "columnsFrom": ["userId"],
           "columnsTo": ["id"],
-          "onDelete": "cascade",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -402,7 +402,7 @@
         },
         "participant_owner_check": {
           "name": "participant_owner_check",
-          "value": "(\"participant\".\"browserId\" IS NULL) <> (\"participant\".\"userId\" IS NULL)"
+          "value": "\"participant\".\"browserId\" IS NULL OR \"participant\".\"userId\" IS NULL"
         },
         "participant_answered_check": {
           "name": "participant_answered_check",

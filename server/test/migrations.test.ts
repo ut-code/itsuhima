@@ -328,7 +328,7 @@ describe("0009_nullable_participant_browser_id", () => {
     expect(await tableNames(db)).not.toContain("__old_participant");
   });
 
-  test("持ち主はブラウザかユーザーの一方。ユーザーを消すと参加者と slot も消える", async () => {
+  test("持ち主は多くても 1 つ。ユーザーを消すと、参加者と slot は残り、持ち主がいなくなる", async () => {
     const { db, migrate } = await migrateUntil("0009_nullable_participant_browser_id.sql");
     await migrate();
     await db.batch([
@@ -336,37 +336,33 @@ describe("0009_nullable_participant_browser_id", () => {
       db.prepare(`INSERT INTO "option" VALUES ('o', '参加', '#0F82B1', 'p')`),
       db.prepare(`INSERT INTO "user" (id, name, email, updatedAt) VALUES ('u', 'A', 'a@example.com', 0)`),
       db.prepare(
-        `INSERT INTO "participant" (id, eventId, role, name, userId, updatedAt) VALUES ('g1', 'p', 'guest', 'A', 'u', 'now')`,
-      ),
-      // ユーザーの参加者 (browserId が null) は何人いてもよい
-      db.prepare(`INSERT INTO "user" (id, name, email, updatedAt) VALUES ('u2', 'B', 'b@example.com', 0)`),
-      db.prepare(
-        `INSERT INTO "participant" (id, eventId, role, name, userId, updatedAt) VALUES ('g2', 'p', 'guest', 'B', 'u2', 'now')`,
+        `INSERT INTO "participant" (id, eventId, role, userId, updatedAt) VALUES ('h', 'p', 'host', 'u', 'now')`,
       ),
       db.prepare(
-        `INSERT INTO "slot" VALUES ('s1', '2026-11-02T00:00:00.000Z', '2026-11-02T01:00:00.000Z', 'p', 'g1', 'o')`,
+        `INSERT INTO "participant" (id, eventId, role, name, browserId, updatedAt) VALUES ('g', 'p', 'guest', 'B', 'b', 'now')`,
+      ),
+      db.prepare(
+        `INSERT INTO "slot" VALUES ('s1', '2026-11-02T00:00:00.000Z', '2026-11-02T01:00:00.000Z', 'p', 'g', 'o')`,
       ),
     ]);
 
-    // 両方ある、両方ない、は入れられない
+    // 両方ある、は入れられない
     await expect(
       db
         .prepare(
-          `INSERT INTO "participant" (id, eventId, role, name, browserId, userId, updatedAt) VALUES ('x', 'p', 'guest', 'X', 'b', 'u', 'now')`,
-        )
-        .run(),
-    ).rejects.toThrow(/participant_owner_check/);
-    await expect(
-      db
-        .prepare(
-          `INSERT INTO "participant" (id, eventId, role, name, updatedAt) VALUES ('y', 'p', 'guest', 'Y', 'now')`,
+          `INSERT INTO "participant" (id, eventId, role, name, browserId, userId, updatedAt) VALUES ('x', 'p', 'guest', 'X', 'b2', 'u', 'now')`,
         )
         .run(),
     ).rejects.toThrow(/participant_owner_check/);
 
     await db.prepare(`DELETE FROM "user" WHERE id = 'u'`).run();
-    expect(await db.prepare(`SELECT id FROM "participant"`).all()).toMatchObject({ results: [{ id: "g2" }] });
-    expect(await db.prepare(`SELECT id FROM "slot"`).all()).toMatchObject({ results: [] });
+    expect(await db.prepare(`SELECT id, browserId, userId FROM "participant" ORDER BY id`).all()).toMatchObject({
+      results: [
+        { id: "g", browserId: "b", userId: null },
+        { id: "h", browserId: null, userId: null },
+      ],
+    });
+    expect(await db.prepare(`SELECT id FROM "slot"`).all()).toMatchObject({ results: [{ id: "s1" }] });
   });
 
   test("未回答はホストだけ。ホストはイベントにつき 1 人", async () => {

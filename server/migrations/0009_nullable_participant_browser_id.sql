@@ -1,5 +1,6 @@
 -- participant の持ち主を、ブラウザ (browserId) かユーザー (userId) のどちらか一方にする。
--- browserId を nullable にし、ユーザーの参加者の browserId を null にする。ユーザーを消したら参加者も消す (持ち主のいない参加者を作らない)。
+-- browserId を nullable にし、ユーザーの参加者の browserId を null にする。
+-- ユーザーを消しても、イベントと回答は残す (userId は null になり、持ち主のいない参加者として誰も操作できなくなる)。
 -- あわせて、次の制約とインデックスを足す。
 -- - 未回答 (name が null) はホストだけ。ホストはイベントにつき 1 人 (ログインしたときの紐づけが、これを前提にする)
 -- - 本人の参加者を browserId・userId だけで引けるよう、一意のインデックスの列の順を入れ替え、eventId のインデックスを足す
@@ -20,9 +21,9 @@ CREATE TABLE `participant` (
 	`userId` text,
 	`updatedAt` text NOT NULL,
 	FOREIGN KEY (`eventId`) REFERENCES `event`(`id`) ON UPDATE cascade ON DELETE cascade,
-	FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null,
 	CONSTRAINT "participant_role_check" CHECK("participant"."role" IN ('host', 'guest')),
-	CONSTRAINT "participant_owner_check" CHECK(("participant"."browserId" IS NULL) <> ("participant"."userId" IS NULL)),
+	CONSTRAINT "participant_owner_check" CHECK("participant"."browserId" IS NULL OR "participant"."userId" IS NULL),
 	CONSTRAINT "participant_answered_check" CHECK("participant"."role" = 'host' OR "participant"."name" IS NOT NULL)
 );
 --> statement-breakpoint

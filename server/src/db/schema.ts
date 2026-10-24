@@ -65,6 +65,7 @@ export const slot = sqliteTable(
  * イベントの参加者。ホスト (作成者) とゲストを role で区別する。
  * name が null なら、まだ回答していない (イベントを作っただけのホスト)。
  * 持ち主は、ブラウザ (browserId) かユーザー (userId) のどちらか一方。
+ * 両方とも null なら、持ち主のいない参加者 (ユーザーが退会した)。回答は残すが、誰も操作できない。
  */
 export const participant = sqliteTable(
   "participant",
@@ -78,8 +79,11 @@ export const participant = sqliteTable(
     comment: text(),
     /** ログインせずに作成・回答した参加者のブラウザ。ユーザーの参加者なら null */
     browserId: text(),
-    /** ログインして作成・回答した (またはログインして紐づけた) 参加者のユーザー。ブラウザの参加者なら null */
-    userId: text().references(() => user.id, { onDelete: "cascade" }),
+    /**
+     * ログインして作成・回答した (またはログインして紐づけた) 参加者のユーザー。ブラウザの参加者なら null。
+     * ユーザーを消しても、イベントと回答は残す (null にする)
+     */
+    userId: text().references(() => user.id, { onDelete: "set null" }),
     updatedAt: text()
       .notNull()
       .$defaultFn(() => new Date().toISOString())
@@ -96,7 +100,8 @@ export const participant = sqliteTable(
       .on(t.eventId)
       .where(sql`${t.role} = 'host'`),
     check("participant_role_check", sql`${t.role} IN ('host', 'guest')`),
-    check("participant_owner_check", sql`(${t.browserId} IS NULL) <> (${t.userId} IS NULL)`),
+    // 持ち主は多くても 1 つ (両方とも null は、退会したユーザーの参加者)
+    check("participant_owner_check", sql`${t.browserId} IS NULL OR ${t.userId} IS NULL`),
     // 未回答 (name が null) はホストだけ。ゲストは回答したときに作る
     check("participant_answered_check", sql`${t.role} = 'host' OR ${t.name} IS NOT NULL`),
   ],
