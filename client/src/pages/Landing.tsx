@@ -89,6 +89,36 @@ function FeaturesSection() {
   );
 }
 
+/**
+ * Google ログインで何の情報を何に使うか。Google の同意画面のブランド確認で、ホームページに求められる。
+ */
+function LoginSection() {
+  return (
+    <section id="login">
+      <div className="bg-base-200 py-16">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+          <h2 className="text-center font-bold text-2xl text-base-content sm:text-3xl">Google でのログインについて</h2>
+          <div className="mt-6 space-y-3 text-base-content/70 leading-relaxed">
+            <p>イツヒマはログインしなくても使えます。作ったイベントや回答は、そのブラウザから編集できます。</p>
+            <p>
+              Google
+              でログインすると、別の端末やブラウザからも、同じイベントや回答を編集できるようになります。そのために、Google
+              アカウントのメールアドレス・名前・プロフィール画像を使います。これらは、ログイン中のアカウントを表示するためだけに使い、他の参加者には表示しません。
+            </p>
+            <p>
+              詳しくは
+              <NavLink to="/privacy" className="link link-primary">
+                プライバシーポリシー
+              </NavLink>
+              をご覧ください。
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-base-200 text-base-content">
@@ -96,6 +126,7 @@ export default function LandingPage() {
       <main>
         <HeroSection />
         <FeaturesSection />
+        <LoginSection />
       </main>
       <Footer />
     </div>
