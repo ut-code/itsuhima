@@ -152,6 +152,8 @@ describe("GET /events/mine", () => {
         endDate: "2026-11-04",
         timezone: "Asia/Tokyo",
         isHost: true,
+        hasAnswered: false,
+        guestCount: 0,
       },
       {
         id: joined.id,
@@ -161,6 +163,8 @@ describe("GET /events/mine", () => {
         endDate: "2026-11-04",
         timezone: "Asia/Tokyo",
         isHost: false,
+        hasAnswered: true,
+        guestCount: 1,
       },
     ]);
   });

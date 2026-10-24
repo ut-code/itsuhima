@@ -13,7 +13,8 @@ export function registerDeleteEvent(server: McpServer, ctx: McpContext) {
       title: "イベントを消す",
       description:
         "自分が主催したイベントを消す。参加者の回答もすべて消え、取り消せない。" +
-        "消す前に、どのイベントか (名前と日程) と、回答した人数をユーザーに示して確かめること。",
+        "依頼がはっきりしていても、回答が 0 人でも、消す前には毎回、どのイベントか (名前と日程) と回答した人数をユーザーに示して確かめること。" +
+        "回答した人数は list_events で分かる。",
       inputSchema: z.object({
         event_id: eventIdSchema,
       }),

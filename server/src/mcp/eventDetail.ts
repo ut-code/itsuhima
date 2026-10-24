@@ -26,7 +26,8 @@ export function availabilityOf(event: EventDetail) {
 /** 集計の人数の数え方の注記。回答が 1 人だけなら、それも書く */
 export function headcountNotes(event: EventDetail): string[] {
   return [
-    "人数は回答した人の中で数える。まだ回答していない人は数に入らない。",
+    "人数は回答した人の中で数える。まだ回答していない人は数に入らない (招いた人数は分からない)。",
+    "参加形態は区別せずに数える。参加形態ごとの内訳は、各行の括弧の中にある。",
     ...(event.guests.length === 1 ? ["まだ 1 人しか回答していないので、みんなの共通の時間帯とは言えない。"] : []),
   ];
 }
@@ -62,13 +63,13 @@ export function formatEventDetail(ctx: McpContext, event: EventDetail, { include
   const facts = [
     "## イベント情報 (システム生成)",
     `event_id: ${event.id}`,
-    `URL: ${ctx.origin}/e/${event.id}`,
+    `URL: ${ctx.origin}/e/${event.id}  (参加者に共有する URL)`,
     `timezone: ${tz}`,
     `現在日時: ${formatNow(tz)}`,
     `日程の範囲: ${formatDate(event.startDate)} 〜 ${formatDate(event.endDate)}`,
     `入力できる時間帯: ${range ? `${range.startTime} 〜 ${range.endTime}` : "終日"} (15 分単位、${tz})`,
     `あなたの立場: ${event.isHost ? "主催者" : me ? "参加者" : "未参加 (このイベントにはまだ回答していない)"}`,
-    `回答した人数: ${event.guests.length}`,
+    `回答した人数: ${event.guests.length}${me ? " (あなたを含む)" : ""}`,
     "参加形態 (回答で使う ID):",
     ...event.options.map((o) => `  - id=${o.id} (ラベルは下の untrusted ブロックを参照)`),
   ];

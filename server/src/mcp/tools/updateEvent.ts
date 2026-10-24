@@ -16,7 +16,8 @@ export function registerUpdateEvent(server: McpServer, ctx: McpContext) {
       description:
         "自分が主催したイベントの名前・説明・日程の範囲・入力できる時間帯を直す。指定しなかった項目は変えない。" +
         "誰かが回答した後は、日程の範囲と入力できる時間帯は変えられない (名前と説明は変えられる)。" +
-        "参加形態は、ここでは変えられない (Web の画面で変える)。",
+        "参加形態は、ここでは変えられない (Web の画面で変える)。" +
+        "「再来週にずらして」のような相対的な言い方は、どの日付にするかをユーザーに示して確かめてから直すこと。",
       inputSchema: z.object({
         event_id: eventIdSchema,
         name: z.string().min(1).max(100).optional().describe("新しいイベント名。"),

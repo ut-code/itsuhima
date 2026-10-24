@@ -66,21 +66,27 @@ export async function listMyEvents(db: Db, actor: Actor) {
     ),
     with: {
       participants: {
-        where: ownedBy(actor),
-        columns: { role: true },
+        columns: { role: true, name: true, browserId: true, userId: true },
       },
     },
   });
 
-  return events.map((p) => ({
-    id: p.id,
-    name: p.name,
-    description: p.description ?? "",
-    startDate: p.startDate,
-    endDate: p.endDate,
-    timezone: p.timezone,
-    isHost: p.participants.some((me) => me.role === "host"),
-  }));
+  return events.map((p) => {
+    const mine = p.participants.filter((participant) => isMine(actor, participant));
+    return {
+      id: p.id,
+      name: p.name,
+      description: p.description ?? "",
+      startDate: p.startDate,
+      endDate: p.endDate,
+      timezone: p.timezone,
+      isHost: mine.some((me) => me.role === "host"),
+      /** 自分が回答したか (ホストはイベントを作っただけでは回答していない) */
+      hasAnswered: mine.some(hasAnswered),
+      /** 回答した人数 (自分を含む) */
+      guestCount: p.participants.filter(hasAnswered).length,
+    };
+  });
 }
 
 /** イベントの詳細。URL (イベント ID) を知っていれば誰でも見られる。 */

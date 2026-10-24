@@ -32,6 +32,13 @@ describe("list_events", () => {
     expect(all.text).toContain(`event_id: ${answered.id}`);
     expect(all.text).not.toContain(other.id);
     expect(all.text).toContain("2026-11-02(月)〜2026-11-04(水)");
+    // 回答した人数と、自分が回答したか (主催しただけなら、回答していない)
+    expect(all.text).toContain(
+      `event_id: ${hosted.id} / 2026-11-02(月)〜2026-11-04(水) (Asia/Tokyo) / 主催者 / 回答した人数: 0 / あなたの回答: なし`,
+    );
+    expect(all.text).toContain(
+      `event_id: ${answered.id} / 2026-11-02(月)〜2026-11-04(水) (Asia/Tokyo) / 参加者 / 回答した人数: 1 / あなたの回答: あり`,
+    );
     // イベント名は untrusted の欄に出す
     expect(all.text).toMatch(/<untrusted_user_content>[\s\S]*name: "主催した会"[\s\S]*<\/untrusted_user_content>/);
 

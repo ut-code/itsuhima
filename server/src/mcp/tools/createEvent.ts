@@ -16,8 +16,10 @@ export function registerCreateEvent(server: McpServer, ctx: McpContext) {
       title: "イベントを作る",
       description:
         "日程調整のイベントを新しく作る。作った人が主催者になる。日付と時刻は Asia/Tokyo の壁時計として扱う。" +
-        "「来週」などの相対的な日付は、先に list_events で現在日時を確かめてから直し、解釈が分かれるとき (例: 日曜の「来週」) はユーザーに確かめること。" +
-        "作ったら、返される共有 URL を参加者に送ってもらう。間違えたときは update_event で直すか、delete_event で消せる。",
+        "作る前に list_events を呼び、現在日時で相対的な日付 (「来週」など) を直し、同じ名前や日程のイベントがもうないか確かめること" +
+        " (あれば、ユーザーに示して、それを使うか新しく作るか確かめる)。" +
+        "参加形態は、作った後は MCP では変えられない (Web の画面で変える) ので、ここで決めておくこと。" +
+        "作ったら、返される共有 URL を参加者に送ってもらう。名前・説明・日程の範囲・時間帯を間違えたときは update_event で直すか、delete_event で消せる。",
       inputSchema: z.object({
         name: z.string().min(1).max(100).describe("イベント名。"),
         start_date: dateSchema("候補の期間の最初の日"),

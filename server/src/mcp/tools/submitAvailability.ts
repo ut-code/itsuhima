@@ -55,7 +55,9 @@ export function registerSubmitAvailability(server: McpServer, ctx: McpContext) {
       description:
         "イベントに、自分が参加できる時間帯を新しく回答する。回答済みなら update_availability を使うこと。" +
         "先に get_event で日程の範囲・入力できる時間帯・参加形態の ID を確かめ、時間帯はその中に 15 分単位で収め、" +
-        "日をまたぐ時間帯は日付ごとに分けること (外れた時間帯があれば、切り詰めずにエラーになる)。",
+        "日をまたぐ時間帯は日付ごとに分けること (外れた時間帯があれば、切り詰めずにエラーになる)。" +
+        "依頼が入力できる時間帯から外れているとき、終わりの時刻が分からないとき、参加形態が複数あってどれか分からないときは、" +
+        "決めつけずにユーザーに確かめること。",
       inputSchema: z.object({
         event_id: eventIdSchema,
         name: nameSchema.describe("参加者として表示される自分の名前。"),
