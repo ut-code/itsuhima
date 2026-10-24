@@ -2,7 +2,7 @@ import { hc } from "hono/client";
 import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router";
 import type { AppType } from "../../../server/src/app";
-import { authClient, consumeJustLoggedIn, LOGIN_ENABLED } from "../lib/auth";
+import { authClient, consumeJustLoggedIn } from "../lib/auth";
 import { API_ENDPOINT } from "../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
@@ -15,11 +15,6 @@ type LinkConflict = { eventId: string; eventName: string; isHost: boolean; name:
  * ログインしている間はアカウントの方が「自分」として表示されるので、このブラウザでの参加が見えなくなったことを伝える。
  */
 export default function LinkConflictNotice() {
-  if (!LOGIN_ENABLED) return null;
-  return <LinkConflictNoticeInner />;
-}
-
-function LinkConflictNoticeInner() {
   const { data: session, isPending } = authClient.useSession();
   const [conflicts, setConflicts] = useState<LinkConflict[]>([]);
   const dialogRef = useRef<HTMLDialogElement>(null);

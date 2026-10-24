@@ -88,7 +88,6 @@ API のレスポンスでは、参加者を `hosts`（ホスト）、`guests` �
 - サービスは `Actor` を受け取る。参加者は、`userId` か `browserId` が一致すれば本人のもの（`services/actor.ts` の `ownedBy` / `pickMine`）。ログインしたまま作る参加者はユーザーのもの（`ownerOf`）。
 - ログインすると、そのブラウザの参加者をユーザーのものにする（`userId` を付け、`browserId` を null にする。`services/link.ts`）。別の端末でも同じユーザーとしてログインすれば、同じ参加者を操作できる。ログアウトしたり、同じブラウザで別の人がログインしたりしても、ユーザーの参加者には触れない。
 - アカウントは削除できる（Better Auth の `deleteUser`）。作ったイベントと回答は残す。パスワードがないので、ログインして 1 日以内のセッションでだけ消せる。
-- client のログインのボタンは `VITE_LOGIN_ENABLED=true` のときだけ出る。
 - テストでは `createBrowser().login(...)` でログインできる（Google を呼ばず、署名なしの ID トークンを使う）。
 
 ### カレンダーの状態管理（CalendarMatrix）

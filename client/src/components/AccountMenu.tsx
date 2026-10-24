@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { LuCircleUserRound } from "react-icons/lu";
-import { authClient, LOGIN_ENABLED, signInWithGoogle } from "../lib/auth";
+import { authClient, signInWithGoogle } from "../lib/auth";
 import DeleteAccountDialog from "./DeleteAccountDialog";
 
 /**
@@ -8,11 +8,6 @@ import DeleteAccountDialog from "./DeleteAccountDialog";
  * ログインすると、このブラウザで作ったイベントや回答を、別の端末からも操作できる。
  */
 export default function AccountMenu({ compact = false }: { compact?: boolean }) {
-  if (!LOGIN_ENABLED) return null;
-  return <AccountMenuInner compact={compact} />;
-}
-
-function AccountMenuInner({ compact }: { compact: boolean }) {
   const { data: session, isPending } = authClient.useSession();
   const size = compact ? "h-6 w-6" : "h-8 w-8";
   const [isOpen, setIsOpen] = useState(false);
