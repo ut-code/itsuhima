@@ -1,4 +1,4 @@
-import { authClient, LOGIN_ENABLED } from "../lib/auth";
+import { authClient, LOGIN_ENABLED, signInWithGoogle } from "../lib/auth";
 
 /**
  * ログインの状態と、ログイン・ログアウトのボタン。ログインは任意。
@@ -16,11 +16,7 @@ function AccountMenuInner({ className }: { className: string }) {
 
   if (!session) {
     return (
-      <button
-        type="button"
-        className={`btn btn-sm btn-outline ${className}`}
-        onClick={() => authClient.signIn.social({ provider: "google", callbackURL: window.location.pathname })}
-      >
+      <button type="button" className={`btn btn-sm btn-outline ${className}`} onClick={() => signInWithGoogle()}>
         Google でログイン
       </button>
     );

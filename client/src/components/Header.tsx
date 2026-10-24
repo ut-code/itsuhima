@@ -3,6 +3,7 @@ import { LuMenu, LuX } from "react-icons/lu";
 import { NavLink } from "react-router";
 import { EXTERNAL_LINKS } from "../constants/links";
 import AccountMenu from "./AccountMenu";
+import LinkConflictNotice from "./LinkConflictNotice";
 
 export default function Header({ compact = false }: { compact?: boolean }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -88,6 +89,7 @@ export default function Header({ compact = false }: { compact?: boolean }) {
           </div>
         </div>
       )}
+      <LinkConflictNotice />
     </header>
   );
 }

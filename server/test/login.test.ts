@@ -98,4 +98,28 @@ describe("ログインしたときの紐づけ", () => {
     // ログインした端末では、ユーザーに紐づいた回答を自分のものとする
     expect(await json(await tablet.get(`/events/${id}`))).toMatchObject({ meAsGuest: { name: "Alice (PC)" } });
   });
+
+  test("ぶつかって紐づけなかった参加者は、そのブラウザで知らせるために取れる", async () => {
+    const host = createBrowser();
+    const { id, optionId } = await createEvent(host, { name: "合宿" });
+    const laptop = createBrowser();
+    await laptop.login(alice);
+    await laptop.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice (PC)" }));
+    const tablet = createBrowser();
+    await tablet.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice (タブレット)" }));
+    const { id: otherId } = await createEvent(tablet);
+
+    expect(await json(await tablet.get("/events/mine/link-conflicts"))).toEqual([]);
+
+    await tablet.login(alice);
+
+    // 紐づけられた方 (tablet で作ったイベント) は入らない
+    expect(await json(await tablet.get("/events/mine/link-conflicts"))).toEqual([
+      { eventId: id, eventName: "合宿", isHost: false, name: "Alice (タブレット)" },
+    ]);
+    expect(await json(await laptop.get("/events/mine/link-conflicts"))).toEqual([]);
+    expect(await json(await laptop.get("/events/mine"))).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: otherId, isHost: true })]),
+    );
+  });
 });

@@ -2,23 +2,19 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { type Db, runBatch } from "../db/index.js";
 import * as schema from "../db/schema.js";
 
+type BrowserAndUser = { browserId: string; userId: string };
+
 /**
- * ログインしたときに、そのブラウザ (browserId) の参加者をユーザーに紐づける。
- * 以降は、別の端末でも同じユーザーとしてログインすれば、その参加者を操作できる。
- *
- * 同じイベントに、すでにそのユーザーの参加者 (別の端末で紐づけたもの) があるときは、紐づけない (何も消さない)。
- * どちらを残すか (ホストを優先する、新しい方を残す など) と、利用者への知らせ方は未決。
- * 紐づけなかった参加者も、このブラウザからは今までどおり操作できる。
- *
- * @returns 紐づけた参加者の数と、ぶつかって紐づけなかったイベント
+ * そのブラウザの、まだユーザーに紐づいていない参加者を、紐づけられるもの (targets) と、
+ * 同じイベントにすでにそのユーザーの参加者 (別の端末で紐づけたもの) があって紐づけられないもの (conflicts) に分ける。
  */
-export async function linkBrowserToUser(db: Db, { browserId, userId }: { browserId: string; userId: string }) {
+async function partitionUnlinked(db: Db, { browserId, userId }: BrowserAndUser) {
   const unlinked = await db.query.participant.findMany({
     where: and(eq(schema.participant.browserId, browserId), isNull(schema.participant.userId)),
-    columns: { id: true, eventId: true },
+    columns: { id: true, eventId: true, role: true, name: true },
   });
   if (unlinked.length === 0) {
-    return { linked: 0, conflictEventIds: [] };
+    return { targets: [], conflicts: [] };
   }
 
   const alreadyLinked = await db.query.participant.findMany({
@@ -31,12 +27,54 @@ export async function linkBrowserToUser(db: Db, { browserId, userId }: { browser
     ),
     columns: { eventId: true },
   });
-  const conflictEventIds = alreadyLinked.map((p) => p.eventId);
-  const targets = unlinked.filter((p) => !conflictEventIds.includes(p.eventId));
+  const conflictEventIds = new Set(alreadyLinked.map((p) => p.eventId));
+  return {
+    targets: unlinked.filter((p) => !conflictEventIds.has(p.eventId)),
+    conflicts: unlinked.filter((p) => conflictEventIds.has(p.eventId)),
+  };
+}
 
+/**
+ * ログインしたときに、そのブラウザ (browserId) の参加者をユーザーに紐づける。
+ * 以降は、別の端末でも同じユーザーとしてログインすれば、その参加者を操作できる。
+ *
+ * 同じイベントに、すでにそのユーザーの参加者 (別の端末で紐づけたもの) があるときは、紐づけない (何も消さない)。
+ * 紐づけなかった参加者は、ログインしていればユーザーの参加者の方が「自分」になるので見えなくなる (`pickMine`)。
+ * そのことは、ログインした後に client が `findLinkConflicts` で知らせる。
+ *
+ * @returns 紐づけた参加者の数と、ぶつかって紐づけなかったイベント
+ */
+export async function linkBrowserToUser(db: Db, actor: BrowserAndUser) {
+  const { targets, conflicts } = await partitionUnlinked(db, actor);
   await runBatch(
     db,
-    targets.map((p) => db.update(schema.participant).set({ userId }).where(eq(schema.participant.id, p.id))),
+    targets.map((p) =>
+      db.update(schema.participant).set({ userId: actor.userId }).where(eq(schema.participant.id, p.id)),
+    ),
   );
-  return { linked: targets.length, conflictEventIds };
+  return { linked: targets.length, conflictEventIds: conflicts.map((p) => p.eventId) };
+}
+
+/** ぶつかって紐づけなかった、このブラウザの参加者と、そのイベント。利用者に知らせるため */
+export async function findLinkConflicts(db: Db, actor: BrowserAndUser) {
+  const { conflicts } = await partitionUnlinked(db, actor);
+  if (conflicts.length === 0) {
+    return [];
+  }
+
+  const events = await db.query.event.findMany({
+    where: inArray(
+      schema.event.id,
+      conflicts.map((p) => p.eventId),
+    ),
+    columns: { id: true, name: true },
+  });
+  const eventName = new Map(events.map((e) => [e.id, e.name]));
+  return conflicts.map((p) => ({
+    eventId: p.eventId,
+    eventName: eventName.get(p.eventId) ?? "",
+    isHost: p.role === "host",
+    /** このブラウザで回答したときの名前。回答していない (イベントを作っただけ) なら null */
+    name: p.name,
+  }));
 }

@@ -12,6 +12,7 @@ import {
   updateEvent,
   updateMyAvailability,
 } from "../services/events.js";
+import { findLinkConflicts } from "../services/link.js";
 
 const eventIdParamsSchema = z.object({ eventId: z.string().length(21) });
 
@@ -26,6 +27,13 @@ const router = new Hono<AppEnv>()
   .get("/mine", async (c) => {
     const events = await listMyEvents(c.get("db"), c.get("actor"));
     return c.json(events, 200);
+  })
+
+  // ログインしたときに、同じイベントにすでにユーザーの参加者があって紐づけなかった、このブラウザの参加者
+  .get("/mine/link-conflicts", async (c) => {
+    const { browserId, userId } = c.get("actor");
+    const conflicts = userId ? await findLinkConflicts(c.get("db"), { browserId, userId }) : [];
+    return c.json(conflicts, 200);
   })
 
   // イベント取得
