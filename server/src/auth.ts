@@ -33,6 +33,8 @@ export function createAuth(env: Bindings, db: Db, { browserId }: { browserId?: s
         clientSecret: env.GOOGLE_CLIENT_SECRET,
         // スコープは既定 (openid email profile) のまま。ID トークンでのログインは使わないので閉じる
         disableIdTokenSignIn: !acceptAnyIdToken,
+        // プロフィールを編集する画面がないので、名前と画像はログインのたびに Google の値で上書きする
+        overrideUserInfoOnSignIn: true,
         ...(acceptAnyIdToken ? { verifyIdToken: async () => true } : {}),
       },
     },
