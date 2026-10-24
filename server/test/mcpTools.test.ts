@@ -89,6 +89,20 @@ describe("get_event", () => {
     expect(text).toContain("あなたの立場: 参加者");
     expect(text).toContain(`version: ${meAsGuest.version}`);
     expect(text).toContain(`- 2026-11-02(月) 10:00〜12:00 [option ${optionId}]`);
+    expect(text).toContain('my_name: "ゲスト"');
+  });
+
+  test("参加者の一覧では、自分の行に「(あなた)」と付ける", async () => {
+    const { browser, token } = await loginAndAuthorize(alice);
+    const { id, optionId } = await createEvent(createBrowser());
+    await answerOnWeb(id, optionId, "Carol", [["10:00", "12:00"]]);
+    await browser.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice" }));
+
+    const { text } = await callTool(token, "get_event", { event_id: id, include: "guests" });
+
+    expect(text).toContain("回答した人数: 2 (あなたを含む)");
+    expect(text).toContain('name: "Alice" (あなた) / ');
+    expect(text).toContain('name: "Carol" / ');
   });
 
   test("非メンバーには、集計と参加者の名前を見せない", async () => {
@@ -353,7 +367,7 @@ describe("update_availability", () => {
     expect(text).not.toContain("10:00〜11:00");
     expect(versionIn(text)).not.toBe(version);
     const detail = await callTool(token, "get_event", { event_id: id, include: "guests" });
-    expect(detail.text).toContain('name: "Alice" / comment: "最初のコメント" / 時間帯 2 件');
+    expect(detail.text).toContain('name: "Alice" (あなた) / comment: "最初のコメント" / 時間帯 2 件');
   });
 
   test("別の端末で更新されていれば (version が古ければ)、取り直しを案内するエラーで、更新しない", async () => {

@@ -76,7 +76,7 @@ export function formatEventDetail(ctx: McpContext, event: EventDetail, { include
 
   if (me) {
     facts.push(
-      "あなたの回答: あり",
+      "あなたの回答: あり (表示名は下の untrusted ブロックの my_name。参加者の一覧では「(あなた)」と付く)",
       `  version: ${me.version}  ← update_availability の based_on_version に、この値をそのまま渡すこと`,
       `  登録した時間帯 (${me.slots.length} 件):`,
       ...[...me.slots]
@@ -109,13 +109,15 @@ export function formatEventDetail(ctx: McpContext, event: EventDetail, { include
     `event_name: "${sanitize(event.name)}"`,
     `description: "${sanitize(event.description)}"`,
     ...event.options.map((o) => `option[${o.id}] label: "${sanitize(o.label)}"`),
+    ...(me ? [`my_name: "${sanitize(me.name)}"`] : []),
   ];
   if (includeGuests && member) {
     const shown = event.guests.slice(0, GUEST_PAGE_SIZE);
     untrusted.push(
       `guests (${shown.length}/${event.guests.length} 件):`,
       ...shown.map(
-        (g) => `  - name: "${sanitize(g.name)}" / comment: "${sanitize(g.comment)}" / 時間帯 ${g.slots.length} 件`,
+        (g) =>
+          `  - name: "${sanitize(g.name)}"${g.id === me?.id ? " (あなた)" : ""} / comment: "${sanitize(g.comment)}" / 時間帯 ${g.slots.length} 件`,
       ),
     );
     if (event.guests.length > shown.length) {

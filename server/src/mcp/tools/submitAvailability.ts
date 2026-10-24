@@ -60,7 +60,9 @@ export function registerSubmitAvailability(server: McpServer, ctx: McpContext) {
         "決めつけずにユーザーに確かめること。",
       inputSchema: z.object({
         event_id: eventIdSchema,
-        name: nameSchema.describe("参加者として表示される自分の名前。"),
+        name: nameSchema.describe(
+          "参加者として表示される自分の名前。ユーザーに聞いて決める (他のイベントの get_event の my_name で前に使った名前が分かれば、それでよいか確かめる)。",
+        ),
         ranges: z.array(rangeSchema).min(1).describe("参加できる時間帯の配列。続いている時間帯は 1 つにまとめること。"),
         comment: commentSchema.optional().describe("主催者に伝えるコメント (任意)。"),
       }),
