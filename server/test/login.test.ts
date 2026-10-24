@@ -283,4 +283,21 @@ describe("アカウントの削除", () => {
     await pc.login(alice);
     expect(await json(await pc.get("/events/mine"))).toEqual([]);
   });
+
+  test("別の端末で消すと、この端末もすぐにログインしていないものとして扱われる", async () => {
+    const laptop = createBrowser();
+    await laptop.login(alice);
+    const { id } = await createEvent(laptop);
+    const phone = createBrowser();
+    await phone.login(alice);
+
+    expect((await phone.post("/auth/delete-user", {})).status).toBe(200);
+
+    expect(await json(await laptop.get(`/events/${id}`))).toMatchObject({ isHost: false });
+    // 消したユーザーのまま書き込もうとして失敗しない (このブラウザのものとして作る)
+    const { id: newId } = await createEvent(laptop);
+    expect(await json(await laptop.get("/events/mine"))).toEqual([
+      expect.objectContaining({ id: newId, isHost: true }),
+    ]);
+  });
 });

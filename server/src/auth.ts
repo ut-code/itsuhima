@@ -47,8 +47,8 @@ export function createAuth(env: Bindings, db: Db, { browserId }: { browserId?: s
       // ログインは任意なので長めに持つ。延長の書き込み (D1) は 7 日に 1 回まで
       expiresIn: 60 * 60 * 24 * 60,
       updateAge: 60 * 60 * 24 * 7,
-      // 10 分は、署名付きの Cookie だけでセッションを確かめ、DB を読まない
-      cookieCache: { enabled: true, maxAge: 60 * 10 },
+      // セッションは毎回 DB で確かめる (cookieCache は使わない)。Cookie にキャッシュすると、ユーザーやセッションを消しても、
+      // ほかの端末では有効期限まで古いセッションが使われ、消したユーザーで書き込もうとして失敗する
     },
     databaseHooks: {
       session: {
