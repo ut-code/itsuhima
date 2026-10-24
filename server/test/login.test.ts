@@ -99,9 +99,10 @@ describe("ログインしたときの紐づけ", () => {
     expect(await json(await tablet.get(`/events/${id}`))).toMatchObject({ meAsGuest: { name: "Alice (PC)" } });
   });
 
-  test("このブラウザで作ったイベントに、アカウントではゲストとして回答済みでも、ホストとして扱われる", async () => {
+  test("このブラウザで作って回答したイベントに、アカウントでも回答済みなら、紐づけないがホストとして扱われる", async () => {
     const tablet = createBrowser();
     const { id, optionId } = await createEvent(tablet);
+    await tablet.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice (タブレット)" }));
     const laptop = createBrowser();
     await laptop.login(alice);
     await laptop.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice (PC)" }));
@@ -113,6 +114,48 @@ describe("ログインしたときの紐づけ", () => {
       meAsGuest: { name: "Alice (PC)" },
     });
     expect((await tablet.patch(`/events/${id}`, { name: "新しい名前" })).status).toBe(200);
+  });
+
+  test("このブラウザで作っただけのイベントに、アカウントで回答していれば、1 人にまとめる", async () => {
+    const tablet = createBrowser();
+    const { id, optionId } = await createEvent(tablet);
+    const laptop = createBrowser();
+    await laptop.login(alice);
+    await laptop.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice", comment: "よろしく" }));
+
+    await tablet.login(alice);
+
+    const phone = createBrowser();
+    await phone.login(alice);
+    for (const device of [tablet, laptop, phone]) {
+      expect(await json(await device.get(`/events/${id}`))).toMatchObject({
+        isHost: true,
+        meAsGuest: { name: "Alice", comment: "よろしく", slots: [expect.anything()] },
+      });
+    }
+    const event = await json(await createBrowser().get(`/events/${id}`));
+    expect(event.hosts).toHaveLength(1);
+    expect(event.guests).toEqual([expect.objectContaining({ id: event.hosts[0].id, name: "Alice" })]);
+    expect(await json(await tablet.get("/events/mine/link-conflicts"))).toEqual([]);
+  });
+
+  test("アカウントで作っただけのイベントに、このブラウザで回答していれば、1 人にまとめる", async () => {
+    const laptop = createBrowser();
+    await laptop.login(alice);
+    const { id, optionId } = await createEvent(laptop);
+    const tablet = createBrowser();
+    await tablet.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice" }));
+
+    await tablet.login(alice);
+
+    for (const device of [tablet, laptop]) {
+      expect(await json(await device.get(`/events/${id}`))).toMatchObject({
+        isHost: true,
+        meAsGuest: { name: "Alice", slots: [expect.anything()] },
+      });
+    }
+    const event = await json(await createBrowser().get(`/events/${id}`));
+    expect(event.guests).toEqual([expect.objectContaining({ id: event.hosts[0].id })]);
   });
 
   test("ぶつかって紐づけなかった参加者は、そのブラウザで知らせるために取れる", async () => {

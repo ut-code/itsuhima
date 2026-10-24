@@ -4,17 +4,39 @@ import * as schema from "../db/schema.js";
 
 type BrowserAndUser = { browserId: string; userId: string };
 
+type ParticipantSummary = {
+  id: string;
+  eventId: string;
+  role: "host" | "guest";
+  name: string | null;
+  comment: string | null;
+};
+
 /**
- * そのブラウザの、まだユーザーに紐づいていない参加者を、紐づけられるもの (targets) と、
- * 同じイベントにすでにそのユーザーの参加者 (別の端末で紐づけたもの) があって紐づけられないもの (conflicts) に分ける。
+ * 同じイベントの、このブラウザの参加者 (browser) とユーザーの参加者 (user) を 1 人にまとめる方法。まとめられなければ null。
+ * 片方がまだ回答していない (イベントを作っただけのホスト) なら、ホストの行を残し、もう片方の回答をそこへ移す。
+ * 両方とも回答していれば、どちらを残すかを決められないので、まとめない。
+ */
+function planMerge(browser: ParticipantSummary, user: ParticipantSummary) {
+  if (browser.name === null && user.name !== null) return { keep: browser, drop: user };
+  if (user.name === null && browser.name !== null) return { keep: user, drop: browser };
+  return null;
+}
+
+/**
+ * そのブラウザの、まだユーザーに紐づいていない参加者を、次の 3 つに分ける。
+ * - targets: そのまま紐づけられるもの
+ * - merges: 同じイベントにすでにそのユーザーの参加者 (別の端末で紐づけたもの) があり、1 人にまとめられるもの
+ * - conflicts: 同じイベントにそのユーザーの参加者があり、まとめられないもの (両方とも回答している)
  */
 async function partitionUnlinked(db: Db, { browserId, userId }: BrowserAndUser) {
+  const columns = { id: true, eventId: true, role: true, name: true, comment: true } as const;
   const unlinked = await db.query.participant.findMany({
     where: and(eq(schema.participant.browserId, browserId), isNull(schema.participant.userId)),
-    columns: { id: true, eventId: true, role: true, name: true },
+    columns,
   });
   if (unlinked.length === 0) {
-    return { targets: [], conflicts: [] };
+    return { targets: [], merges: [], conflicts: [] };
   }
 
   const alreadyLinked = await db.query.participant.findMany({
@@ -25,34 +47,62 @@ async function partitionUnlinked(db: Db, { browserId, userId }: BrowserAndUser) 
         unlinked.map((p) => p.eventId),
       ),
     ),
-    columns: { eventId: true },
+    columns,
   });
-  const conflictEventIds = new Set(alreadyLinked.map((p) => p.eventId));
-  return {
-    targets: unlinked.filter((p) => !conflictEventIds.has(p.eventId)),
-    conflicts: unlinked.filter((p) => conflictEventIds.has(p.eventId)),
-  };
+  const linkedByEvent = new Map(alreadyLinked.map((p) => [p.eventId, p]));
+
+  const targets: ParticipantSummary[] = [];
+  const merges: { keep: ParticipantSummary; drop: ParticipantSummary }[] = [];
+  const conflicts: ParticipantSummary[] = [];
+  for (const p of unlinked) {
+    const linked = linkedByEvent.get(p.eventId);
+    if (!linked) {
+      targets.push(p);
+      continue;
+    }
+    const merge = planMerge(p, linked);
+    if (merge) merges.push(merge);
+    else conflicts.push(p);
+  }
+  return { targets, merges, conflicts };
 }
 
 /**
  * ログインしたときに、そのブラウザ (browserId) の参加者をユーザーに紐づける。
  * 以降は、別の端末でも同じユーザーとしてログインすれば、その参加者を操作できる。
  *
- * 同じイベントに、すでにそのユーザーの参加者 (別の端末で紐づけたもの) があるときは、紐づけない (何も消さない)。
- * 紐づけなかった参加者は、ログインしていればユーザーの参加者の方が「自分」になるので見えなくなる (`pickMine`)。
- * そのことは、ログインした後に client が `findLinkConflicts` で知らせる。
+ * 同じイベントに、すでにそのユーザーの参加者 (別の端末で紐づけたもの) があるときは、
+ * - 片方がまだ回答していない (イベントを作っただけのホスト) なら、ホストの行に回答を移して 1 人にまとめる。
+ *   消える方の行の端末 (browserId) からは、ログインしていないと操作できなくなる。
+ * - 両方とも回答していれば、紐づけない (何も消さない)。紐づけなかった参加者は、ログインしていれば
+ *   ユーザーの参加者の方が「自分」になるので見えなくなる (`pickMine`)。そのことは、ログインした後に
+ *   client が `findLinkConflicts` で知らせる。
  *
- * @returns 紐づけた参加者の数と、ぶつかって紐づけなかったイベント
+ * @returns 紐づけた参加者の数、まとめた参加者の数、ぶつかって紐づけなかったイベント
  */
 export async function linkBrowserToUser(db: Db, actor: BrowserAndUser) {
-  const { targets, conflicts } = await partitionUnlinked(db, actor);
-  await runBatch(
-    db,
-    targets.map((p) =>
+  const { targets, merges, conflicts } = await partitionUnlinked(db, actor);
+  await runBatch(db, [
+    ...targets.map((p) =>
       db.update(schema.participant).set({ userId: actor.userId }).where(eq(schema.participant.id, p.id)),
     ),
-  );
-  return { linked: targets.length, conflictEventIds: conflicts.map((p) => p.eventId) };
+    ...merges.flatMap(({ keep, drop }) => [
+      // 消す前に予定を移す (消すと予定も CASCADE で消える)
+      db
+        .update(schema.slot)
+        .set({ participantId: keep.id })
+        .where(eq(schema.slot.participantId, drop.id)),
+      // (eventId, browserId) と (eventId, userId) は一意なので、消す行を先に消してから、残す行にユーザーを付ける
+      db
+        .delete(schema.participant)
+        .where(eq(schema.participant.id, drop.id)),
+      db
+        .update(schema.participant)
+        .set({ userId: actor.userId, name: drop.name, comment: drop.comment })
+        .where(eq(schema.participant.id, keep.id)),
+    ]),
+  ]);
+  return { linked: targets.length, merged: merges.length, conflictEventIds: conflicts.map((p) => p.eventId) };
 }
 
 /** ぶつかって紐づけなかった、このブラウザの参加者と、そのイベント。利用者に知らせるため */
