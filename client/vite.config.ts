@@ -9,6 +9,10 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     server: {
       allowedHosts: env.VITE_ALLOWED_HOSTS?.split(",").filter(Boolean) ?? [],
+      // 本番と同じく、API を同じオリジンの /api で呼ぶ。wrangler dev (server) に転送する
+      proxy: {
+        "/api": "http://localhost:3000",
+      },
     },
   };
 });

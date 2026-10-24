@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: "24"
       - run: npm ci
-      - run: cd client && bash build.sh
+      - run: cd client && npm run build
   server-build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -35,5 +35,6 @@ jobs:
         with:
           node-version: "24"
       - run: npm ci
+      # client のビルド結果 (静的アセット) も含めて、Worker として出せるかを確かめる
       - run: cd server && npm run build
       - run: cd server && npm run typecheck

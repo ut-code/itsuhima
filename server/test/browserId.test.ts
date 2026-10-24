@@ -1,14 +1,14 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
-import { app } from "../src/app.js";
 import type { Bindings } from "../src/env.js";
+import { app } from "../src/main.js";
 
 function browserIdCookie(res: Response) {
   return res.headers.get("Set-Cookie")?.split(";")[0];
 }
 
 function requestWithCookie(cookie?: string, vars: Partial<Bindings> = {}) {
-  return app.request("/", { headers: cookie ? { Cookie: cookie } : {} }, { ...env, ...vars });
+  return app.request("/api", { headers: cookie ? { Cookie: cookie } : {} }, { ...env, ...vars });
 }
 
 describe("browserIdMiddleware", () => {

@@ -45,13 +45,15 @@ npm run dev:server
 npm run dev:client
 ```
 
-cloudflare functions が必要な場合
+http://localhost:5173 にアクセスします。`/api` は Vite が wrangler dev (http://localhost:3000) に転送します。
+
+本番と同じく、Worker から画面も配信して確かめる場合 (イベントのページの OG、OG 画像など)
 
 ```sh
-npm run dev:functions
+npm run dev:worker
 ```
 
-http://localhost:5173 にアクセスします。
+client をビルドしてから wrangler dev を起動します。http://localhost:3000 にアクセスします。
 
 
 

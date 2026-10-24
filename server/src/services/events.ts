@@ -114,6 +114,15 @@ export async function getEvent(db: Db, browserId: string, eventId: string) {
   };
 }
 
+/** リンクのプレビュー (OG) に出す、イベントの名前と日程。無ければ null */
+export async function getEventPreview(db: Db, eventId: string) {
+  const event = await db.query.event.findFirst({
+    where: eq(schema.event.id, eventId),
+    columns: { id: true, name: true, startDate: true, endDate: true },
+  });
+  return event ?? null;
+}
+
 type ParticipantWithSlots = typeof schema.participant.$inferSelect & { slots: (typeof schema.slot.$inferSelect)[] };
 
 /** 回答したか。name が null なら、まだ回答していない (イベントを作っただけのホスト) */
