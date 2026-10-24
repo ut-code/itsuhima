@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { createBrowser, createEvent, submissionInput } from "./helpers.js";
 
 const alice = { sub: "google-alice", email: "alice@example.com", name: "Alice" };
+const bob = { sub: "google-bob", email: "bob@example.com", name: "Bob" };
 
 // biome-ignore lint/suspicious/noExplicitAny: レスポンスの形そのものを見るため
 async function json(res: Response): Promise<any> {
@@ -180,5 +181,81 @@ describe("ログインしたときの紐づけ", () => {
     expect(await json(await laptop.get("/events/mine"))).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: otherId, isHost: true })]),
     );
+  });
+});
+
+describe("ログアウト・同じブラウザでの別のユーザー", () => {
+  test("ログアウトすると、ログインして作ったイベントと回答は、このブラウザからは操作できない", async () => {
+    const host = createBrowser();
+    const other = await createEvent(host);
+    const pc = createBrowser();
+    await pc.login(alice);
+    const { id } = await createEvent(pc);
+    await pc.post(`/events/${other.id}/submissions`, submissionInput(other.optionId, { name: "Alice" }));
+
+    await pc.logout();
+
+    expect(await json(await pc.get("/events/mine"))).toEqual([]);
+    expect(await json(await pc.get(`/events/${id}`))).toMatchObject({ isHost: false });
+    expect((await pc.delete(`/events/${id}`)).status).toBe(403);
+    expect(await json(await pc.get(`/events/${other.id}`))).toMatchObject({ meAsGuest: null });
+    expect((await pc.put(`/events/${other.id}/submissions/mine`, submissionInput(other.optionId))).status).toBe(404);
+    // ログインせずに回答し直せる
+    expect(
+      (await pc.post(`/events/${other.id}/submissions`, submissionInput(other.optionId, { name: "ゲスト" }))).status,
+    ).toBe(201);
+  });
+
+  test("ログインせずに回答してからログインすると、ログアウトした後は、このブラウザからは操作できない", async () => {
+    const host = createBrowser();
+    const { id, optionId } = await createEvent(host);
+    const pc = createBrowser();
+    await pc.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice" }));
+    await pc.login(alice);
+
+    await pc.logout();
+
+    expect(await json(await pc.get(`/events/${id}`))).toMatchObject({ meAsGuest: null });
+    await pc.login(alice);
+    expect(await json(await pc.get(`/events/${id}`))).toMatchObject({ meAsGuest: { name: "Alice" } });
+  });
+
+  test("紐づけなかった回答は、ログアウトすると、このブラウザで編集できる", async () => {
+    const host = createBrowser();
+    const { id, optionId } = await createEvent(host);
+    const laptop = createBrowser();
+    await laptop.login(alice);
+    await laptop.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice (PC)" }));
+    const tablet = createBrowser();
+    await tablet.post(`/events/${id}/submissions`, submissionInput(optionId, { name: "Alice (タブレット)" }));
+    await tablet.login(alice);
+
+    await tablet.logout();
+
+    expect(await json(await tablet.get(`/events/${id}`))).toMatchObject({ meAsGuest: { name: "Alice (タブレット)" } });
+    expect(
+      (await tablet.put(`/events/${id}/submissions/mine`, submissionInput(optionId, { name: "編集" }))).status,
+    ).toBe(200);
+  });
+
+  test("同じブラウザで別のユーザーがログインしても、前のユーザーのイベントと回答は操作できない", async () => {
+    const host = createBrowser();
+    const other = await createEvent(host);
+    const pc = createBrowser();
+    await pc.login(alice);
+    const { id } = await createEvent(pc);
+    await pc.post(`/events/${other.id}/submissions`, submissionInput(other.optionId, { name: "Alice" }));
+
+    // ログアウトせず (セッションが切れたなど) に、別のユーザーがログインする
+    await pc.login(bob);
+
+    expect(await json(await pc.get("/events/mine"))).toEqual([]);
+    expect((await pc.delete(`/events/${id}`)).status).toBe(403);
+    expect(await json(await pc.get(`/events/${other.id}`))).toMatchObject({ meAsGuest: null });
+    expect(
+      (await pc.post(`/events/${other.id}/submissions`, submissionInput(other.optionId, { name: "Bob" }))).status,
+    ).toBe(201);
+    const event = await json(await host.get(`/events/${other.id}`));
+    expect(event.guests.map((g: { name: string }) => g.name).sort()).toEqual(["Alice", "Bob"]);
   });
 });

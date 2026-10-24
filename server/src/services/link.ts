@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { type Db, runBatch } from "../db/index.js";
 import * as schema from "../db/schema.js";
 
@@ -24,15 +24,15 @@ function planMerge(browser: ParticipantSummary, user: ParticipantSummary) {
 }
 
 /**
- * そのブラウザの、まだユーザーに紐づいていない参加者を、次の 3 つに分ける。
+ * そのブラウザの参加者 (まだユーザーに紐づいていない) を、次の 3 つに分ける。
  * - targets: そのまま紐づけられるもの
- * - merges: 同じイベントにすでにそのユーザーの参加者 (別の端末で紐づけたもの) があり、1 人にまとめられるもの
+ * - merges: 同じイベントにすでにそのユーザーの参加者 (ログインして作ったもの、別の端末で紐づけたもの) があり、1 人にまとめられるもの
  * - conflicts: 同じイベントにそのユーザーの参加者があり、まとめられないもの (両方とも回答している)
  */
 async function partitionUnlinked(db: Db, { browserId, userId }: BrowserAndUser) {
   const columns = { id: true, eventId: true, role: true, name: true, comment: true } as const;
   const unlinked = await db.query.participant.findMany({
-    where: and(eq(schema.participant.browserId, browserId), isNull(schema.participant.userId)),
+    where: eq(schema.participant.browserId, browserId),
     columns,
   });
   if (unlinked.length === 0) {
@@ -69,14 +69,15 @@ async function partitionUnlinked(db: Db, { browserId, userId }: BrowserAndUser) 
 
 /**
  * ログインしたときに、そのブラウザ (browserId) の参加者をユーザーに紐づける。
- * 以降は、別の端末でも同じユーザーとしてログインすれば、その参加者を操作できる。
+ * 紐づけた参加者は、ブラウザのものではなくユーザーのものになる (browserId を null にする)。
+ * 以降は、別の端末でも同じユーザーとしてログインすれば、その参加者を操作でき、
+ * ログアウトすると、このブラウザからは操作できない。
  *
- * 同じイベントに、すでにそのユーザーの参加者 (別の端末で紐づけたもの) があるときは、
+ * 同じイベントに、すでにそのユーザーの参加者 (ログインして作ったもの、別の端末で紐づけたもの) があるときは、
  * - 片方がまだ回答していない (イベントを作っただけのホスト) なら、ホストの行に回答を移して 1 人にまとめる。
- *   消える方の行の端末 (browserId) からは、ログインしていないと操作できなくなる。
- * - 両方とも回答していれば、紐づけない (何も消さない)。紐づけなかった参加者は、ログインしていれば
- *   ユーザーの参加者の方が「自分」になるので見えなくなる (`pickMine`)。そのことは、ログインした後に
- *   client が `findLinkConflicts` で知らせる。
+ * - 両方とも回答していれば、紐づけない (何も消さない)。紐づけなかった参加者はブラウザのものとして残り、
+ *   ログアウトすれば操作できる。ログインしていれば、ユーザーの参加者の方が「自分」になるので見えなくなる
+ *   (`pickMine`)。そのことは、ログインした後に client が `findLinkConflicts` で知らせる。
  *
  * @returns 紐づけた参加者の数、まとめた参加者の数、ぶつかって紐づけなかったイベント
  */
@@ -84,7 +85,10 @@ export async function linkBrowserToUser(db: Db, actor: BrowserAndUser) {
   const { targets, merges, conflicts } = await partitionUnlinked(db, actor);
   await runBatch(db, [
     ...targets.map((p) =>
-      db.update(schema.participant).set({ userId: actor.userId }).where(eq(schema.participant.id, p.id)),
+      db
+        .update(schema.participant)
+        .set({ browserId: null, userId: actor.userId })
+        .where(eq(schema.participant.id, p.id)),
     ),
     ...merges.flatMap(({ keep, drop }) => [
       // 消す前に予定を移す (消すと予定も CASCADE で消える)
@@ -98,7 +102,7 @@ export async function linkBrowserToUser(db: Db, actor: BrowserAndUser) {
         .where(eq(schema.participant.id, drop.id)),
       db
         .update(schema.participant)
-        .set({ userId: actor.userId, name: drop.name, comment: drop.comment })
+        .set({ browserId: null, userId: actor.userId, name: drop.name, comment: drop.comment })
         .where(eq(schema.participant.id, keep.id)),
     ]),
   ]);

@@ -64,6 +64,7 @@ export const slot = sqliteTable(
 /**
  * イベントの参加者。ホスト (作成者) とゲストを role で区別する。
  * name が null なら、まだ回答していない (イベントを作っただけのホスト)。
+ * 持ち主は、ブラウザ (browserId) かユーザー (userId) のどちらか一方。
  */
 export const participant = sqliteTable(
   "participant",
@@ -75,9 +76,10 @@ export const participant = sqliteTable(
     role: text({ enum: ["host", "guest"] }).notNull(),
     name: text(),
     comment: text(),
-    browserId: text().notNull(),
-    /** ログインしている参加者のユーザー。ログインせずに回答した参加者は null */
-    userId: text().references(() => user.id, { onDelete: "set null" }),
+    /** ログインせずに作成・回答した参加者のブラウザ。ユーザーの参加者なら null */
+    browserId: text(),
+    /** ログインして作成・回答した (またはログインして紐づけた) 参加者のユーザー。ブラウザの参加者なら null */
+    userId: text().references(() => user.id, { onDelete: "cascade" }),
     updatedAt: text()
       .notNull()
       .$defaultFn(() => new Date().toISOString())
@@ -85,9 +87,10 @@ export const participant = sqliteTable(
   },
   (t) => [
     uniqueIndex("participant_eventId_browserId_key").on(t.eventId, t.browserId),
-    // SQLite の UNIQUE は NULL 同士を重複とみなさないので、ログインしていない参加者は何人いてもよい
+    // SQLite の UNIQUE は NULL 同士を重複とみなさないので、ブラウザの参加者もユーザーの参加者も、それぞれ何人いてもよい
     uniqueIndex("participant_eventId_userId_key").on(t.eventId, t.userId),
     check("participant_role_check", sql`${t.role} IN ('host', 'guest')`),
+    check("participant_owner_check", sql`(${t.browserId} IS NULL) <> (${t.userId} IS NULL)`),
   ],
 );
 

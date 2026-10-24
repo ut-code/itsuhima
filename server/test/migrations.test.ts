@@ -299,3 +299,69 @@ describe("0008_add_participant_user_id", () => {
     expect(await db.prepare(`SELECT userId FROM "participant" WHERE id = 'g1'`).first()).toEqual({ userId: null });
   });
 });
+
+describe("0009_nullable_participant_browser_id", () => {
+  test("ユーザーの参加者の browserId を null にし、参加者と slot は残る", async () => {
+    const { db, migrate } = await migrateUntil("0009_nullable_participant_browser_id.sql");
+    await db.batch([
+      db.prepare(`INSERT INTO "event" (id, name, startDate, endDate) VALUES ('p', 'name', '2026-11-02', '2026-11-04')`),
+      db.prepare(`INSERT INTO "option" VALUES ('o', '参加', '#0F82B1', 'p')`),
+      db.prepare(`INSERT INTO "user" (id, name, email, updatedAt) VALUES ('u', 'A', 'a@example.com', 0)`),
+      db.prepare(`INSERT INTO "participant" VALUES ('h', 'p', 'host', NULL, NULL, 'b1', 'now', 'u')`),
+      db.prepare(`INSERT INTO "participant" VALUES ('g', 'p', 'guest', 'ゲスト', 'コメント', 'b2', 'now', NULL)`),
+      db.prepare(
+        `INSERT INTO "slot" VALUES ('s1', '2026-11-02T00:00:00.000Z', '2026-11-02T01:00:00.000Z', 'p', 'g', 'o')`,
+      ),
+    ]);
+
+    await migrate();
+
+    expect(await db.prepare(`SELECT * FROM "participant" ORDER BY id`).all()).toMatchObject({
+      results: [
+        { id: "g", eventId: "p", role: "guest", name: "ゲスト", comment: "コメント", browserId: "b2", userId: null },
+        { id: "h", eventId: "p", role: "host", name: null, browserId: null, userId: "u" },
+      ],
+    });
+    expect(await db.prepare(`SELECT id, participantId FROM "slot"`).all()).toMatchObject({
+      results: [{ id: "s1", participantId: "g" }],
+    });
+    expect(await tableNames(db)).not.toContain("__old_participant");
+  });
+
+  test("持ち主はブラウザかユーザーの一方。ユーザーを消すと参加者と slot も消える", async () => {
+    const { db, migrate } = await migrateUntil("0009_nullable_participant_browser_id.sql");
+    await migrate();
+    await db.batch([
+      db.prepare(`INSERT INTO "event" (id, name, startDate, endDate) VALUES ('p', 'name', '2026-11-02', '2026-11-04')`),
+      db.prepare(`INSERT INTO "option" VALUES ('o', '参加', '#0F82B1', 'p')`),
+      db.prepare(`INSERT INTO "user" (id, name, email, updatedAt) VALUES ('u', 'A', 'a@example.com', 0)`),
+      db.prepare(
+        `INSERT INTO "participant" (id, eventId, role, name, userId, updatedAt) VALUES ('g1', 'p', 'guest', 'A', 'u', 'now')`,
+      ),
+      // ユーザーの参加者 (browserId が null) は何人いてもよい
+      db.prepare(`INSERT INTO "user" (id, name, email, updatedAt) VALUES ('u2', 'B', 'b@example.com', 0)`),
+      db.prepare(
+        `INSERT INTO "participant" (id, eventId, role, name, userId, updatedAt) VALUES ('g2', 'p', 'guest', 'B', 'u2', 'now')`,
+      ),
+      db.prepare(
+        `INSERT INTO "slot" VALUES ('s1', '2026-11-02T00:00:00.000Z', '2026-11-02T01:00:00.000Z', 'p', 'g1', 'o')`,
+      ),
+    ]);
+
+    // 両方ある、両方ない、は入れられない
+    await expect(
+      db
+        .prepare(
+          `INSERT INTO "participant" (id, eventId, role, browserId, userId, updatedAt) VALUES ('x', 'p', 'guest', 'b', 'u', 'now')`,
+        )
+        .run(),
+    ).rejects.toThrow(/CHECK/);
+    await expect(
+      db.prepare(`INSERT INTO "participant" (id, eventId, role, updatedAt) VALUES ('y', 'p', 'guest', 'now')`).run(),
+    ).rejects.toThrow(/CHECK/);
+
+    await db.prepare(`DELETE FROM "user" WHERE id = 'u'`).run();
+    expect(await db.prepare(`SELECT id FROM "participant"`).all()).toMatchObject({ results: [{ id: "g2" }] });
+    expect(await db.prepare(`SELECT id FROM "slot"`).all()).toMatchObject({ results: [] });
+  });
+});

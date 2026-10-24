@@ -4,7 +4,7 @@ import type { editEventReqSchema, eventReqSchema, submitReqSchema } from "../../
 import { type Db, insertMany, runBatch } from "../db/index.js";
 import * as schema from "../db/schema.js";
 import { nanoid } from "../lib/id.js";
-import { type Actor, isMine, ownedBy, pickMine } from "./actor.js";
+import { type Actor, isMine, ownedBy, ownerOf, pickMine } from "./actor.js";
 import { ServiceError } from "./errors.js";
 import { validateSlots } from "./slots.js";
 
@@ -33,9 +33,7 @@ export async function createEvent(db: Db, actor: Actor, input: CreateEventInput)
       schema.allowedRange,
       input.allowedRanges.map((range) => ({ ...range, eventId: event.id })),
     ),
-    db
-      .insert(schema.participant)
-      .values({ eventId: event.id, role: "host", browserId: actor.browserId, userId: actor.userId }),
+    db.insert(schema.participant).values({ eventId: event.id, role: "host", ...ownerOf(actor) }),
     ...insertMany(
       db,
       schema.option,
@@ -305,8 +303,7 @@ export async function submitAvailability(db: Db, actor: Actor, eventId: string, 
           id: participantId,
           eventId,
           role: "guest",
-          browserId: actor.browserId,
-          userId: actor.userId,
+          ...ownerOf(actor),
           ...answer,
         }),
     ...insertMany(db, schema.slot, slotRows(input, eventId, participantId)),

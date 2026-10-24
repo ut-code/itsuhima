@@ -49,9 +49,18 @@ export function createBrowser() {
     }
   };
 
+  /** ログアウトする。以降のリクエストに、セッションの Cookie を付けない */
+  const logout = async () => {
+    const res = await send("POST", "/auth/sign-out", {});
+    if (res.status !== 200) throw new Error(`ログアウトに失敗しました: ${res.status} ${await res.text()}`);
+    sessionCookies = [];
+    return res;
+  };
+
   return {
     browserId,
     login,
+    logout,
     get: (path: string) => request(path),
     post: (path: string, body?: unknown) => send("POST", path, body),
     put: (path: string, body?: unknown) => send("PUT", path, body),
