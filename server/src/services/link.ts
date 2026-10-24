@@ -120,11 +120,18 @@ export async function findLinkConflicts(db: Db, actor: BrowserAndUser) {
     columns: { id: true, name: true },
   });
   const eventName = new Map(events.map((e) => [e.id, e.name]));
-  return conflicts.map((p) => ({
-    eventId: p.eventId,
-    eventName: eventName.get(p.eventId) ?? "",
-    isHost: p.role === "host",
-    /** このブラウザで回答したときの名前。回答していない (イベントを作っただけ) なら null */
-    name: p.name,
-  }));
+  // conflicts は両方とも回答しているものなので、name は null にならない。型を絞るために除く
+  return conflicts.flatMap((p) =>
+    p.name === null
+      ? []
+      : [
+          {
+            eventId: p.eventId,
+            eventName: eventName.get(p.eventId) ?? "",
+            isHost: p.role === "host",
+            /** このブラウザで回答したときの名前 */
+            name: p.name,
+          },
+        ],
+  );
 }

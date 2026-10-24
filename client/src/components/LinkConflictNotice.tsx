@@ -7,7 +7,7 @@ import { API_ENDPOINT } from "../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
 
-type LinkConflict = { eventId: string; eventName: string; isHost: boolean; name: string | null };
+type LinkConflict = { eventId: string; eventName: string; isHost: boolean; name: string };
 
 /**
  * ログインした直後に、アカウントに紐づけなかった、このブラウザの参加者を知らせる。
@@ -47,11 +47,10 @@ function LinkConflictNoticeInner() {
   return (
     <dialog ref={dialogRef} className="modal">
       <div className="modal-box">
-        <h3 className="mb-2 font-bold text-base-content text-lg">アカウントに紐づけなかった参加があります</h3>
+        <h3 className="mb-2 font-bold text-base-content text-lg">アカウントに紐づけなかった回答があります</h3>
         <p className="mb-4 text-base-content/70 text-sm">
-          {"次のイベントには、このアカウントでの参加 (別の端末での回答など) がすでにあるため、"}
-          {"このブラウザでの参加は紐づけていません。"}
-          {"ログインしている間は、アカウントでの参加が表示されます。どちらも消えてはいません。"}
+          {"次のイベントには、アカウントでの回答と、このブラウザ上での回答の両方が存在します。"}
+          {"現在はアカウントでログインしています。このブラウザ上での回答を編集するには、ログアウトしてください。"}
         </p>
         <ul className="mb-2 space-y-2">
           {conflicts.map((c) => (
@@ -81,7 +80,5 @@ function LinkConflictNoticeInner() {
 }
 
 function describe({ isHost, name }: LinkConflict) {
-  const answer = name ? `「${name}」として回答` : null;
-  if (isHost) return answer ? `このブラウザで作成し、${answer}` : "このブラウザで作成";
-  return `このブラウザで${answer ?? "参加"}`;
+  return isHost ? `このブラウザで作成し、「${name}」として回答` : `このブラウザで「${name}」として回答`;
 }
