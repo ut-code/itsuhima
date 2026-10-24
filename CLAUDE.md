@@ -67,7 +67,7 @@ REST fetch ではなく `client.events[":eventId"].$get(...)` 形式で呼び出
 - `event`: 日程調整のイベント。`startDate` / `endDate` は `"YYYY-MM-DD"`（`endDate` を含む）、`timezone` は IANA のタイムゾーン名（現在は全件 `Asia/Tokyo`）。
 - `allowedRange`: 入力できる時間帯（現在はイベントにつき 1 つ）。`startTime` / `endTime` は `"HH:mm"`。終わりは `"24:00"` もありうる。
 - `option`: 参加形態。
-- `participant`: 参加者。`role` でホストとゲストを区別する。`name` が null なら未回答（イベントを作っただけのホスト）。ホストが回答しても 1 行のまま。持ち主はブラウザ（`browserId`）かユーザー（`userId`）のどちらか一方で、もう一方は null（CHECK 制約）。
+- `participant`: 参加者。`role` でホストとゲストを区別する。`name` が null なら未回答（イベントを作っただけのホスト）。ホストが回答しても 1 行のまま。持ち主はブラウザ（`browserId`）かユーザー（`userId`）のどちらか一方で、もう一方は null（CHECK 制約）。未回答はホストだけで、ホストはイベントにつき 1 人（CHECK 制約と部分 UNIQUE インデックス）。
 - `slot`: 参加者が参加できる時間帯。`startAt` / `endAt` は UTC の ISO 8601 で、日をまたがない。
 
 日付と時間帯は、イベントの `timezone` の壁時計の値で持つ。Slot だけは実際の時刻なので UTC で持つ。API も同じ形式で受け取って返す。

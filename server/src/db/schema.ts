@@ -86,11 +86,19 @@ export const participant = sqliteTable(
       .$onUpdateFn(() => new Date().toISOString()),
   },
   (t) => [
-    uniqueIndex("participant_eventId_browserId_key").on(t.eventId, t.browserId),
+    index("participant_eventId_idx").on(t.eventId),
+    // 本人の参加者を browserId・userId だけで引く (`ownedBy`) ので、それぞれを先頭にする。
     // SQLite の UNIQUE は NULL 同士を重複とみなさないので、ブラウザの参加者もユーザーの参加者も、それぞれ何人いてもよい
-    uniqueIndex("participant_eventId_userId_key").on(t.eventId, t.userId),
+    uniqueIndex("participant_browserId_eventId_key").on(t.browserId, t.eventId),
+    uniqueIndex("participant_userId_eventId_key").on(t.userId, t.eventId),
+    // ホストはイベントにつき 1 人
+    uniqueIndex("participant_eventId_host_key")
+      .on(t.eventId)
+      .where(sql`${t.role} = 'host'`),
     check("participant_role_check", sql`${t.role} IN ('host', 'guest')`),
     check("participant_owner_check", sql`(${t.browserId} IS NULL) <> (${t.userId} IS NULL)`),
+    // 未回答 (name が null) はホストだけ。ゲストは回答したときに作る
+    check("participant_answered_check", sql`${t.role} = 'host' OR ${t.name} IS NOT NULL`),
   ],
 );
 

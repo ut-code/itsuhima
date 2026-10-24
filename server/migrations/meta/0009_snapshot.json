@@ -351,15 +351,26 @@
         }
       },
       "indexes": {
-        "participant_eventId_browserId_key": {
-          "name": "participant_eventId_browserId_key",
-          "columns": ["eventId", "browserId"],
+        "participant_eventId_idx": {
+          "name": "participant_eventId_idx",
+          "columns": ["eventId"],
+          "isUnique": false
+        },
+        "participant_browserId_eventId_key": {
+          "name": "participant_browserId_eventId_key",
+          "columns": ["browserId", "eventId"],
           "isUnique": true
         },
-        "participant_eventId_userId_key": {
-          "name": "participant_eventId_userId_key",
-          "columns": ["eventId", "userId"],
+        "participant_userId_eventId_key": {
+          "name": "participant_userId_eventId_key",
+          "columns": ["userId", "eventId"],
           "isUnique": true
+        },
+        "participant_eventId_host_key": {
+          "name": "participant_eventId_host_key",
+          "columns": ["eventId"],
+          "isUnique": true,
+          "where": "\"participant\".\"role\" = 'host'"
         }
       },
       "foreignKeys": {
@@ -392,6 +403,10 @@
         "participant_owner_check": {
           "name": "participant_owner_check",
           "value": "(\"participant\".\"browserId\" IS NULL) <> (\"participant\".\"userId\" IS NULL)"
+        },
+        "participant_answered_check": {
+          "name": "participant_answered_check",
+          "value": "\"participant\".\"role\" = 'host' OR \"participant\".\"name\" IS NOT NULL"
         }
       }
     },

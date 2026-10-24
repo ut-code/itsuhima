@@ -352,16 +352,57 @@ describe("0009_nullable_participant_browser_id", () => {
     await expect(
       db
         .prepare(
-          `INSERT INTO "participant" (id, eventId, role, browserId, userId, updatedAt) VALUES ('x', 'p', 'guest', 'b', 'u', 'now')`,
+          `INSERT INTO "participant" (id, eventId, role, name, browserId, userId, updatedAt) VALUES ('x', 'p', 'guest', 'X', 'b', 'u', 'now')`,
         )
         .run(),
-    ).rejects.toThrow(/CHECK/);
+    ).rejects.toThrow(/participant_owner_check/);
     await expect(
-      db.prepare(`INSERT INTO "participant" (id, eventId, role, updatedAt) VALUES ('y', 'p', 'guest', 'now')`).run(),
-    ).rejects.toThrow(/CHECK/);
+      db
+        .prepare(
+          `INSERT INTO "participant" (id, eventId, role, name, updatedAt) VALUES ('y', 'p', 'guest', 'Y', 'now')`,
+        )
+        .run(),
+    ).rejects.toThrow(/participant_owner_check/);
 
     await db.prepare(`DELETE FROM "user" WHERE id = 'u'`).run();
     expect(await db.prepare(`SELECT id FROM "participant"`).all()).toMatchObject({ results: [{ id: "g2" }] });
     expect(await db.prepare(`SELECT id FROM "slot"`).all()).toMatchObject({ results: [] });
+  });
+
+  test("未回答はホストだけ。ホストはイベントにつき 1 人", async () => {
+    const { db, migrate } = await migrateUntil("0009_nullable_participant_browser_id.sql");
+    await migrate();
+    await db.batch([
+      db.prepare(`INSERT INTO "event" (id, name, startDate, endDate) VALUES ('p', 'name', '2026-11-02', '2026-11-04')`),
+      db.prepare(
+        `INSERT INTO "participant" (id, eventId, role, browserId, updatedAt) VALUES ('h', 'p', 'host', 'b1', 'now')`,
+      ),
+    ]);
+
+    await expect(
+      db
+        .prepare(
+          `INSERT INTO "participant" (id, eventId, role, browserId, updatedAt) VALUES ('g', 'p', 'guest', 'b2', 'now')`,
+        )
+        .run(),
+    ).rejects.toThrow(/participant_answered_check/);
+    await expect(
+      db
+        .prepare(
+          `INSERT INTO "participant" (id, eventId, role, browserId, updatedAt) VALUES ('h2', 'p', 'host', 'b3', 'now')`,
+        )
+        .run(),
+    ).rejects.toThrow(/UNIQUE/);
+  });
+
+  test("本人の参加者を browserId・userId で引くときに、インデックスを使う", async () => {
+    const { db, migrate } = await migrateUntil("0009_nullable_participant_browser_id.sql");
+    await migrate();
+
+    const { results } = await db
+      .prepare(`EXPLAIN QUERY PLAN SELECT eventId FROM "participant" WHERE browserId = 'b' OR userId = 'u'`)
+      .all<{ detail: string }>();
+
+    expect(results.map((r) => r.detail).join("\n")).not.toMatch(/SCAN participant/);
   });
 });
