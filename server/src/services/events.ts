@@ -4,6 +4,7 @@ import type { editEventReqSchema, eventReqSchema, submitReqSchema } from "../../
 import { type Db, insertMany, runBatch } from "../db/index.js";
 import * as schema from "../db/schema.js";
 import { nanoid } from "../lib/id.js";
+import { type Actor, isMine, ownedBy, ownerOf, pickMine } from "./actor.js";
 import { ServiceError } from "./errors.js";
 import { validateSlots } from "./slots.js";
 
@@ -11,12 +12,20 @@ export type CreateEventInput = z.infer<typeof eventReqSchema>;
 export type UpdateEventInput = z.infer<typeof editEventReqSchema>;
 export type SubmissionInput = z.infer<typeof submitReqSchema>;
 
+/** 一意制約の違反か。D1 のエラーは Drizzle のエラーの cause に入る */
+function isUniqueViolation(error: unknown): boolean {
+  for (let e = error; e instanceof Error; e = (e as { cause?: unknown }).cause) {
+    if (e.message.includes("UNIQUE constraint failed")) return true;
+  }
+  return false;
+}
+
 /** DB には日時を ISO 8601 の文字列で入れる */
 function toIso(value: string | Date): string {
   return new Date(value).toISOString();
 }
 
-export async function createEvent(db: Db, browserId: string, input: CreateEventInput) {
+export async function createEvent(db: Db, actor: Actor, input: CreateEventInput) {
   const event = {
     id: nanoid(),
     name: input.name,
@@ -32,7 +41,7 @@ export async function createEvent(db: Db, browserId: string, input: CreateEventI
       schema.allowedRange,
       input.allowedRanges.map((range) => ({ ...range, eventId: event.id })),
     ),
-    db.insert(schema.participant).values({ eventId: event.id, role: "host", browserId }),
+    db.insert(schema.participant).values({ eventId: event.id, role: "host", ...ownerOf(actor) }),
     ...insertMany(
       db,
       schema.option,
@@ -49,18 +58,15 @@ export async function createEvent(db: Db, browserId: string, input: CreateEventI
 }
 
 /** ホストまたはゲストとして関わるイベント */
-export async function listMyEvents(db: Db, browserId: string) {
+export async function listMyEvents(db: Db, actor: Actor) {
   const events = await db.query.event.findMany({
     where: inArray(
       schema.event.id,
-      db
-        .select({ id: schema.participant.eventId })
-        .from(schema.participant)
-        .where(eq(schema.participant.browserId, browserId)),
+      db.select({ id: schema.participant.eventId }).from(schema.participant).where(ownedBy(actor)),
     ),
     with: {
       participants: {
-        where: eq(schema.participant.browserId, browserId),
+        where: ownedBy(actor),
         columns: { role: true },
       },
     },
@@ -78,7 +84,7 @@ export async function listMyEvents(db: Db, browserId: string) {
 }
 
 /** イベントの詳細。URL (イベント ID) を知っていれば誰でも見られる。 */
-export async function getEvent(db: Db, browserId: string, eventId: string) {
+export async function getEvent(db: Db, actor: Actor, eventId: string) {
   const event = await db.query.event.findFirst({
     where: eq(schema.event.id, eventId),
     with: {
@@ -96,7 +102,7 @@ export async function getEvent(db: Db, browserId: string, eventId: string) {
     throw new ServiceError("event_not_found", "イベントが見つかりません。");
   }
 
-  const me = event.participants.find((p) => p.browserId === browserId);
+  const me = pickMine(actor, event.participants);
 
   return {
     id: event.id,
@@ -109,7 +115,8 @@ export async function getEvent(db: Db, browserId: string, eventId: string) {
     options: event.options,
     hosts: event.participants.filter((p) => p.role === "host").map((p) => ({ id: p.id, eventId: p.eventId })),
     guests: event.participants.filter(hasAnswered).map(toGuest),
-    isHost: me?.role === "host",
+    // 自分の参加者が 2 人いる (紐づけなかった) とき、me がゲストでも、もう 1 人がホストならホストとして扱う (isHost() と同じ)
+    isHost: event.participants.some((p) => isMine(actor, p) && p.role === "host"),
     meAsGuest: me && hasAnswered(me) ? toGuest(me) : null,
   };
 }
@@ -141,21 +148,17 @@ function toGuest(participant: ParticipantWithSlots & { name: string }) {
   };
 }
 
-async function isHost(db: Db, browserId: string, eventId: string) {
+async function isHost(db: Db, actor: Actor, eventId: string) {
   const host = await db.query.participant.findFirst({
-    where: and(
-      eq(schema.participant.eventId, eventId),
-      eq(schema.participant.browserId, browserId),
-      eq(schema.participant.role, "host"),
-    ),
+    where: and(eq(schema.participant.eventId, eventId), ownedBy(actor), eq(schema.participant.role, "host")),
     columns: { id: true },
   });
   return host !== undefined;
 }
 
-export async function updateEvent(db: Db, browserId: string, eventId: string, input: UpdateEventInput) {
+export async function updateEvent(db: Db, actor: Actor, eventId: string, input: UpdateEventInput) {
   const [host, existingGuest] = await Promise.all([
-    isHost(db, browserId, eventId),
+    isHost(db, actor, eventId),
     db.query.participant.findFirst({
       where: and(eq(schema.participant.eventId, eventId), isNotNull(schema.participant.name)),
       columns: { id: true },
@@ -236,8 +239,8 @@ export async function updateEvent(db: Db, browserId: string, eventId: string, in
   });
 }
 
-export async function deleteEvent(db: Db, browserId: string, eventId: string) {
-  if (!(await isHost(db, browserId, eventId))) {
+export async function deleteEvent(db: Db, actor: Actor, eventId: string) {
+  if (!(await isHost(db, actor, eventId))) {
     throw new ServiceError("not_host", "削除権限がありません。");
   }
 
@@ -266,16 +269,17 @@ async function findEventForSlots(db: Db, eventId: string) {
   };
 }
 
-function findMyParticipant(db: Db, browserId: string, eventId: string) {
-  return db.query.participant.findFirst({
-    where: and(eq(schema.participant.browserId, browserId), eq(schema.participant.eventId, eventId)),
+async function findMyParticipant(db: Db, actor: Actor, eventId: string) {
+  const mine = await db.query.participant.findMany({
+    where: and(ownedBy(actor), eq(schema.participant.eventId, eventId)),
     with: { slots: true },
   });
+  return pickMine(actor, mine);
 }
 
 /** 自分の回答。回答していなければ null */
-async function findMyGuest(db: Db, browserId: string, eventId: string) {
-  const me = await findMyParticipant(db, browserId, eventId);
+async function findMyGuest(db: Db, actor: Actor, eventId: string) {
+  const me = await findMyParticipant(db, actor, eventId);
   return me && hasAnswered(me) ? toGuest(me) : null;
 }
 
@@ -289,9 +293,9 @@ function slotRows(input: SubmissionInput, eventId: string, participantId: string
   }));
 }
 
-export async function submitAvailability(db: Db, browserId: string, eventId: string, input: SubmissionInput) {
+export async function submitAvailability(db: Db, actor: Actor, eventId: string, input: SubmissionInput) {
   // ホストはイベントを作った時点で participant があり、名前を入れると回答したことになる
-  const me = await findMyParticipant(db, browserId, eventId);
+  const me = await findMyParticipant(db, actor, eventId);
   if (me && hasAnswered(me)) {
     throw new ServiceError("already_submitted", "提出済みです。");
   }
@@ -299,19 +303,34 @@ export async function submitAvailability(db: Db, browserId: string, eventId: str
   validateSlots(await findEventForSlots(db, eventId), input.slots);
 
   const answer = { name: input.name, comment: input.comment?.trim() || null };
-  const participantId = me?.id ?? crypto.randomUUID();
-  await runBatch(db, [
-    me
-      ? db.update(schema.participant).set(answer).where(eq(schema.participant.id, me.id))
-      : db.insert(schema.participant).values({ id: participantId, eventId, role: "guest", browserId, ...answer }),
-    ...insertMany(db, schema.slot, slotRows(input, eventId, participantId)),
-  ]);
+  if (me) {
+    // 二重送信で、上の確認を両方が通っても、予定が二重にならないよう、入れる前に消す (後に届いた方の内容になる)
+    await runBatch(db, [
+      db.update(schema.participant).set(answer).where(eq(schema.participant.id, me.id)),
+      db.delete(schema.slot).where(eq(schema.slot.participantId, me.id)),
+      ...insertMany(db, schema.slot, slotRows(input, eventId, me.id)),
+    ]);
+  } else {
+    const participantId = crypto.randomUUID();
+    try {
+      await runBatch(db, [
+        db
+          .insert(schema.participant)
+          .values({ id: participantId, eventId, role: "guest", ...ownerOf(actor), ...answer }),
+        ...insertMany(db, schema.slot, slotRows(input, eventId, participantId)),
+      ]);
+    } catch (e) {
+      // 二重送信で、上の確認を両方が通ったときは、後の方が (browserId, eventId)・(userId, eventId) の一意制約に当たる
+      if (isUniqueViolation(e)) throw new ServiceError("already_submitted", "提出済みです。");
+      throw e;
+    }
+  }
 
-  return findMyGuest(db, browserId, eventId);
+  return findMyGuest(db, actor, eventId);
 }
 
-export async function updateMyAvailability(db: Db, browserId: string, eventId: string, input: SubmissionInput) {
-  const myGuest = await findMyGuest(db, browserId, eventId);
+export async function updateMyAvailability(db: Db, actor: Actor, eventId: string, input: SubmissionInput) {
+  const myGuest = await findMyGuest(db, actor, eventId);
 
   if (!myGuest) {
     throw new ServiceError("submission_not_found", "既存の日程が見つかりません。");
@@ -328,5 +347,5 @@ export async function updateMyAvailability(db: Db, browserId: string, eventId: s
       .where(eq(schema.participant.id, myGuest.id)),
   ]);
 
-  return findMyGuest(db, browserId, eventId);
+  return findMyGuest(db, actor, eventId);
 }

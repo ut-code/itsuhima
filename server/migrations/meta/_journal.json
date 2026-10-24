@@ -50,6 +50,27 @@
       "when": 1792697240075,
       "tag": "0006_merge_host_guest_into_participant",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1792706589944,
+      "tag": "0007_add_auth_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792706622649,
+      "tag": "0008_add_participant_user_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1792853683415,
+      "tag": "0009_nullable_participant_browser_id",
+      "breakpoints": true
     }
   ]
 }
