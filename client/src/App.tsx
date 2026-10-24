@@ -4,6 +4,8 @@ import SubmissionPage from "./pages/eventId/Submission.tsx";
 import HomePage from "./pages/Home.tsx";
 import LandingPage from "./pages/Landing.tsx";
 import NotFoundPage from "./pages/NotFound.tsx";
+import PrivacyPage from "./pages/Privacy.tsx";
+import TermsPage from "./pages/Terms.tsx";
 
 /**
  * Nano ID 形式の正規表現。
@@ -38,6 +40,10 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route index element={<LandingPage />} />
+        {/* / は訪問済みだと /home にリダイレクトするので、リダイレクトしない URL を Google の同意画面のホームページに登録する */}
+        <Route path="about" element={<LandingPage />} />
+        <Route path="privacy" element={<PrivacyPage />} />
+        <Route path="terms" element={<TermsPage />} />
         <Route path="home" element={<HomePage />} />
         <Route path="new" element={<EventFormPage />} />
         <Route path="e">
