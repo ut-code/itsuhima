@@ -3,10 +3,12 @@ import type { McpContext } from "./context.js";
 import { registerPrompts } from "./prompts.js";
 import { registerEventResource } from "./resources.js";
 import { registerCreateEvent } from "./tools/createEvent.js";
+import { registerDeleteEvent } from "./tools/deleteEvent.js";
 import { registerFindCommonAvailability } from "./tools/findCommonAvailability.js";
 import { registerGetEvent } from "./tools/getEvent.js";
 import { registerListEvents } from "./tools/listEvents.js";
 import { registerSubmitAvailability } from "./tools/submitAvailability.js";
+import { registerUpdateEvent } from "./tools/updateEvent.js";
 
 const INSTRUCTIONS = [
   "イツヒマは、みんなの空いている時間を集めて日程を決めるサービスです。",
@@ -25,6 +27,8 @@ export function createItsuhimaMcpServer(ctx: McpContext) {
   registerFindCommonAvailability(server, ctx);
   registerSubmitAvailability(server, ctx);
   registerCreateEvent(server, ctx);
+  registerUpdateEvent(server, ctx);
+  registerDeleteEvent(server, ctx);
   registerEventResource(server, ctx);
   registerPrompts(server);
   return server;

@@ -6,17 +6,8 @@ import { createEvent, getEvent } from "../../services/events.js";
 import { type McpContext, missingScope } from "../context.js";
 import { serviceErrorResult } from "../errors.js";
 import { formatEventDetail } from "../eventDetail.js";
-import { EVENT_TIMEZONE, toolError, toolText } from "../format.js";
-
-const dateSchema = (role: string) =>
-  z.iso.date().describe(`${role} (${EVENT_TIMEZONE} の日付、YYYY-MM-DD。例: 2026-11-02)。`);
-
-const timeSchema = (role: string, defaultTime: string) =>
-  z
-    .string()
-    .regex(/^(([01]\d|2[0-3]):(00|15|30|45)|24:00)$/, "HH:mm で、15 分単位 (:00 / :15 / :30 / :45) で指定してください")
-    .default(defaultTime)
-    .describe(`${role} (${EVENT_TIMEZONE} の時刻、HH:mm、15 分単位。既定は ${defaultTime})。`);
+import { toolError, toolText } from "../format.js";
+import { dateSchema, timeSchema } from "../schemas.js";
 
 export function registerCreateEvent(server: McpServer, ctx: McpContext) {
   server.registerTool(
@@ -26,13 +17,16 @@ export function registerCreateEvent(server: McpServer, ctx: McpContext) {
       description:
         "日程調整のイベントを新しく作る。作った人が主催者になる。日付と時刻は Asia/Tokyo の壁時計として扱う。" +
         "「来週」などの相対的な日付は、先に list_events で現在日時を確かめてから直し、解釈が分かれるとき (例: 日曜の「来週」) はユーザーに確かめること。" +
-        "作ったら、返される共有 URL を参加者に送ってもらう。",
+        "作ったら、返される共有 URL を参加者に送ってもらう。間違えたときは update_event で直すか、delete_event で消せる。",
       inputSchema: z.object({
         name: z.string().min(1).max(100).describe("イベント名。"),
         start_date: dateSchema("候補の期間の最初の日"),
         end_date: dateSchema("候補の期間の最後の日 (この日を含む)。start_date 以降"),
-        start_time: timeSchema("1 日のうち、回答できる時間帯の始まり", "09:00"),
-        end_time: timeSchema("1 日のうち、回答できる時間帯の終わり。その日の終わりまでなら 24:00", "21:00"),
+        start_time: timeSchema("1 日のうち、回答できる時間帯の始まり", "既定は 09:00").default("09:00"),
+        end_time: timeSchema(
+          "1 日のうち、回答できる時間帯の終わり。その日の終わりまでなら 24:00",
+          "既定は 21:00",
+        ).default("21:00"),
         description: z.string().max(1000).optional().describe("イベントの説明 (任意)。"),
         participation_options: z
           .array(z.object({ label: z.string().min(1).max(50).describe("参加形態のラベル (例: 対面、オンライン)。") }))

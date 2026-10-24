@@ -6,7 +6,7 @@ import { authClient } from "../../lib/auth";
 const SCOPE_LABELS: Record<string, string> = {
   read: "あなたが関わるイベントと、その回答を見る",
   submit: "あなたとして、イベントに回答する・回答を変える",
-  create: "あなたとして、イベントを作る",
+  create: "あなたとして、イベントを作る・変える・消す",
   openid: "あなたのアカウントを識別する",
   profile: "名前とプロフィール画像を見る",
   email: "メールアドレスを見る",

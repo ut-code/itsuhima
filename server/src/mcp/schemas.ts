@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { EVENT_TIMEZONE } from "./format.js";
 
 /** ツールの入力で共通に使うスキーマ */
 
@@ -25,5 +26,16 @@ export const rangeSchema = z.object({
         "イベントの参加形態が 1 つだけなら省略できる。",
     ),
 });
+
+/** イベントの日付 ("YYYY-MM-DD") */
+export const dateSchema = (role: string) =>
+  z.iso.date().describe(`${role} (${EVENT_TIMEZONE} の日付、YYYY-MM-DD。例: 2026-11-02)。`);
+
+/** 1 日のうちの時刻 ("HH:mm"、15 分単位。24:00 もありうる) */
+export const timeSchema = (role: string, note: string) =>
+  z
+    .string()
+    .regex(/^(([01]\d|2[0-3]):(00|15|30|45)|24:00)$/, "HH:mm で、15 分単位 (:00 / :15 / :30 / :45) で指定してください")
+    .describe(`${role} (${EVENT_TIMEZONE} の時刻、HH:mm、15 分単位。${note})。`);
 
 export type RangeInput = z.infer<typeof rangeSchema>;

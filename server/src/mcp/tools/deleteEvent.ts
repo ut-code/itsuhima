@@ -1,0 +1,35 @@
+import type { McpServer } from "@modelcontextprotocol/server";
+import { z } from "zod";
+import { deleteEvent, getEvent } from "../../services/events.js";
+import { type McpContext, missingScope } from "../context.js";
+import { serviceErrorResult } from "../errors.js";
+import { toolError, toolText } from "../format.js";
+import { eventIdSchema } from "../schemas.js";
+
+export function registerDeleteEvent(server: McpServer, ctx: McpContext) {
+  server.registerTool(
+    "delete_event",
+    {
+      title: "イベントを消す",
+      description:
+        "自分が主催したイベントを消す。参加者の回答もすべて消え、取り消せない。" +
+        "消す前に、どのイベントか (名前と日程) と、回答した人数をユーザーに示して確かめること。",
+      inputSchema: z.object({
+        event_id: eventIdSchema,
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ event_id }) => {
+      const scopeError = missingScope(ctx, "create");
+      if (scopeError) return toolError(scopeError);
+
+      try {
+        const event = await getEvent(ctx.db, ctx.actor, event_id);
+        await deleteEvent(ctx.db, ctx.actor, event_id);
+        return toolText(`イベント ${event_id} を消しました (回答 ${event.guests.length} 件も消えました)。`);
+      } catch (e) {
+        return serviceErrorResult(e);
+      }
+    },
+  );
+}

@@ -467,6 +467,110 @@ describe("create_event", () => {
   });
 });
 
+describe("update_event", () => {
+  test("指定した項目だけを直し、片方だけの日付や時刻は今の値と合わせて確かめる", async () => {
+    const { browser, token } = await loginAndAuthorize(alice);
+    const { id } = await createEvent(browser, { name: "定例会" });
+
+    const { text, isError } = await callTool(token, "update_event", {
+      event_id: id,
+      name: "打ち上げ",
+      end_date: "2026-11-06",
+      start_time: "10:00",
+    });
+
+    expect(isError).toBe(false);
+    expect(text).toContain("イベントを直しました。");
+    expect(text).toContain("日程の範囲: 2026-11-02(月) 〜 2026-11-06(金)");
+    expect(text).toContain("入力できる時間帯: 10:00 〜 23:00");
+    expect(text).toContain('event_name: "打ち上げ"');
+
+    const reversed = await callTool(token, "update_event", { event_id: id, end_date: "2026-11-01" });
+    expect(reversed.isError).toBe(true);
+    expect(reversed.text).toContain("開始日は終了日より前に設定してください");
+  });
+
+  test("回答があれば、日程と時間帯は変えずにエラーにし、名前は変えられる", async () => {
+    const { browser, token } = await loginAndAuthorize(alice);
+    const { id, optionId } = await createEvent(browser);
+    await answerOnWeb(id, optionId, "Carol", [["10:00", "12:00"]]);
+
+    const schedule = await callTool(token, "update_event", {
+      event_id: id,
+      name: "新しい名前",
+      end_date: "2026-11-06",
+    });
+    expect(schedule.isError).toBe(true);
+    expect(schedule.text).toContain("1 人が回答しているので");
+
+    const renamed = await callTool(token, "update_event", { event_id: id, name: "新しい名前" });
+    expect(renamed.isError).toBe(false);
+    expect(renamed.text).toContain("日程の範囲: 2026-11-02(月) 〜 2026-11-04(水)");
+    expect(renamed.text).toContain('event_name: "新しい名前"');
+  });
+
+  test("主催者でなければ、または変える項目が無ければエラー", async () => {
+    const { id } = await createEvent(createBrowser());
+    const { browser, token } = await loginAndAuthorize(alice);
+    const mine = await createEvent(browser);
+
+    const notHost = await callTool(token, "update_event", { event_id: id, name: "乗っ取り" });
+    expect(notHost.isError).toBe(true);
+    expect(notHost.text).toContain("主催者だけ");
+
+    const empty = await callTool(token, "update_event", { event_id: mine.id });
+    expect(empty.isError).toBe(true);
+  });
+
+  test("create を許可していなければエラー", async () => {
+    const { browser, token } = await loginAndAuthorize(alice, "openid read submit");
+    const { id } = await createEvent(browser);
+
+    const { text, isError } = await callTool(token, "update_event", { event_id: id, name: "会" });
+
+    expect(isError).toBe(true);
+    expect(text).toContain("「create」");
+  });
+});
+
+describe("delete_event", () => {
+  test("主催したイベントを、回答ごと消す", async () => {
+    const { browser, token } = await loginAndAuthorize(alice);
+    const { id, optionId } = await createEvent(browser);
+    await answerOnWeb(id, optionId, "Carol", [["10:00", "12:00"]]);
+
+    const { text, isError } = await callTool(token, "delete_event", { event_id: id });
+
+    expect(isError).toBe(false);
+    expect(text).toContain("回答 1 件も消えました");
+    expect((await browser.get(`/events/${id}`)).status).toBe(404);
+    expect((await callTool(token, "list_events", {})).text).not.toContain(id);
+  });
+
+  test("主催者でなければ消さない", async () => {
+    const other = createBrowser();
+    const { id } = await createEvent(other);
+    const { token } = await loginAndAuthorize(alice);
+
+    const { text, isError } = await callTool(token, "delete_event", { event_id: id });
+
+    expect(isError).toBe(true);
+    expect(text).toContain("主催者だけ");
+    expect((await other.get(`/events/${id}`)).status).toBe(200);
+  });
+
+  test("create を許可していなければエラー", async () => {
+    const { browser, token } = await loginAndAuthorize(alice, "openid read submit");
+    const { id } = await createEvent(browser);
+
+    const { text, isError } = await callTool(token, "delete_event", { event_id: id });
+
+    expect(isError).toBe(true);
+    expect(text).toContain("「create」");
+    expect((await browser.get(`/events/${id}`)).status).toBe(200);
+  });
+});
+
 describe("Resource と Prompt", () => {
   test("自分のイベントを Resource として一覧し、読める", async () => {
     const { browser, token } = await loginAndAuthorize(alice);
