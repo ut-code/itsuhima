@@ -1,8 +1,6 @@
 name = "itsuhima"
 main = "src/main.ts"
 compatibility_date = "2026-10-01"
-
-# Pages から付け替える。Pages にドメインが付いている間は、デプロイが失敗する (先に Pages から外す)
 routes = [{ pattern = "itsuhima.utcode.net", custom_domain = true }]
 workers_dev = false
 
