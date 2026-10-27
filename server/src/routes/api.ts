@@ -1,10 +1,10 @@
 import { Hono } from "hono";
-import { createDb } from "./db/index.js";
-import type { AppEnv } from "./env.js";
-import { actorMiddleware } from "./middleware/actor.js";
-import { browserIdMiddleware } from "./middleware/browserId.js";
-import eventsRoutes from "./routes/events.js";
-import { ServiceError, type ServiceErrorReason } from "./services/errors.js";
+import { createDb } from "../db/index.js";
+import type { AppEnv } from "../env.js";
+import { actorMiddleware } from "../middleware/actor.js";
+import { browserIdMiddleware } from "../middleware/browserId.js";
+import { ServiceError, type ServiceErrorReason } from "../services/errors.js";
+import eventsRoutes from "./events.js";
 
 const serviceErrorStatus = {
   event_not_found: 404,
@@ -29,13 +29,15 @@ export const api = new Hono<AppEnv>()
   })
   // ログイン (Better Auth)。Google の OAuth、セッションなど
   .on(["GET", "POST"], "/auth/*", async (c) => {
-    // Better Auth は大きいので、使うときだけ読み込む (ほかのリクエストのコールドスタートを遅くしない)
-    const { createAuth } = await import("./auth.js");
+    // Better Auth は初期化が重いので、使うときだけ初期化する (ほかのリクエストのコールドスタートを遅くしない)
+    const { createAuth } = await import("../auth.js");
     return createAuth(c.env, c.get("db"), { browserId: c.get("browserId") }).handler(c.req.raw);
   })
   // ここから下のルートは、操作する本人 (actor) を使う
   .use("*", actorMiddleware)
   .route("/events", eventsRoutes)
+  // `/api` の下に未定義のパスは、画面 (index.html) に落とさず 404 にする
+  .all("*", (c) => c.json({ message: "Not Found" }, 404))
   .onError((err, c) => {
     if (err instanceof ServiceError) {
       return c.json({ message: err.message }, serviceErrorStatus[err.reason]);

@@ -18,7 +18,7 @@ import { NavLink, useNavigate, useParams } from "react-router";
 import type { z } from "zod";
 import { DEFAULT_PARTICIPATION_OPTION, generateDistinctColor } from "../../../common/colors";
 import { editEventReqSchema, eventReqSchema } from "../../../common/validators";
-import type { AppType } from "../../../server/src/app";
+import type { AppType } from "../../../server/src/routes/api";
 import Header from "../components/Header";
 import { EXTERNAL_LINKS } from "../constants/links";
 import dayjs from "../lib/dayjs";

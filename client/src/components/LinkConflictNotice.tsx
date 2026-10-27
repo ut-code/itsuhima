@@ -1,7 +1,7 @@
 import { hc } from "hono/client";
 import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router";
-import type { AppType } from "../../../server/src/app";
+import type { AppType } from "../../../server/src/routes/api";
 import { authClient, consumeJustLoggedIn } from "../lib/auth";
 import { API_ENDPOINT } from "../utils";
 

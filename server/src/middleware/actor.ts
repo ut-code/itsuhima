@@ -14,7 +14,7 @@ export const actorMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
   const hasSession = Object.keys(getCookie(c)).some((name) => name.endsWith(SESSION_COOKIE_SUFFIX));
   let session = null;
   if (hasSession) {
-    // Better Auth は大きいので、使うときだけ読み込む
+    // Better Auth は初期化が重いので、使うときだけ初期化する
     const { createAuth } = await import("../auth.js");
     session = await createAuth(c.env, c.get("db")).api.getSession({ headers: c.req.raw.headers });
   }
