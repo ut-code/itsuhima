@@ -1,10 +1,6 @@
 name = "itsuhima"
 main = "src/main.ts"
 compatibility_date = "2026-10-01"
-# Better Auth が AsyncLocalStorage を使う。この compatibility_date では既定で有効だが、意図を残すため明示する
-compatibility_flags = ["nodejs_compat"]
-
-# Pages から付け替える。Pages にドメインが付いている間は、デプロイが失敗する (先に Pages から外す)
 routes = [{ pattern = "itsuhima.utcode.net", custom_domain = true }]
 workers_dev = false
 
