@@ -6,7 +6,7 @@ import type { AppEnv } from "../env.js";
  * MCP クライアントが OAuth の設定を見つけるためのメタデータ。/.well-known の下に置く。
  * browserId を発行しない (MCP クライアントは Cookie を送らないので、リクエストのたびに発行されてしまう)。
  */
-const oauthDiscovery = new Hono<AppEnv>()
+export const oauthDiscovery = new Hono<AppEnv>()
   // 保護リソースのメタデータ (RFC 9728)。/mcp の 401 が指す URL と、ルートの両方。mcp() プラグインが答える
   .get("/oauth-protected-resource/mcp", async (c) => {
     const { createAuth } = await import("../auth.js");
@@ -31,5 +31,3 @@ const oauthDiscovery = new Hono<AppEnv>()
     ]);
     return oauthProviderOpenIdConfigMetadata(createAuth(c.env, createDb(c.env.DB)))(c.req.raw);
   });
-
-export default oauthDiscovery;

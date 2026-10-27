@@ -3,8 +3,8 @@ import type { AppEnv } from "./env.js";
 import { api } from "./routes/api.js";
 import { eventPage } from "./routes/eventPage.js";
 import { landing } from "./routes/landing.js";
-import mcp from "./routes/mcp.js";
-import oauthDiscovery from "./routes/oauthDiscovery.js";
+import { mcp } from "./routes/mcp.js";
+import { oauthDiscovery } from "./routes/oauthDiscovery.js";
 import { ogImage } from "./routes/ogImage.js";
 
 /**
@@ -22,7 +22,7 @@ export const app = new Hono<AppEnv>()
   .route("/.well-known", oauthDiscovery)
   // run_worker_first にマッチしたが、上記のルートにマッチしなかった場合、SPA 側 (上記の 2. 以降) に送る
   // 例えば `/e/:eventId/edit` など。
-  .notFound((c) => c.env.ASSETS.fetch(c.req.raw)); 
+  .notFound((c) => c.env.ASSETS.fetch(c.req.raw));
 
 export type { AppType } from "./routes/api.js";
 

@@ -7,9 +7,7 @@ import type { AppEnv } from "../env.js";
  * そのため、このファイルは軽いものしか静的に import しない。mcp/handler.ts を静的に import すると、
  * API で遅らせている Better Auth の初期化も起動時に走る。
  */
-const mcp = new Hono<AppEnv>().on(["POST", "GET", "DELETE"], "/", async (c) => {
+export const mcp = new Hono<AppEnv>().on(["POST", "GET", "DELETE"], "/", async (c) => {
   const { handleMcp } = await import("../mcp/handler.js");
   return handleMcp(c);
 });
-
-export default mcp;
