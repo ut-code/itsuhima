@@ -9,13 +9,19 @@ workers_dev = false
 [dev]
 port = 3000
 
-# client のビルド結果を配信する。run_worker_first に当たるパスだけ Worker を通し、それ以外のアセットは Worker を通さない
-# (Worker を通らないリクエストは、無料枠のリクエスト数に数えられない)
+# client のビルド結果を配信。run_worker_first にマッチするパスは Worker へ送る
 [assets]
 directory = "../client/dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api", "/api/*", "/e/*", "/og/*", "/"]
+# src/main.ts の振り分けと対応させる
+run_worker_first = [
+  "/",
+  "/e/*",
+  "/og/*",
+  "/api", # "/api/*" は "/api" を含まないため
+  "/api/*",
+]
 
 [vars]
 NODE_ENV = "production"

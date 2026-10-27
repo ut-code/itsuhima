@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { createDb } from "./db/index.js";
-import type { AppEnv } from "./env.js";
-import { browserIdMiddleware } from "./middleware/browserId.js";
-import eventsRoutes from "./routes/events.js";
-import { ServiceError, type ServiceErrorReason } from "./services/errors.js";
+import { createDb } from "../db/index.js";
+import type { AppEnv } from "../env.js";
+import { browserIdMiddleware } from "../middleware/browserId.js";
+import { ServiceError, type ServiceErrorReason } from "../services/errors.js";
+import eventsRoutes from "./events.js";
 
 const serviceErrorStatus = {
   event_not_found: 404,
@@ -26,6 +26,8 @@ export const api = new Hono<AppEnv>()
     return c.json({ message: "Hello! イツヒマ？" });
   })
   .route("/events", eventsRoutes)
+  // `/api` の下に未定義のパスは、画面 (index.html) に落とさず 404 にする
+  .all("*", (c) => c.json({ message: "Not Found" }, 404))
   .onError((err, c) => {
     if (err instanceof ServiceError) {
       return c.json({ message: err.message }, serviceErrorStatus[err.reason]);

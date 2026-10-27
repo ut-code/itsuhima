@@ -72,3 +72,21 @@ export function submissionInput(optionId: string, overrides: Record<string, unkn
     ...overrides,
   };
 }
+
+/** client の index.html の、OG のメタタグの部分 */
+export const indexHtml = `<!doctype html><html><head>
+<meta property="og:title" content="イツヒマ" />
+<meta property="og:description" content="既定の説明" />
+<meta property="og:image" content="https://itsuhima.utcode.net/og-image.jpg" />
+</head><body><div id="root"></div></body></html>`;
+
+/** 静的アセットの代わり。どのパスにも index.html を返す (SPA のフォールバックと同じ) */
+const assets = {
+  fetch: async (_request: Request) =>
+    new Response(indexHtml, { headers: { "Content-Type": "text/html", ETag: '"abc"' } }),
+};
+
+/** Worker の入口 (main.ts) にリクエストを送る。パスは `/api` を含めたものを渡す */
+export function requestWorker(path: string, init: RequestInit = {}) {
+  return app.request(`https://itsuhima.example${path}`, init, { ...env, ASSETS: assets });
+}
