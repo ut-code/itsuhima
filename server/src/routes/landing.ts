@@ -4,7 +4,6 @@ import type { AppEnv } from "../env.js";
 
 /**
  * サービスを利用したことのあるユーザは、LP ("/") からホーム ("/home") にリダイレクトする。
- * TODO: Google ログインのユーザへの対応の確認
  */
 export function landing(c: Context<AppEnv>) {
   if (getCookie(c, "browserId") !== undefined) {
