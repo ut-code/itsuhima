@@ -37,8 +37,6 @@ export async function eventPage(c: Context<AppEnv, "/e/:eventId">) {
       .on(...setMetaContent("og:title", `${event.name} - イツヒマ`))
       .on(...setMetaContent("og:description", `日程範囲: ${formatDateRange(event)}`))
       .on(...setMetaContent("og:image", await ogImageUrl(origin, event)));
-  } else {
-    rewriter.on(...setMetaContent("og:image", `${origin}/og-image.jpg`));
   }
 
   const res = rewriter.transform(html);
