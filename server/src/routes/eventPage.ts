@@ -1,14 +1,14 @@
 import type { Context } from "hono";
 import { createDb } from "../db/index.js";
 import type { AppEnv } from "../env.js";
+import { ID_PATTERN } from "../lib/id.js";
 import { formatDateRange, ogImageUrl } from "../lib/preview.js";
 import { getEventPreview } from "../services/events.js";
 
-/** イベント ID (nanoid 21 文字) の形 */
-const EVENT_ID_PATTERN = /^[A-Za-z0-9_-]{21}$/;
-
-/** SPA の index.html。条件付きリクエスト (304) にならないよう、元のリクエストのヘッダは渡さない */
-function fetchIndexHtml(c: { env: AppEnv["Bindings"]; req: { url: string } }) {
+/** SPA 側から index.html を取得する */
+function fetchIndexHtml(c: Context<AppEnv>) {
+  // `c.req.raw` だと If-None-Match 等がついており 304 Not Modified で本文なしになる可能性がある
+  // それだと HTML を書き換えられないため、新しいリクエストを作っている
   return c.env.ASSETS.fetch(new Request(new URL("/", c.req.url)));
 }
 
@@ -17,10 +17,14 @@ function setMetaContent(property: string, content: string): [string, HTMLRewrite
   return [`meta[property="${property}"]`, { element: (el) => void el.setAttribute("content", content) }];
 }
 
-/** イベントのページ (/e/:eventId)。リンクのプレビューにイベント名と日程を出すため、OG のメタタグを書き換える */
+/**
+ * イベントのページ (/e/:eventId)。
+ * リンクのプレビューにイベント名と日程を出すため、OG のメタタグを HTMLRewriter で書き換える。
+ */
 export async function eventPage(c: Context<AppEnv, "/e/:eventId">) {
   const eventId = c.req.param("eventId");
-  if (!EVENT_ID_PATTERN.test(eventId)) {
+  if (!ID_PATTERN.test(eventId)) {
+    // 不正な eventId の場合は SPA 側に任せる (SPA 側で 404 になる)
     return c.env.ASSETS.fetch(c.req.raw);
   }
 
