@@ -41,12 +41,10 @@ describe("GET /e/:eventId", () => {
     expect(after).not.toBe(before);
   });
 
-  test("イベントが無ければ、既定の OG 画像にする", async () => {
+  test("イベントが無ければ、書き換えずに返す", async () => {
     const res = await requestWorker(`/e/${"a".repeat(21)}`);
 
-    const html = await res.text();
-    expect(metaContent(html, "og:title")).toBe("イツヒマ");
-    expect(metaContent(html, "og:image")).toBe("https://itsuhima.example/og-image.jpg");
+    expect(await res.text()).toBe(indexHtml);
   });
 
   test("イベント ID の形でなければ、書き換えずに返す", async () => {
