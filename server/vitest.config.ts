@@ -12,7 +12,6 @@ export default defineConfig(async () => ({
         bindings: {
           TEST_MIGRATIONS: await readD1Migrations("./migrations"),
           COOKIE_SECRET: "test-secret",
-          DOMAIN: "localhost",
           NODE_ENV: "test",
           PUBLIC_ORIGIN: "http://localhost:3000",
           BETTER_AUTH_SECRET: "test-better-auth-secret-0123456789abcdef",

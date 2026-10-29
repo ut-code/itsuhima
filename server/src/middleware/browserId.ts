@@ -1,9 +1,19 @@
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
-import { cookieOptions } from "../config.js";
-import type { AppEnv } from "../env.js";
+import type { CookieOptions } from "hono/utils/cookie";
+import type { AppEnv, Bindings } from "../env.js";
 
 const COOKIE_NAME = "browserId";
+
+function cookieOptions(env: Bindings) {
+  return {
+    path: "/",
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 365,
+  } as const satisfies CookieOptions;
+}
 
 /**
  * 署名鍵のローテーションに対応するため、現行の鍵、前の鍵の順に検証する。

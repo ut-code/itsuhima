@@ -10,8 +10,6 @@ export type Bindings = {
   COOKIE_SECRET: string;
   /** 署名鍵のローテーション中だけ、前の鍵をカンマ区切りで入れる */
   COOKIE_SECRET_PREVIOUS?: string;
-  /** browserId Cookie の Domain */
-  DOMAIN?: string;
   /** "true" のとき、Worker が返す全てのレスポンスを検索に載せない (ステージング用) */
   NOINDEX?: string;
   /** "production" のとき Cookie に Secure を付ける */
