@@ -12,6 +12,12 @@ function requestWithCookie(cookie?: string, vars: Partial<Bindings> = {}) {
 }
 
 describe("browserIdMiddleware", () => {
+  test("Cookie に Domain を付けない (画面と API が同じオリジンなので、送り先はホストだけでよい)", async () => {
+    const res = await requestWithCookie();
+
+    expect(res.headers.get("Set-Cookie")).not.toMatch(/Domain=/i);
+  });
+
   test("署名が不正な Cookie には 400 を返す", async () => {
     const cookie = browserIdCookie(await requestWithCookie());
 
