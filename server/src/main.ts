@@ -26,6 +26,4 @@ export const app = new Hono<AppEnv>()
   // 例えば `/e/:eventId/edit` など。
   .notFound((c) => c.env.ASSETS.fetch(c.req.raw));
 
-export type { AppType } from "./routes/api.js";
-
 export default app;
