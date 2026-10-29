@@ -87,6 +87,6 @@ const assets = {
 };
 
 /** Worker の入口 (main.ts) にリクエストを送る。パスは `/api` を含めたものを渡す */
-export function requestWorker(path: string, init: RequestInit = {}) {
-  return app.request(`https://itsuhima.example${path}`, init, { ...env, ASSETS: assets });
+export function requestWorker(path: string, init: RequestInit = {}, bindings: Record<string, string> = {}) {
+  return app.request(`https://itsuhima.example${path}`, init, { ...env, ASSETS: assets, ...bindings });
 }

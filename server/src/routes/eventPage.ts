@@ -43,6 +43,5 @@ export async function eventPage(c: Context<AppEnv, "/e/:eventId">) {
   const headers = new Headers(res.headers);
   // 書き換えたので、元の HTML の ETag は使えない
   headers.delete("ETag");
-  headers.set("X-Robots-Tag", "noindex");
   return new Response(res.body, { status: res.status, headers });
 }

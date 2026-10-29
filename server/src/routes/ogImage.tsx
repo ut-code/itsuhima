@@ -141,7 +141,6 @@ export async function ogImage(c: Context<AppEnv, "/og/:eventId">) {
       "Content-Type": "image/png",
       // 版が同じなら内容は同じなので長期キャッシュしてよい。
       "Cache-Control": "public, max-age=31536000, immutable",
-      "X-Robots-Tag": "noindex",
     },
   });
   c.executionCtx.waitUntil(cache.put(c.req.url, res.clone()));
