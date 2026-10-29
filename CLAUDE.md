@@ -45,7 +45,7 @@ server/    Hono + Drizzle バックエンド (Cloudflare Workers + D1)。client 
 - `server/wrangler.toml` の `run_worker_first` に当たるパスだけ Worker を通る。`main.ts` はパスの最初の区切りだけで振り分け、1 行を `run_worker_first` の 1 項目に対応させる。`server/src/routes/` の各ファイルは自分のプレフィックスより下だけを受け持ち、受け持ちは重ならない (ハンドラが 1 つだけなら Hono のルーターにせず、関数を `.get` で載せる)。ルートを足すときは両方に足す:
   - `/`: 使ったことがあれば (browserId の Cookie があれば) `/home` にリダイレクトする (`landing.ts`)
   - `/e/:eventId`: `index.html` の OG メタタグにイベント名と日程を入れる (`eventPage.ts`)
-  - `/og/:eventId`: OG 画像を生成し、Cache API にキャッシュする (`ogImage.ts`。本体の `og/handler.tsx` は初期化が重いので動的に import する)
+  - `/og/:eventId`: OG 画像を生成し、Cache API にキャッシュする (`ogImage.tsx`。画像を作るライブラリ (`@cloudflare/pages-plugin-vercel-og`) は初期化が重いので、作るときだけ動的に import する)
   - `/api/*`: API (`api.ts`)
   - `/mcp`: MCP サーバー (`mcp.ts`。本体の `mcp/handler.ts` は、MCP の SDK と Better Auth の初期化が重いので動的に import する)
   - `/.well-known/*`: MCP クライアント向けの OAuth のメタデータ (`oauthDiscovery.ts`)
