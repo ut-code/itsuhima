@@ -24,7 +24,7 @@ import { EXTERNAL_LINKS } from "../constants/links";
 import dayjs from "../lib/dayjs";
 import { eventReviver } from "../revivers";
 import type { Event } from "../types";
-import { API_ENDPOINT, FRONTEND_ORIGIN, readErrorMessage } from "../utils";
+import { API_ENDPOINT, readErrorMessage } from "../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
 
@@ -675,12 +675,12 @@ export default function EventFormPage() {
                 type="text"
                 disabled
                 className="h-10 min-w-0 flex-1 rounded-lg border border-base-300 bg-base-200 px-3 text-base text-base-content/80"
-                value={`${FRONTEND_ORIGIN}/e/${dialogStatus.eventId}`}
+                value={`${window.location.origin}/e/${dialogStatus.eventId}`}
               />
               <button
                 type="button"
                 onClick={async () => {
-                  await navigator.clipboard.writeText(`${FRONTEND_ORIGIN}/e/${dialogStatus.eventId}`);
+                  await navigator.clipboard.writeText(`${window.location.origin}/e/${dialogStatus.eventId}`);
                   setCopied(true);
                   setTimeout(() => {
                     setCopied(false);
