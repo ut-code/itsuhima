@@ -4,13 +4,18 @@ import type { AppEnv } from "../env.js";
 import { type EventPreview, formatDateRange, ogImageVersion } from "../lib/preview.js";
 import { getEventPreview } from "../services/events.js";
 
-const FONT_URL = "https://unpkg.com/@fontsource/m-plus-1p@5.2.8/files/m-plus-1p-japanese-700-normal.woff";
+/**
+ * 静的アセットのフォント (client/public/fonts)。@fontsource/m-plus-1p@5.2.8 の日本語のサブセット。
+ * ライセンスは SIL OFL 1.1 で、再配布するのでライセンス文 (OFL.txt) を横に置いている。
+ * Satori は woff2 を読めないので woff を使う。
+ */
+const FONT_PATH = "/fonts/m-plus-1p-japanese-700-normal.woff";
 
 // isolate が生きている間は使い回す
 let font: Promise<ArrayBuffer> | undefined;
 
-function loadFont() {
-  font ??= fetch(FONT_URL).then((res) => {
+function loadFont(c: Context<AppEnv>) {
+  font ??= c.env.ASSETS.fetch(new Request(new URL(FONT_PATH, c.req.url))).then((res) => {
     if (!res.ok) throw new Error(`フォントを取得できませんでした: ${res.status}`);
     return res.arrayBuffer();
   });
@@ -126,7 +131,7 @@ export async function ogImage(c: Context<AppEnv, "/og/:eventId">) {
   const image = new ImageResponse(<OgCard event={event} />, {
     width: 1200,
     height: 630,
-    fonts: [{ name: "M PLUS 1p", data: await loadFont(), weight: 700, style: "normal" }],
+    fonts: [{ name: "M PLUS 1p", data: await loadFont(c), weight: 700, style: "normal" }],
   });
   const res = new Response(image.body, {
     headers: {
