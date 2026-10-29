@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { AppEnv } from "./env.js";
+import { noindexMiddleware } from "./middleware/noindex.js";
 import { api } from "./routes/api.js";
 import { eventPage } from "./routes/eventPage.js";
 import { landing } from "./routes/landing.js";
@@ -14,6 +15,7 @@ import { ogImage } from "./routes/ogImage.js";
  * 3. それ以外は、 index.html が返る (`not_found_handling = "single-page-application"` による)。
  */
 export const app = new Hono<AppEnv>()
+  .use(noindexMiddleware)
   .get("/", landing)
   .get("/e/:eventId", eventPage)
   .get("/og/:eventId", ogImage)

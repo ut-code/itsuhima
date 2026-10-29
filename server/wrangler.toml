@@ -39,6 +39,7 @@ workers_dev = false
 
 [env.staging.vars]
 NODE_ENV = "production"
+NOINDEX = "true"
 DOMAIN = "itsuhima-staging.utcode.net"
 PUBLIC_ORIGIN = "https://itsuhima-staging.utcode.net"
 

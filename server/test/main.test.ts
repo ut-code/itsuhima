@@ -22,3 +22,27 @@ describe("ルートが無いパス", () => {
     expect(await res.text()).toBe(indexHtml);
   });
 });
+
+describe("検索に載せない (X-Robots-Tag: noindex)", () => {
+  test("イベントのページ (SPA の下位パスも) と OG 画像に付き、LP と API には付かない", async () => {
+    const cases: [string, string | null][] = [
+      ["/e/a/b", "noindex"],
+      ["/og/a", "noindex"],
+      ["/api/unknown", null],
+      ["/", null],
+    ];
+    for (const [path, expected] of cases) {
+      const res = await requestWorker(path);
+
+      expect(res.headers.get("X-Robots-Tag"), path).toBe(expected);
+    }
+  });
+
+  test("NOINDEX のとき (ステージング) は、Worker が返す全てに付く", async () => {
+    for (const path of ["/", "/api/unknown", "/.well-known/oauth-authorization-server"]) {
+      const res = await requestWorker(path, {}, { NOINDEX: "true" });
+
+      expect(res.headers.get("X-Robots-Tag"), path).toBe("noindex");
+    }
+  });
+});

@@ -12,6 +12,8 @@ export type Bindings = {
   COOKIE_SECRET_PREVIOUS?: string;
   /** browserId Cookie の Domain */
   DOMAIN?: string;
+  /** "true" のとき、Worker が返す全てのレスポンスを検索に載せない (ステージング用) */
+  NOINDEX?: string;
   /** "production" のとき Cookie に Secure を付ける */
   NODE_ENV?: string;
   /** ブラウザから見えるオリジン (例: https://itsuhima.utcode.net)。Better Auth の baseURL。OAuth のリダイレクト URI もここから作る */

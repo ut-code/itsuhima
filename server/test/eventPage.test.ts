@@ -13,7 +13,6 @@ describe("GET /e/:eventId", () => {
     const res = await requestWorker(`/e/${id}`);
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("X-Robots-Tag")).toBe("noindex");
     expect(res.headers.get("ETag")).toBeNull();
     const html = await res.text();
     expect(metaContent(html, "og:title")).toBe("定例会 - イツヒマ");

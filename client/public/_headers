@@ -1,4 +1,6 @@
-# Worker の静的アセットに付けるヘッダ。Worker が返すレスポンス (/e/*、/og/* など) には、Worker の側で付ける
+# Worker の静的アセットに付けるヘッダ。Worker が返すレスポンス (/e/*、/og/*、/api/* など) には付かない
+# noindex のうち、Worker が返すレスポンスの分は server/src/middleware/noindex.ts で付ける (ここは静的アセットの分だけ)
+
 # ステージングは検索に載せない
 https://itsuhima-staging.utcode.net/*
   X-Robots-Tag: noindex
