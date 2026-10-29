@@ -1,4 +1,3 @@
-import { ImageResponse } from "@cloudflare/pages-plugin-vercel-og/api";
 import type { Context } from "hono";
 import { createDb } from "../db/index.js";
 import type { AppEnv } from "../env.js";
@@ -99,10 +98,10 @@ function OgCard({ event }: { event: EventPreview }) {
 }
 
 /**
- * イベントの OG 画像。URL の `?v=` (内容から作った版) ごとに Cache API にキャッシュする。
+ * イベントの OG 画像 (/og/:eventId)。URL の `?v=` (内容から作った版) ごとに Cache API にキャッシュする。
  * 生成は CPU 時間を多く使うので (1 枚 100ms 前後)、同じ画像は作り直さない。
  */
-export async function handleOgImage(c: Context<AppEnv, "/og/:eventId">) {
+export async function ogImage(c: Context<AppEnv, "/og/:eventId">) {
   // Workers の caches.default (型は DOM の CacheStorage に隠れて見えない)
   const cache = (caches as unknown as { default: Cache }).default;
   const cached = await cache.match(c.req.url);
@@ -122,6 +121,8 @@ export async function handleOgImage(c: Context<AppEnv, "/og/:eventId">) {
     return c.redirect(`/og/${event.id}?v=${version}`, 302);
   }
 
+  // 画像の生成 (Satori と resvg の wasm) は初期化が重いので、作るときだけ読み込む。ほかのリクエストのコールドスタートを遅くしない
+  const { ImageResponse } = await import("@cloudflare/pages-plugin-vercel-og/api");
   const image = new ImageResponse(<OgCard event={event} />, {
     width: 1200,
     height: 630,
