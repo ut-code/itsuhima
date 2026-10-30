@@ -18,6 +18,7 @@ import { NavLink, useParams } from "react-router";
 import type { AppType } from "../../../../server/src/routes/api";
 import { AddToCalendar } from "../../components/AddToCalendar";
 import { Calendar, type Highlight } from "../../components/Calendar";
+import { DeletedEvent } from "../../components/DeletedEvent";
 import Header from "../../components/Header";
 import { eventReviver } from "../../revivers";
 import type { Event, Slot } from "../../types";
@@ -76,6 +77,8 @@ const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
 export default function SubmissionPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const [event, setEvent] = useState<Event | null>(null);
+  /** 削除されたイベントなら、その名前などが入る */
+  const [deletedEvent, setDeletedEvent] = useState<{ name: string; purgeAt: string; canRestore: boolean } | null>(null);
   const [eventLoading, setEventLoading] = useState(true);
 
   const [postLoading, setPostLoading] = useState(false);
@@ -102,6 +105,11 @@ export default function SubmissionPage() {
         const data = await res.json();
         const parsedData = eventReviver(data);
         setEvent(parsedData);
+        setDeletedEvent(null);
+      } else if (res.status === 410) {
+        const { name, purgeAt, canRestore } = await res.json();
+        setEvent(null);
+        setDeletedEvent({ name, purgeAt, canRestore });
       } else {
         const errorMessage = await readErrorMessage(res, "イベントの取得に失敗しました。");
         setToast({
@@ -124,6 +132,30 @@ export default function SubmissionPage() {
   useEffect(() => {
     fetchEvent();
   }, [fetchEvent]);
+
+  const [restoring, setRestoring] = useState(false);
+  const restoreEvent = useCallback(async () => {
+    if (!eventId) return;
+    setRestoring(true);
+    try {
+      const res = await client.events[":eventId"].restore.$post(
+        { param: { eventId } },
+        { init: { credentials: "include" } },
+      );
+      if (res.ok) {
+        setToast({ message: "イベントを元に戻しました。", variant: "success" });
+        await fetchEvent();
+      } else {
+        setToast({ message: await readErrorMessage(res, "元に戻せませんでした。"), variant: "error" });
+      }
+    } catch (error) {
+      console.error("Error restoring event:", error);
+      setToast({ message: "ネットワークエラーが発生しました。", variant: "error" });
+    } finally {
+      setRestoring(false);
+      setTimeout(() => setToast(null), 3000);
+    }
+  }, [eventId, fetchEvent]);
 
   const meAsGuest = event?.meAsGuest;
   const myGuestId = meAsGuest?.id;
@@ -286,6 +318,14 @@ export default function SubmissionPage() {
           <div className="flex w-full flex-1 items-center justify-center">
             <span className="loading loading-dots loading-md text-base-content/40" />
           </div>
+        ) : deletedEvent ? (
+          <DeletedEvent
+            name={deletedEvent.name}
+            purgeAt={deletedEvent.purgeAt}
+            canRestore={deletedEvent.canRestore}
+            restoring={restoring}
+            onRestore={restoreEvent}
+          />
         ) : !event ? (
           <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-4 px-4 py-16 sm:px-6 lg:px-8">
             <div className="flex min-h-100 w-full flex-col items-center justify-center gap-4 rounded-xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
