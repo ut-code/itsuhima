@@ -11,10 +11,17 @@ export type EventSnapshot = {
   options: { id: string; label: string; color: string }[];
 };
 
-/** 履歴に残す、回答。Slot の日時は UTC の ISO 8601 */
+/**
+ * 履歴に残す、回答。Slot の日時は UTC の ISO 8601。
+ * userId は、ログインして出した回答の持ち主 (消した回答を戻すときに、同じ持ち主で作り直す)。API では返さない。
+ * 前のものには無い (匿名)。回答した人がアカウントを削除すると、userId を消して ownerDeleted を立てる (`auth.ts`。
+ * 戻しても、誰も変えられない回答のままにする)
+ */
 export type ParticipantSnapshot = {
   name: string;
   comment: string | null;
+  userId?: string;
+  ownerDeleted?: true;
   slots: { startAt: string; endAt: string; optionId: string }[];
 };
 
@@ -43,11 +50,15 @@ export function eventSnapshot(event: {
 export function participantSnapshot(participant: {
   name: string;
   comment: string | null;
+  userId: string | null;
+  ownerDeleted: boolean;
   slots: { startAt: string; endAt: string; optionId: string }[];
 }): ParticipantSnapshot {
   return {
     name: participant.name,
     comment: participant.comment,
+    ...(participant.userId === null ? {} : { userId: participant.userId }),
+    ...(participant.ownerDeleted ? { ownerDeleted: true as const } : {}),
     slots: participant.slots.map(({ startAt, endAt, optionId }) => ({ startAt, endAt, optionId })),
   };
 }
@@ -68,7 +79,7 @@ function normalize(snapshot: EventSnapshot | ParticipantSnapshot) {
 /** 変える前のスナップショットを履歴に足す文。変える文と同じ batch で実行する */
 export function insertHistory(
   db: Db,
-  history: HistoryBefore & { eventId: string; targetId: string; action: "update" | "delete" },
+  history: HistoryBefore & { eventId: string; targetId: string; action: "update" | "delete"; userId: string | null },
 ) {
   return db.insert(schema.history).values(history);
 }

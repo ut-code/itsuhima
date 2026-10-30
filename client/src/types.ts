@@ -11,7 +11,7 @@ type ParticipationOption = {
 export type Slot = {
   id: string;
   eventId: string;
-  guestId: string;
+  participantId: string;
   from: Dayjs;
   to: Dayjs;
   participationOptionId: string;
@@ -26,18 +26,26 @@ type AllowedRange = {
   endTime: string;
 };
 
-type Host = {
-  id: string;
-  eventId: string;
+/** 回答の権限。匿名の回答は誰でも、ログインして出した回答はその人だけが編集できる */
+type ParticipantPermissions = {
+  canEdit: boolean;
+  /** 編集できる人と、ログインして作ったイベントの持ち主 */
+  canDelete: boolean;
+  /** ログインした人が出した回答か (アカウントを削除した人の回答も含む) */
+  hasOwner: boolean;
+  /** 回答した人がアカウントを削除したか (誰も編集できない。イベントを編集できる人は削除できる) */
+  ownerDeleted: boolean;
+  /** ログインしている自分の回答か */
+  isMine: boolean;
 };
 
-type Guest = {
+export type Participant = {
   id: string;
   name: string;
   eventId: string;
   comment?: string;
   slots: Slot[];
-};
+} & ParticipantPermissions;
 
 export type Event = {
   id: string;
@@ -51,10 +59,10 @@ export type Event = {
   timezone: string;
   allowedRanges: AllowedRange[];
   options: ParticipationOption[];
-  hosts: Host[];
-  guests: Guest[];
-  isHost: boolean;
-  meAsGuest: Guest | null;
+  participants: Participant[];
+  canEdit: boolean;
+  /** ログインした人が作ったイベントか (作った人だけが編集できる) */
+  hasOwner: boolean;
 };
 
 // TODO: ユーティリティ関数で処理するようにする
@@ -79,41 +87,33 @@ export type ISOStringEvent = {
     color: string;
     eventId: string;
   }[];
-  hosts: Host[];
-  guests: {
-    id: string;
-    name: string;
-    eventId: string;
-    comment: string | null;
-    slots: {
-      id: string;
-      eventId: string;
-      guestId: string;
-      /** UTC の ISO 8601 */
-      startAt: string;
-      /** UTC の ISO 8601 */
-      endAt: string;
-      optionId: string;
-    }[];
-  }[];
-  isHost: boolean;
-  meAsGuest: {
-    id: string;
-    name: string;
-    eventId: string;
-    comment: string | null;
-    slots: {
-      id: string;
-      eventId: string;
-      guestId: string;
-      /** UTC の ISO 8601 */
-      startAt: string;
-      /** UTC の ISO 8601 */
-      endAt: string;
-      optionId: string;
-    }[];
-  } | null;
+  participants: ISOStringParticipant[];
+  canEdit: boolean;
+  hasOwner: boolean;
 };
 
-export type BriefEvent = Pick<Event, "id" | "name" | "startDate" | "endDate" | "timezone" | "isHost">;
-export type ISOStringBriefEvent = Pick<ISOStringEvent, "id" | "name" | "startDate" | "endDate" | "timezone" | "isHost">;
+export type ISOStringParticipant = {
+  id: string;
+  name: string;
+  eventId: string;
+  comment: string | null;
+  slots: {
+    id: string;
+    eventId: string;
+    participantId: string;
+    /** UTC の ISO 8601 */
+    startAt: string;
+    /** UTC の ISO 8601 */
+    endAt: string;
+    optionId: string;
+  }[];
+} & ParticipantPermissions;
+
+/** ホームの一覧に出すイベント。isHost は localStorage の控えと、ログインしていれば `/me/events` から付ける */
+export type BriefEvent = Pick<Event, "id" | "name" | "startDate" | "endDate" | "timezone"> & {
+  deleted: boolean;
+  isHost: boolean;
+};
+export type ISOStringBriefEvent = Pick<ISOStringEvent, "id" | "name" | "startDate" | "endDate" | "timezone"> & {
+  deleted: boolean;
+};

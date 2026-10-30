@@ -258,3 +258,75 @@ describe("0006_merge_host_guest_into_participant", () => {
     expect(await db.prepare(`SELECT id FROM "slot"`).all()).toMatchObject({ results: [{ id: "s1" }] });
   });
 });
+
+describe("0008_anonymous_model", () => {
+  test("関わったイベントを別表に写し、未回答のホストを消し、participant から role と browserId を外す", async () => {
+    const { db, migrate } = await migrateUntil("0008_anonymous_model.sql");
+    await db.batch([
+      db.prepare(`INSERT INTO "event" (id, name, startDate, endDate) VALUES ('p', 'name', '2026-11-02', '2026-11-04')`),
+      db.prepare(`INSERT INTO "option" VALUES ('o', '参加', '#0F82B1', 'p')`),
+      // 回答したホスト、未回答のホスト、ゲスト
+      db.prepare(`INSERT INTO "participant" VALUES ('g1', 'p', 'host', 'ホスト', 'よろしく', 'both', 't1')`),
+      db.prepare(`INSERT INTO "participant" VALUES ('h2', 'p', 'host', NULL, NULL, 'hostOnly', 't2')`),
+      db.prepare(`INSERT INTO "participant" VALUES ('g2', 'p', 'guest', 'ゲスト', NULL, 'guestOnly', 't3')`),
+      db.prepare(
+        `INSERT INTO "slot" VALUES ('s1', '2026-11-02T00:00:00.000Z', '2026-11-02T01:00:00.000Z', 'p', 'g1', 'o')`,
+      ),
+      db.prepare(
+        `INSERT INTO "slot" VALUES ('s2', '2026-11-02T01:00:00.000Z', '2026-11-02T02:00:00.000Z', 'p', 'g2', 'o')`,
+      ),
+      db.prepare(
+        `INSERT INTO "history" VALUES ('hi', 'p', 'participant', 'g2', 'update', '{"name":"x","comment":null,"slots":[]}', 't')`,
+      ),
+    ]);
+
+    await migrate();
+
+    expect(await db.prepare(`SELECT * FROM "legacyBrowserEvent" ORDER BY browserId`).all()).toMatchObject({
+      results: [
+        { browserId: "both", eventId: "p", isHost: 1, participantId: "g1" },
+        { browserId: "guestOnly", eventId: "p", isHost: 0, participantId: "g2" },
+        { browserId: "hostOnly", eventId: "p", isHost: 1, participantId: null },
+      ],
+    });
+    expect(await db.prepare(`SELECT * FROM "participant" ORDER BY id`).all()).toMatchObject({
+      results: [
+        { id: "g1", eventId: "p", name: "ホスト", comment: "よろしく", updatedAt: "t1" },
+        { id: "g2", eventId: "p", name: "ゲスト", comment: null, updatedAt: "t3" },
+      ],
+    });
+    const { results: columns } = await db.prepare(`PRAGMA table_info("participant")`).all<{ name: string }>();
+    expect(columns.map((c) => c.name)).toEqual(["id", "eventId", "name", "comment", "updatedAt"]);
+    // slot と履歴は残る
+    expect(await db.prepare(`SELECT id, participantId FROM "slot" ORDER BY id`).all()).toMatchObject({
+      results: [
+        { id: "s1", participantId: "g1" },
+        { id: "s2", participantId: "g2" },
+      ],
+    });
+    expect(await db.prepare(`SELECT id FROM "history"`).all()).toMatchObject({ results: [{ id: "hi" }] });
+    expect(await tableNames(db)).not.toContain("participant_old");
+    expect(await tableNames(db)).not.toContain("slot_new");
+    const { results: fks } = await db.prepare(`PRAGMA foreign_key_list("slot")`).all<{ table: string }>();
+    expect(fks.map((r) => r.table).sort()).toEqual(["event", "option", "participant"]);
+    const { results: indexes } = await db
+      .prepare(
+        `SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name IN ('participant', 'slot') AND name NOT LIKE 'sqlite_%'`,
+      )
+      .all<{ name: string }>();
+    expect(indexes.map((i) => i.name).sort()).toEqual([
+      "participant_eventId_idx",
+      "slot_eventId_startAt_idx",
+      "slot_optionId_idx",
+      "slot_participantId_idx",
+    ]);
+
+    // 名前は必須
+    await expect(db.prepare(`INSERT INTO "participant" VALUES ('x', 'p', NULL, NULL, 'now')`).run()).rejects.toThrow(
+      /NOT NULL/,
+    );
+    // 参加者を消すと、その Slot も消える
+    await db.prepare(`DELETE FROM "participant" WHERE id = 'g2'`).run();
+    expect(await db.prepare(`SELECT id FROM "slot"`).all()).toMatchObject({ results: [{ id: "s1" }] });
+  });
+});

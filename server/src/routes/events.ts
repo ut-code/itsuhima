@@ -3,20 +3,35 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { editEventReqSchema, eventReqSchema, submitReqSchema } from "../../../common/validators.js";
 import type { AppEnv } from "../env.js";
+import { ID_PATTERN } from "../lib/id.js";
 import {
   createEvent,
+  deleteAvailability,
   deleteEvent,
   getEvent,
-  listMyEvents,
+  listEventsByIds,
   restoreEvent,
   submitAvailability,
+  updateAvailability,
   updateEvent,
-  updateMyAvailability,
 } from "../services/events.js";
 import { listHistory, restoreHistory } from "../services/history.js";
 
 const eventIdParamsSchema = z.object({ eventId: z.string().length(21) });
 const historyParamsSchema = eventIdParamsSchema.extend({ historyId: z.string().uuid() });
+// 回答の id は UUID。前のデータ (Prisma で作った Guest の id) も含むので、形は確かめない
+const participantParamsSchema = eventIdParamsSchema.extend({ participantId: z.string().min(1).max(64) });
+
+/** 一度に引けるイベントの数 */
+const MAX_EVENT_IDS = 100;
+
+/** `?ids=a,b,c`。イベント ID の形でないものは捨てる */
+const eventIdsQuerySchema = z.object({
+  ids: z
+    .string()
+    .transform((ids) => [...new Set(ids.split(",").filter((id) => ID_PATTERN.test(id)))])
+    .pipe(z.array(z.string()).max(MAX_EVENT_IDS)),
+});
 
 const router = new Hono<AppEnv>()
   // イベント作成
@@ -25,9 +40,9 @@ const router = new Hono<AppEnv>()
     return c.json({ id: event.id, name: event.name }, 201);
   })
 
-  // 自分が関連するイベント取得
-  .get("/mine", async (c) => {
-    const events = await listMyEvents(c.get("db"), c.get("actor"));
+  // 指定した id のイベントの一覧 (名前・日程・削除したか)。client が控えた id から一覧を出すのに使う
+  .get("/", zValidator("query", eventIdsQuerySchema), async (c) => {
+    const events = await listEventsByIds(c.get("db"), c.req.valid("query").ids);
     return c.json(events, 200);
   })
 
@@ -77,30 +92,41 @@ const router = new Hono<AppEnv>()
     return c.body(null, 204);
   })
 
-  // 日程の提出。
+  // 回答する
   .post(
-    "/:eventId/submissions",
+    "/:eventId/participants",
     zValidator("param", eventIdParamsSchema),
     zValidator("json", submitReqSchema),
     async (c) => {
       const { eventId } = c.req.valid("param");
-      const { name, comment, slots } = c.req.valid("json");
-      const guest = await submitAvailability(c.get("db"), c.get("actor"), eventId, { name, comment, slots });
-      return c.json({ guest }, 201);
+      const participant = await submitAvailability(c.get("db"), c.get("actor"), eventId, c.req.valid("json"));
+      return c.json({ participant }, 201);
     },
   )
 
-  // 日程の更新。
+  // 回答を変える
   .put(
-    "/:eventId/submissions/mine",
-    zValidator("param", eventIdParamsSchema),
+    "/:eventId/participants/:participantId",
+    zValidator("param", participantParamsSchema),
     zValidator("json", submitReqSchema),
     async (c) => {
-      const { eventId } = c.req.valid("param");
-      const { name, comment, slots } = c.req.valid("json");
-      const guest = await updateMyAvailability(c.get("db"), c.get("actor"), eventId, { name, comment, slots });
-      return c.json({ guest }, 200);
+      const { eventId, participantId } = c.req.valid("param");
+      const participant = await updateAvailability(
+        c.get("db"),
+        c.get("actor"),
+        eventId,
+        participantId,
+        c.req.valid("json"),
+      );
+      return c.json({ participant }, 200);
     },
-  );
+  )
+
+  // 回答を消す。履歴から戻せる
+  .delete("/:eventId/participants/:participantId", zValidator("param", participantParamsSchema), async (c) => {
+    const { eventId, participantId } = c.req.valid("param");
+    await deleteAvailability(c.get("db"), c.get("actor"), eventId, participantId);
+    return c.body(null, 204);
+  });
 
 export default router;

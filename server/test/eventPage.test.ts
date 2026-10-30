@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { createBrowser, createEvent, indexHtml, requestWorker } from "./helpers.js";
+import { api, createEvent, indexHtml, requestWorker } from "./helpers.js";
 
 function metaContent(html: string, property: string) {
   return html.match(new RegExp(`<meta property="${property}" content="([^"]*)"`))?.[1];
@@ -7,8 +7,7 @@ function metaContent(html: string, property: string) {
 
 describe("GET /e/:eventId", () => {
   test("イベント名と日程を OG のメタタグに入れる", async () => {
-    const host = createBrowser();
-    const { id } = await createEvent(host, { name: "定例会" });
+    const { id } = await createEvent({ name: "定例会" });
 
     const res = await requestWorker(`/e/${id}`);
 
@@ -21,8 +20,7 @@ describe("GET /e/:eventId", () => {
   });
 
   test("1 日だけのイベントは、日付を 1 つだけ出す", async () => {
-    const host = createBrowser();
-    const { id } = await createEvent(host, { startDate: "2026-11-02", endDate: "2026-11-02" });
+    const { id } = await createEvent({ startDate: "2026-11-02", endDate: "2026-11-02" });
 
     const html = await (await requestWorker(`/e/${id}`)).text();
 
@@ -30,11 +28,10 @@ describe("GET /e/:eventId", () => {
   });
 
   test("イベント名を変えると、OG 画像の URL も変わる", async () => {
-    const host = createBrowser();
-    const { id } = await createEvent(host, { name: "定例会" });
+    const { id } = await createEvent({ name: "定例会" });
     const before = metaContent(await (await requestWorker(`/e/${id}`)).text(), "og:image");
 
-    expect((await host.patch(`/events/${id}`, { name: "打ち上げ" })).status).toBe(200);
+    expect((await api.patch(`/events/${id}`, { name: "打ち上げ" })).status).toBe(200);
     const after = metaContent(await (await requestWorker(`/e/${id}`)).text(), "og:image");
 
     expect(after).not.toBe(before);
@@ -47,9 +44,8 @@ describe("GET /e/:eventId", () => {
   });
 
   test("削除したイベントは、書き換えずに返す", async () => {
-    const host = createBrowser();
-    const { id } = await createEvent(host);
-    await host.delete(`/events/${id}`);
+    const { id } = await createEvent();
+    await api.delete(`/events/${id}`);
 
     const res = await requestWorker(`/e/${id}`);
 

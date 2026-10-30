@@ -5,7 +5,7 @@ import { type Db, insertMany, runBatch } from "../db/index.js";
 import * as schema from "../db/schema.js";
 import { nanoid } from "../lib/id.js";
 import { ServiceError } from "./errors.js";
-import { type Actor, canEditEvent } from "./permissions.js";
+import { type Actor, canDeleteParticipant, canEditEvent, canEditParticipant, isOwnParticipant } from "./permissions.js";
 import { validateSlots } from "./slots.js";
 import { eventSnapshot, insertHistory, isSameSnapshot, participantSnapshot } from "./snapshots.js";
 
@@ -21,9 +21,11 @@ function toIso(value: string | Date): string {
   return new Date(value).toISOString();
 }
 
+/** イベントを作る。ログインしていれば、その人のもの (持ち主だけが編集できる) になる */
 export async function createEvent(db: Db, actor: Actor, input: CreateEventInput) {
   const event = {
     id: nanoid(),
+    ownerUserId: actor.userId,
     name: input.name,
     description: input.description.trim() || null,
     startDate: input.startDate,
@@ -37,7 +39,6 @@ export async function createEvent(db: Db, actor: Actor, input: CreateEventInput)
       schema.allowedRange,
       input.allowedRanges.map((range) => ({ ...range, eventId: event.id })),
     ),
-    db.insert(schema.participant).values({ eventId: event.id, role: "host", browserId: actor.browserId }),
     ...insertMany(
       db,
       schema.option,
@@ -53,36 +54,61 @@ export async function createEvent(db: Db, actor: Actor, input: CreateEventInput)
   return { id: event.id, name: event.name };
 }
 
-/** ホストまたはゲストとして関わるイベント。削除したものは除く */
-export async function listMyEvents(db: Db, actor: Actor) {
+/**
+ * 指定した id のイベントの、一覧に出す分の情報。client が localStorage に控えた id から一覧を出すのに使う。
+ * 無い id は返さない (client は控えから外す)。削除したイベントは deleted を true にして返す。
+ */
+export async function listEventsByIds(db: Db, eventIds: string[]) {
+  if (eventIds.length === 0) return [];
   const events = await db.query.event.findMany({
-    where: and(
-      inArray(
-        schema.event.id,
-        db
-          .select({ id: schema.participant.eventId })
-          .from(schema.participant)
-          .where(eq(schema.participant.browserId, actor.browserId)),
-      ),
-      isNull(schema.event.deletedAt),
-    ),
-    with: {
-      participants: {
-        where: eq(schema.participant.browserId, actor.browserId),
-        columns: { role: true },
-      },
-    },
+    where: inArray(schema.event.id, eventIds),
+    columns: { id: true, name: true, startDate: true, endDate: true, timezone: true, deletedAt: true },
   });
+  return events.map(({ deletedAt, ...event }) => ({ ...event, deleted: deletedAt !== null }));
+}
 
-  return events.map((p) => ({
-    id: p.id,
-    name: p.name,
-    description: p.description ?? "",
-    startDate: p.startDate,
-    endDate: p.endDate,
-    timezone: p.timezone,
-    isHost: p.participants.some((me) => me.role === "host"),
-  }));
+/**
+ * ログインした人が作ったイベントと回答したイベント (`GET /me/events`、MCP の `list_events`)。
+ * 作った順に新しいものから。削除したイベントは deleted を true にして返す。
+ */
+export async function listMyEvents(db: Db, userId: string) {
+  const [owned, answered] = await Promise.all([
+    db.query.event.findMany({
+      where: eq(schema.event.ownerUserId, userId),
+      columns: { id: true },
+    }),
+    db.query.participant.findMany({
+      where: eq(schema.participant.userId, userId),
+      columns: { id: true, eventId: true },
+    }),
+  ]);
+  const ownedIds = new Set(owned.map((e) => e.id));
+  const participantIdByEvent = new Map(answered.map((p) => [p.eventId, p.id]));
+  const eventIds = [...new Set([...ownedIds, ...participantIdByEvent.keys()])];
+  if (eventIds.length === 0) return [];
+
+  const events = await db.query.event.findMany({
+    where: inArray(schema.event.id, eventIds),
+    columns: {
+      id: true,
+      name: true,
+      startDate: true,
+      endDate: true,
+      timezone: true,
+      createdAt: true,
+      deletedAt: true,
+    },
+    with: { participants: { columns: { id: true } } },
+  });
+  return events
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map(({ deletedAt, participants, createdAt: _, ...event }) => ({
+      ...event,
+      deleted: deletedAt !== null,
+      isHost: ownedIds.has(event.id),
+      participantId: participantIdByEvent.get(event.id) ?? null,
+      participantCount: participants.length,
+    }));
 }
 
 /**
@@ -122,8 +148,6 @@ export async function getEvent(db: Db, actor: Actor, eventId: string) {
     };
   }
 
-  const me = event.participants.find((p) => p.browserId === actor.browserId);
-
   return {
     status: "active" as const,
     event: {
@@ -135,10 +159,10 @@ export async function getEvent(db: Db, actor: Actor, eventId: string) {
       timezone: event.timezone,
       allowedRanges: event.allowedRanges,
       options: event.options,
-      hosts: event.participants.filter((p) => p.role === "host").map((p) => ({ id: p.id, eventId: p.eventId })),
-      guests: event.participants.filter(hasAnswered).map(toGuest),
-      isHost: canEditEvent(actor, event),
-      meAsGuest: me && hasAnswered(me) ? toGuest(me) : null,
+      participants: event.participants.map((participant) => toParticipantResponse(actor, event, participant)),
+      canEdit: canEditEvent(actor, event),
+      /** ログインした人が作ったイベントか (持ち主だけが編集できる)。誰かは返さない */
+      hasOwner: event.ownerUserId !== null,
     },
   };
 }
@@ -154,19 +178,22 @@ export async function getEventPreview(db: Db, eventId: string) {
 
 type ParticipantWithSlots = typeof schema.participant.$inferSelect & { slots: (typeof schema.slot.$inferSelect)[] };
 
-/** 回答したか。name が null なら、まだ回答していない (イベントを作っただけのホスト) */
-function hasAnswered<T extends { name: string | null }>(participant: T): participant is T & { name: string } {
-  return participant.name !== null;
-}
-
-/** API では、回答した参加者を guest として返す。Slot の participantId は guestId として返す */
-function toGuest(participant: ParticipantWithSlots & { name: string }) {
+/** 回答と、その権限。ログインした人の id は返さない (自分の回答かだけを返す) */
+function toParticipantResponse(actor: Actor, event: { ownerUserId: string | null }, participant: ParticipantWithSlots) {
   return {
     id: participant.id,
     name: participant.name,
     comment: participant.comment,
     eventId: participant.eventId,
-    slots: participant.slots.map(({ participantId, ...slot }) => ({ ...slot, guestId: participantId })),
+    slots: participant.slots,
+    canEdit: canEditParticipant(actor, event, participant),
+    canDelete: canDeleteParticipant(actor, event, participant),
+    /** ログインした人が出した回答か (その人だけが変えられる)。アカウントを削除した人の回答も含む */
+    hasOwner: participant.userId !== null || participant.ownerDeleted,
+    /** 回答した人がアカウントを削除したか (誰も変えられない) */
+    ownerDeleted: participant.ownerDeleted,
+    /** ログインしている自分の回答か */
+    isMine: isOwnParticipant(actor, participant),
   };
 }
 
@@ -174,9 +201,16 @@ function toGuest(participant: ParticipantWithSlots & { name: string }) {
 function findEventForPermission(db: Db, eventId: string) {
   return db.query.event.findFirst({
     where: eq(schema.event.id, eventId),
-    columns: { id: true, deletedAt: true },
-    with: { participants: { columns: { role: true, browserId: true } } },
+    columns: { id: true, deletedAt: true, ownerUserId: true },
   });
+}
+
+async function findEventForPermissionOrThrow(db: Db, eventId: string) {
+  const event = await findEventForPermission(db, eventId);
+  if (!event) {
+    throw new ServiceError("event_not_found", "イベントが見つかりません。");
+  }
+  return event;
 }
 
 function throwIfDeleted(event: { deletedAt: string | null }) {
@@ -191,15 +225,18 @@ export async function updateEvent(db: Db, actor: Actor, eventId: string, input: 
     with: {
       allowedRanges: true,
       options: { with: { slots: { columns: { id: true }, limit: 1 } } },
-      participants: { columns: { role: true, browserId: true, name: true } },
+      participants: { columns: { id: true }, limit: 1 },
     },
   });
 
-  if (!event || !canEditEvent(actor, event)) {
-    throw new ServiceError("not_host", "アクセス権限がありません。");
+  if (!event) {
+    throw new ServiceError("event_not_found", "イベントが見つかりません。");
+  }
+  if (!canEditEvent(actor, event)) {
+    throw new ServiceError("forbidden", "このイベントを編集する権限がありません。");
   }
   throwIfDeleted(event);
-  const existingGuest = event.participants.some(hasAnswered);
+  const answered = event.participants.length > 0;
 
   const statements: Parameters<typeof runBatch>[1] = [];
 
@@ -236,18 +273,18 @@ export async function updateEvent(db: Db, actor: Actor, eventId: string, input: 
     );
   }
 
-  // 省略したフィールドは変えない。ゲストの回答があれば、日程と時間帯は変えない
+  // 省略したフィールドは変えない。回答があれば、日程と時間帯は変えない
   const eventFields = {
     name: input.name,
     description: input.description === undefined ? undefined : input.description.trim() || null,
-    startDate: existingGuest ? undefined : input.startDate,
-    endDate: existingGuest ? undefined : input.endDate,
+    startDate: answered ? undefined : input.startDate,
+    endDate: answered ? undefined : input.endDate,
   };
   // Drizzle は undefined の列を更新しないが、更新する列が 1 つも無いとエラーにする
   if (Object.values(eventFields).some((value) => value !== undefined)) {
     statements.push(db.update(schema.event).set(eventFields).where(eq(schema.event.id, eventId)));
   }
-  if (!existingGuest && input.allowedRanges) {
+  if (!answered && input.allowedRanges) {
     statements.push(
       db.delete(schema.allowedRange).where(eq(schema.allowedRange.eventId, eventId)),
       ...insertMany(
@@ -265,11 +302,20 @@ export async function updateEvent(db: Db, actor: Actor, eventId: string, input: 
     description: eventFields.description === undefined ? event.description : eventFields.description,
     startDate: eventFields.startDate ?? event.startDate,
     endDate: eventFields.endDate ?? event.endDate,
-    allowedRanges: (!existingGuest && input.allowedRanges) || event.allowedRanges,
+    allowedRanges: (!answered && input.allowedRanges) || event.allowedRanges,
     options: input.options ?? event.options,
   });
   if (!isSameSnapshot(before, after)) {
-    statements.unshift(insertHistory(db, { eventId, target: "event", targetId: eventId, action: "update", before }));
+    statements.unshift(
+      insertHistory(db, {
+        eventId,
+        target: "event",
+        targetId: eventId,
+        action: "update",
+        before,
+        userId: actor.userId,
+      }),
+    );
   }
 
   await runBatch(db, statements);
@@ -283,9 +329,9 @@ export async function updateEvent(db: Db, actor: Actor, eventId: string, input: 
 
 /** 論理削除する。行は、DELETED_EVENT_RETENTION_DAYS 日たってから消す。削除済みなら何もしない */
 export async function deleteEvent(db: Db, actor: Actor, eventId: string) {
-  const event = await findEventForPermission(db, eventId);
-  if (!event || !canEditEvent(actor, event)) {
-    throw new ServiceError("not_host", "削除権限がありません。");
+  const event = await findEventForPermissionOrThrow(db, eventId);
+  if (!canEditEvent(actor, event)) {
+    throw new ServiceError("forbidden", "このイベントを削除する権限がありません。");
   }
 
   await db
@@ -296,12 +342,9 @@ export async function deleteEvent(db: Db, actor: Actor, eventId: string) {
 
 /** 論理削除したイベントを戻す。削除されていなければ何もしない */
 export async function restoreEvent(db: Db, actor: Actor, eventId: string) {
-  const event = await findEventForPermission(db, eventId);
-  if (!event) {
-    throw new ServiceError("event_not_found", "イベントが見つかりません。");
-  }
+  const event = await findEventForPermissionOrThrow(db, eventId);
   if (!canEditEvent(actor, event)) {
-    throw new ServiceError("not_host", "戻す権限がありません。");
+    throw new ServiceError("forbidden", "このイベントを戻す権限がありません。");
   }
 
   await db.update(schema.event).set({ deletedAt: null }).where(eq(schema.event.id, eventId));
@@ -337,17 +380,35 @@ async function findEventForSlots(db: Db, eventId: string) {
   };
 }
 
-function findMyParticipant(db: Db, actor: Actor, eventId: string) {
-  return db.query.participant.findFirst({
-    where: and(eq(schema.participant.browserId, actor.browserId), eq(schema.participant.eventId, eventId)),
+/** イベントの回答。無いか、ほかのイベントの回答なら投げる */
+async function findParticipant(db: Db, eventId: string, participantId: string) {
+  const participant = await db.query.participant.findFirst({
+    where: and(eq(schema.participant.id, participantId), eq(schema.participant.eventId, eventId)),
     with: { slots: true },
   });
+  if (!participant) {
+    throw new ServiceError("participant_not_found", "回答が見つかりません。");
+  }
+  return participant;
 }
 
-/** 自分の回答。回答していなければ null */
-async function findMyGuest(db: Db, actor: Actor, eventId: string) {
-  const me = await findMyParticipant(db, actor, eventId);
-  return me && hasAnswered(me) ? toGuest(me) : null;
+/** 回答と、その権限 (イベントの詳細の participants と同じ形) */
+async function findParticipantResponse(
+  db: Db,
+  actor: Actor,
+  event: { id: string; ownerUserId: string | null },
+  participantId: string,
+) {
+  const participant = await findParticipant(db, event.id, participantId);
+  return toParticipantResponse(actor, event, participant);
+}
+
+/** ログインした人の、イベントへの回答。無ければ undefined */
+export function findOwnParticipant(db: Db, eventId: string, userId: string) {
+  return db.query.participant.findFirst({
+    where: and(eq(schema.participant.eventId, eventId), eq(schema.participant.userId, userId)),
+    columns: { id: true },
+  });
 }
 
 function slotRows(input: SubmissionInput, eventId: string, participantId: string) {
@@ -360,38 +421,76 @@ function slotRows(input: SubmissionInput, eventId: string, participantId: string
   }));
 }
 
+/**
+ * 回答を足す。名前の重複は許す。
+ * ログインしていれば、その人の回答 (その人だけが変えられる) になる。ログインした人は、1 つのイベントに 1 つだけ回答できる。
+ */
 export async function submitAvailability(db: Db, actor: Actor, eventId: string, input: SubmissionInput) {
-  // ホストはイベントを作った時点で participant があり、名前を入れると回答したことになる
-  const me = await findMyParticipant(db, actor, eventId);
-  if (me && hasAnswered(me)) {
-    throw new ServiceError("already_submitted", "提出済みです。");
+  const event = await findEventForPermissionOrThrow(db, eventId);
+  validateSlots(await findEventForSlots(db, eventId), input.slots);
+  if (actor.userId !== null) {
+    const own = await findOwnParticipant(db, eventId, actor.userId);
+    if (own) {
+      throw new ServiceError("already_submitted", "このイベントには、もう回答しています。回答を編集してください。");
+    }
   }
 
-  validateSlots(await findEventForSlots(db, eventId), input.slots);
-
-  const answer = { name: input.name, comment: input.comment?.trim() || null };
-  const participantId = me?.id ?? crypto.randomUUID();
+  const participantId = crypto.randomUUID();
   await runBatch(db, [
-    me
-      ? db.update(schema.participant).set(answer).where(eq(schema.participant.id, me.id))
-      : db
-          .insert(schema.participant)
-          .values({ id: participantId, eventId, role: "guest", browserId: actor.browserId, ...answer }),
+    db.insert(schema.participant).values({
+      id: participantId,
+      eventId,
+      name: input.name,
+      comment: input.comment?.trim() || null,
+      userId: actor.userId,
+    }),
     ...insertMany(db, schema.slot, slotRows(input, eventId, participantId)),
   ]);
 
-  return findMyGuest(db, actor, eventId);
+  return findParticipantResponse(db, actor, event, participantId);
 }
 
-export async function updateMyAvailability(db: Db, actor: Actor, eventId: string, input: SubmissionInput) {
-  const me = await findMyParticipant(db, actor, eventId);
-  if (!me || !hasAnswered(me)) {
-    throw new ServiceError("submission_not_found", "既存の日程が見つかりません。");
+export async function updateAvailability(
+  db: Db,
+  actor: Actor,
+  eventId: string,
+  participantId: string,
+  input: SubmissionInput,
+) {
+  const event = await findEventForPermissionOrThrow(db, eventId);
+  const participant = await findParticipant(db, eventId, participantId);
+  if (!canEditParticipant(actor, event, participant)) {
+    throw new ServiceError("forbidden", "この回答を編集する権限がありません。");
   }
 
-  await replaceAnswer(db, eventId, me, input);
+  await replaceAnswer(db, actor, eventId, participant, input);
 
-  return findMyGuest(db, actor, eventId);
+  return findParticipantResponse(db, actor, event, participantId);
+}
+
+/** 回答を消す。消す前の回答を履歴に残すので、履歴から戻せる */
+export async function deleteAvailability(db: Db, actor: Actor, eventId: string, participantId: string) {
+  const event = await findEventForPermissionOrThrow(db, eventId);
+  throwIfDeleted(event);
+  const participant = await findParticipant(db, eventId, participantId);
+  if (!canDeleteParticipant(actor, event, participant)) {
+    throw new ServiceError("forbidden", "この回答を削除する権限がありません。");
+  }
+
+  await runBatch(db, [
+    insertHistory(db, {
+      eventId,
+      target: "participant",
+      targetId: participant.id,
+      action: "delete",
+      before: participantSnapshot(participant),
+      userId: actor.userId,
+    }),
+    // Slot は ON DELETE CASCADE で消える
+    db
+      .delete(schema.participant)
+      .where(eq(schema.participant.id, participant.id)),
+  ]);
 }
 
 /**
@@ -400,8 +499,9 @@ export async function updateMyAvailability(db: Db, actor: Actor, eventId: string
  */
 export async function replaceAnswer(
   db: Db,
+  actor: Actor,
   eventId: string,
-  participant: ParticipantWithSlots & { name: string },
+  participant: ParticipantWithSlots,
   input: SubmissionInput,
 ) {
   validateSlots(await findEventForSlots(db, eventId), input.slots);
@@ -409,14 +509,55 @@ export async function replaceAnswer(
   const answer = { name: input.name, comment: input.comment?.trim() || null };
   const rows = slotRows(input, eventId, participant.id);
   const before = participantSnapshot(participant);
-  const changed = !isSameSnapshot(before, participantSnapshot({ ...answer, slots: rows }));
+  const changed = !isSameSnapshot(
+    before,
+    participantSnapshot({ ...answer, userId: participant.userId, ownerDeleted: participant.ownerDeleted, slots: rows }),
+  );
 
   await runBatch(db, [
     ...(changed
-      ? [insertHistory(db, { eventId, target: "participant", targetId: participant.id, action: "update", before })]
+      ? [
+          insertHistory(db, {
+            eventId,
+            target: "participant",
+            targetId: participant.id,
+            action: "update",
+            before,
+            userId: actor.userId,
+          }),
+        ]
       : []),
     db.delete(schema.slot).where(eq(schema.slot.participantId, participant.id)),
     ...insertMany(db, schema.slot, rows),
     db.update(schema.participant).set(answer).where(eq(schema.participant.id, participant.id)),
+  ]);
+}
+
+/**
+ * 消した回答を、同じ id と同じ持ち主で作り直す。履歴から戻すのに使う。権限は呼び出す側で確かめる。
+ * 持ち主が、そのイベントにもう回答し直していれば戻せない (1 つのイベントに 1 つだけなので)。
+ */
+export async function recreateAnswer(
+  db: Db,
+  eventId: string,
+  participantId: string,
+  { userId, ownerDeleted }: { userId: string | null; ownerDeleted: boolean },
+  input: SubmissionInput,
+) {
+  validateSlots(await findEventForSlots(db, eventId), input.slots);
+  if (userId !== null && (await findOwnParticipant(db, eventId, userId))) {
+    throw new ServiceError("already_submitted", "この回答をした人が、もう回答し直しているので戻せません。");
+  }
+
+  await runBatch(db, [
+    db.insert(schema.participant).values({
+      id: participantId,
+      eventId,
+      name: input.name,
+      comment: input.comment?.trim() || null,
+      userId,
+      ownerDeleted,
+    }),
+    ...insertMany(db, schema.slot, slotRows(input, eventId, participantId)),
   ]);
 }

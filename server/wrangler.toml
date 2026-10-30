@@ -1,6 +1,8 @@
 name = "itsuhima"
 main = "src/main.ts"
 compatibility_date = "2026-10-01"
+# Better Auth が AsyncLocalStorage を使う
+compatibility_flags = ["nodejs_compat"]
 routes = [{ pattern = "itsuhima.utcode.net", custom_domain = true }]
 workers_dev = false
 
@@ -17,14 +19,19 @@ run_worker_first = [
   "/og/*",
   "/api", # "/api/*" は "/api" を含まないため
   "/api/*",
+  "/mcp", # "/mcp/*" は "/mcp" を含まないため
+  "/mcp/*",
+  "/.well-known/*",
 ]
 
 # 削除してから 7 日たったイベントを消す (src/scheduled.ts)。毎日 18:00 UTC (3:00 JST)
 [triggers]
 crons = ["0 18 * * *"]
 
+# シークレット (wrangler secret put): COOKIE_SECRET、BETTER_AUTH_SECRET、ACCOUNT_ID_SECRET、GOOGLE_CLIENT_ID、GOOGLE_CLIENT_SECRET
 [vars]
 NODE_ENV = "production"
+PUBLIC_ORIGIN = "https://itsuhima.utcode.net"
 
 # 書き込みの、IP ごとのレート制限 (src/middleware/rateLimit.ts)。数えるのは Cloudflare の拠点ごと。
 # namespace_id はアカウントの中で一意な整数。バインディングは env に引き継がれないので、staging にも書く
@@ -46,6 +53,7 @@ workers_dev = false
 
 [env.staging.vars]
 NODE_ENV = "production"
+PUBLIC_ORIGIN = "https://itsuhima-staging.utcode.net"
 NOINDEX = "true"
 
 [[env.staging.ratelimits]]

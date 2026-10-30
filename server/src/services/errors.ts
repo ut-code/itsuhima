@@ -4,10 +4,9 @@
 export type ServiceErrorReason =
   | "event_not_found"
   | "event_deleted"
-  | "submission_not_found"
+  | "participant_not_found"
   | "history_not_found"
-  | "not_host"
-  | "not_participant"
+  | "forbidden"
   | "already_submitted"
   | "options_empty"
   | "option_in_use"
