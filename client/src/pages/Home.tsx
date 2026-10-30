@@ -5,11 +5,37 @@ import { NavLink } from "react-router";
 import type { AppType } from "../../../server/src/routes/api";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
+import {
+  forgetMyEvents,
+  isLegacyExchanged,
+  loadMyEvents,
+  markLegacyExchanged,
+  rememberMyEvents,
+} from "../lib/myEvents";
 import { briefEventReviver } from "../revivers";
 import type { BriefEvent } from "../types";
 import { API_ENDPOINT, readErrorMessage } from "../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
+
+/** 一度に引けるイベントの数 (サーバーの `GET /events?ids=` の上限) */
+const MAX_EVENT_IDS = 100;
+
+/**
+ * 前の一覧 (browserId でサーバーが持っていたもの) を、一度だけ控えに移す。
+ * 失敗したら、次にホームを開いたときにやり直す。
+ */
+async function exchangeLegacyEvents() {
+  if (isLegacyExchanged()) return;
+  try {
+    const res = await client.legacy.exchange.$post();
+    if (res.status !== 200) return;
+    rememberMyEvents(await res.json());
+    markLegacyExchanged();
+  } catch (error) {
+    console.error("Error exchanging legacy events:", error);
+  }
+}
 
 export default function HomePage() {
   const [involvedEvents, setInvolvedEvents] = useState<BriefEvent[] | null>(null);
@@ -23,24 +49,32 @@ export default function HomePage() {
     const fetchInvolvedEvents = async () => {
       setLoading(true);
       try {
-        const res = await client.events.mine.$get({}, { init: { credentials: "include" } });
-        if (res.status === 200) {
-          const data = await res.json();
-          const parsedData = data.map((p) => briefEventReviver(p));
-          setInvolvedEvents(parsedData);
-        } else {
-          const errorMessage = await readErrorMessage(res, "イベントの取得に失敗しました。");
-          setToast({
-            message: errorMessage,
-            variant: "error",
-          });
-          setTimeout(() => setToast(null), 5000);
-          setInvolvedEvents(null);
+        await exchangeLegacyEvents();
+        const myEvents = loadMyEvents();
+        const isHostById = new Map(myEvents.map((e) => [e.id, e.isHost]));
+        const chunks = [];
+        for (let i = 0; i < myEvents.length; i += MAX_EVENT_IDS) {
+          chunks.push(myEvents.slice(i, i + MAX_EVENT_IDS).map((e) => e.id));
         }
+        const results = await Promise.all(
+          chunks.map(async (ids) => {
+            const res = await client.events.$get({ query: { ids: ids.join(",") } });
+            if (res.status !== 200) {
+              throw new Error(await readErrorMessage(res, "イベントの取得に失敗しました。"));
+            }
+            return { ids, events: await res.json() };
+          }),
+        );
+        // 返ってこなかったイベントは、もう無い (完全に消えた) ので控えから外す
+        const found = new Set(results.flatMap((r) => r.events.map((e) => e.id)));
+        forgetMyEvents(results.flatMap((r) => r.ids).filter((id) => !found.has(id)));
+        setInvolvedEvents(
+          results.flatMap((r) => r.events.map((e) => briefEventReviver(e, isHostById.get(e.id) ?? false))),
+        );
       } catch (error) {
         console.error("Error fetching involved events:", error);
         setToast({
-          message: "ネットワークエラーが発生しました。",
+          message: error instanceof Error && error.message ? error.message : "ネットワークエラーが発生しました。",
           variant: "error",
         });
         setTimeout(() => setToast(null), 5000);
@@ -149,9 +183,12 @@ function EventRow({ event, isLast }: { event: BriefEvent; isLast: boolean }) {
       }`}
     >
       <div className="min-w-0 flex-1">
-        <h3 className="truncate font-medium text-base-content transition-colors group-hover:text-primary">
-          {event.name}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="truncate font-medium text-base-content transition-colors group-hover:text-primary">
+            {event.name}
+          </h3>
+          {event.deleted && <span className="badge badge-sm badge-ghost shrink-0">削除済み</span>}
+        </div>
         <div className="mt-1 flex items-center gap-1.5 text-base-content/50 text-sm">
           <LuCalendar className="h-3.5 w-3.5 shrink-0" />
           <span>
@@ -171,7 +208,9 @@ function EmptyState() {
         <LuLayoutList className="h-8 w-8 text-base-content/40" />
       </div>
       <h3 className="mb-2 font-bold text-base-content text-lg">まだイベントがありません</h3>
-      <p className="max-w-sm text-base-content/50 text-sm">「新規作成」ボタンから、新しい日程調整を始めましょう。</p>
+      <p className="max-w-sm text-base-content/50 text-sm">
+        「新規作成」ボタンから、新しい日程調整を始めましょう。このブラウザで作ったイベントと回答したイベントが、ここに出ます。
+      </p>
     </div>
   );
 }

@@ -45,7 +45,7 @@ server/    Hono + Drizzle バックエンド (Cloudflare Workers + D1)。client 
 
 - 静的アセット (`client/dist`) は Worker を通らずに配信する。SPA のパスは `index.html` になる。
 - `server/wrangler.toml` の `run_worker_first` に当たるパスだけ Worker を通る。`main.ts` はパスの最初の区切りだけで振り分け、1 行を `run_worker_first` の 1 項目に対応させる。`server/src/routes/` の各ファイルは自分のプレフィックスより下だけを受け持ち、受け持ちは重ならない (ハンドラが 1 つだけなら Hono のルーターにせず、関数を `.get` で載せる)。ルートを足すときは両方に足す:
-  - `/`: 使ったことがあれば (browserId の Cookie があれば) `/home` にリダイレクトする (`landing.ts`)
+  - `/`: 使ったことがあれば (`visited` の Cookie があれば) `/home` にリダイレクトする (`landing.ts`)
   - `/e/:eventId`: `index.html` の OG メタタグにイベント名と日程を入れる (`eventPage.ts`)
   - `/og/:eventId`: OG 画像を生成し、Cache API にキャッシュする (`ogImage.tsx`。画像を作るライブラリ (`@cloudflare/pages-plugin-vercel-og`) は初期化が重いので、作るときだけ動的に import する)
   - `/api/*`: API (`api.ts`)
@@ -71,25 +71,31 @@ REST fetch ではなく `client.events[":eventId"].$get(...)` 形式で呼び出
 - `event`: 日程調整のイベント。`startDate` / `endDate` は `"YYYY-MM-DD"`（`endDate` を含む）、`timezone` は IANA のタイムゾーン名（現在は全件 `Asia/Tokyo`）。
 - `allowedRange`: 入力できる時間帯（現在はイベントにつき 1 つ）。`startTime` / `endTime` は `"HH:mm"`。終わりは `"24:00"` もありうる。
 - `option`: 参加形態。
-- `participant`: 参加者。`role` でホストとゲストを区別する。`name` が null なら未回答（イベントを作っただけのホスト）。ホストが回答しても 1 行のまま。
+- `participant`: 回答。名前の重複は許す。
 - `slot`: 参加者が参加できる時間帯。`startAt` / `endAt` は UTC の ISO 8601 で、日をまたがない。
+- `history`: イベントの設定と回答を変える・消す前のスナップショット。履歴から戻すのに使う。
+- `legacyBrowserEvent`: 前の browserId で作ったイベントと回答したイベント。前の一覧を client の控えに移す (交換する) ためだけに残す。
 
 日付と時間帯は、イベントの `timezone` の壁時計の値で持つ。Slot だけは実際の時刻なので UTC で持つ。API も同じ形式で受け取って返す。
 
-API のレスポンスでは、参加者を `hosts`（ホスト）、`guests` と `meAsGuest`（回答した参加者）に分けて返し、Slot の参加者 ID は `guestId` として返す。
+API のレスポンスでは、イベントと回答に、編集できるか (`canEdit`) を付けて返す。
 
 マイグレーションは `server/migrations/`。データの変換を伴うものは `drizzle-kit generate --custom` で作って SQL を手で書き、`server/test/migrations.test.ts` に移行のテストを足す。D1 は外部キーを常に強制し、`DROP TABLE` の暗黙の DELETE で `ON DELETE CASCADE` が発火するので、他のテーブルから参照されるテーブルは作り直さない（`RENAME` や `ADD COLUMN` で変える）。
 
-### 認証（browserId）
+### 権限と本人
 
-ユーザーアカウントなし。サーバーの `browserIdMiddleware` が、初回アクセス時に UUID を生成して署名付き Cookie として保存し、以降のリクエストでは Cookie から `browserId` を復元して `c.set("browserId", ...)` に格納する。署名鍵は `COOKIE_SECRET`。ローテーション中は `COOKIE_SECRET_PREVIOUS` の鍵でも検証し、現行の鍵で署名し直す（`server/src/middleware/browserId.ts`）。
+ユーザーアカウントなし。サーバーはブラウザを識別せず、本人を表す Cookie を入れない。URL を知っている人は誰でも、イベントと回答を編集・削除できる。間違えて変えたときのために、論理削除と変更の履歴 (誰でも戻せる) と、書き込みのレート制限がある。
+
+- 本人は `Actor = { userId: string | null }` で表し (今はいつも `null`)、判定は `server/src/services/permissions.ts` の `canEditEvent` / `canEditParticipant` に集める。
+- 「自分が作ったイベント・回答したイベント」は、client が localStorage に控える (`client/src/lib/myEvents.ts`)。ホームの一覧はこの控えから出す。権限には使わない。
+- 前の browserId の Cookie は、交換の口 (`POST /api/legacy/exchange`、`server/src/routes/legacy.ts`) だけが読む。署名鍵は `COOKIE_SECRET` (ローテーション中は `COOKIE_SECRET_PREVIOUS` も)。
 
 ### カレンダーの状態管理（CalendarMatrix）
 
 `client/src/lib/CalendarMatrix.ts` に核となるデータ構造がある。カレンダーの選択状態は 2D 行列で管理される（行=日、列=15分単位のスロット）：
 
 - **`EditingMatrix`**: 自分の入力中スロット。セル値は参加形態の id（文字列）。
-- **`ViewingMatrix`**: 全ゲストの既存スロット。セル値は `{ [guestId]: optionId }` のレコード。
+- **`ViewingMatrix`**: 全回答の既存スロット。セル値は `{ [participantId]: optionId }` のレコード。
 - **`HighlightMatrix`**: 「最多人数」や特定のゲストの強調表示に使う、条件を満たすセル。
 
 いずれも `getSlots()` で連続するセルをまとめて区間に変換（run-length encoding 的な処理）して返す。

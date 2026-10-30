@@ -98,6 +98,7 @@ export const HistoryDialog = forwardRef<HistoryDialogHandle, Props>(function His
                   ) : (
                     <ParticipantSnapshotSummary
                       snapshot={entry.before as ParticipantSnapshot}
+                      deleted={entry.action === "delete"}
                       optionIdToLabel={optionIdToLabel}
                     />
                   )}
@@ -171,16 +172,21 @@ const MAX_SLOTS_SHOWN = 3;
 
 function ParticipantSnapshotSummary({
   snapshot,
+  deleted,
   optionIdToLabel,
 }: {
   snapshot: ParticipantSnapshot;
+  /** 消した回答か */
+  deleted: boolean;
   optionIdToLabel: Record<string, string>;
 }) {
   const showOption = Object.keys(optionIdToLabel).length > 1;
   const slots = [...snapshot.slots].sort((a, b) => a.startAt.localeCompare(b.startAt));
   return (
     <>
-      <p className="wrap-break-word font-medium text-base-content text-sm">「{snapshot.name}」の回答の変更</p>
+      <p className="wrap-break-word font-medium text-base-content text-sm">
+        「{snapshot.name}」の回答の{deleted ? "削除" : "変更"}
+      </p>
       <ul className="mt-1 text-base-content/80 text-sm">
         {slots.length === 0 && <li>時間帯なし</li>}
         {slots.slice(0, MAX_SLOTS_SHOWN).map((slot) => (

@@ -1,19 +1,19 @@
 import { Hono } from "hono";
 import { createDb } from "../db/index.js";
 import type { AppEnv } from "../env.js";
-import { browserIdMiddleware } from "../middleware/browserId.js";
 import { rateLimitMiddleware } from "../middleware/rateLimit.js";
+import { visitedMiddleware } from "../middleware/visited.js";
 import { ServiceError, type ServiceErrorReason } from "../services/errors.js";
+import { anonymousActor } from "../services/permissions.js";
 import eventsRoutes from "./events.js";
+import legacyRoutes from "./legacy.js";
 
 const serviceErrorStatus = {
   event_not_found: 404,
   event_deleted: 410,
-  submission_not_found: 404,
+  participant_not_found: 404,
   history_not_found: 404,
-  not_host: 403,
-  not_participant: 403,
-  already_submitted: 409,
+  forbidden: 403,
   options_empty: 400,
   option_in_use: 400,
   invalid_slot: 400,
@@ -27,16 +27,18 @@ export const api = new Hono<AppEnv>()
     c.header("Cache-Control", "no-store");
   })
   .use("*", rateLimitMiddleware)
-  .use("*", browserIdMiddleware)
+  .use("*", visitedMiddleware)
   .use("*", async (c, next) => {
     c.set("db", createDb(c.env.DB));
-    c.set("actor", { browserId: c.get("browserId") });
+    // ログインが無いので、いつも匿名
+    c.set("actor", anonymousActor);
     await next();
   })
   .get("/", (c) => {
     return c.json({ message: "Hello! イツヒマ？" });
   })
   .route("/events", eventsRoutes)
+  .route("/legacy", legacyRoutes)
   // `/api` の下に未定義のパスは、画面 (index.html) に落とさず 404 にする
   .all("*", (c) => c.json({ message: "Not Found" }, 404))
   .onError((err, c) => {

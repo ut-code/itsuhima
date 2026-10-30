@@ -99,7 +99,10 @@ function LoginSection() {
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <h2 className="text-center font-bold text-2xl text-base-content sm:text-3xl">Google でのログインについて</h2>
           <div className="mt-6 space-y-3 text-base-content/70 leading-relaxed">
-            <p>イツヒマはログインしなくても使えます。作ったイベントや回答は、そのブラウザから編集できます。</p>
+            <p>
+              イツヒマはログインしなくても使えます。ログインしないで作ったイベントや回答は、URL
+              を知っている人なら誰でも編集できます。
+            </p>
             <p>
               Google
               でログインすると、別の端末やブラウザからも、同じイベントや回答を編集できるようになります。そのために、Google

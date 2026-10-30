@@ -1,41 +1,25 @@
 import { env } from "cloudflare:workers";
-import { serializeSigned } from "hono/utils/cookie";
 import { app } from "../src/main.js";
 
 /**
- * 1 つのブラウザを再現する。browserId を決めて署名済みの Cookie を作り、すべてのリクエストに付ける。
- * サーバーは同じ browserId で Cookie を再発行するだけなので、レスポンスの Set-Cookie は見ない。
+ * API を呼ぶ。サーバーはブラウザを識別しないので、Cookie は付けない。
  * パスは API の `/api` を除いたもの (`/events` など) を渡す。
  */
-export function createBrowser() {
-  const browserId = crypto.randomUUID();
-  // 署名は非同期なので、最初のリクエストのときに作る
-  let cookie: Promise<string> | undefined;
+const request = (path: string, init: RequestInit = {}) => app.request(`/api${path}`, init, env);
+const send = (method: string, path: string, body?: unknown) =>
+  request(path, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
 
-  const request = async (path: string, init: RequestInit = {}) => {
-    cookie ??= serializeSigned("browserId", browserId, env.COOKIE_SECRET);
-    const headers = new Headers(init.headers);
-    headers.set("Cookie", await cookie);
-    return app.request(`/api${path}`, { ...init, headers }, env);
-  };
-  const send = (method: string, path: string, body?: unknown) =>
-    request(path, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-
-  return {
-    browserId,
-    get: (path: string) => request(path),
-    post: (path: string, body?: unknown) => send("POST", path, body),
-    put: (path: string, body?: unknown) => send("PUT", path, body),
-    patch: (path: string, body?: unknown) => send("PATCH", path, body),
-    delete: (path: string) => send("DELETE", path),
-  };
-}
-
-export type Browser = ReturnType<typeof createBrowser>;
+export const api = {
+  get: (path: string, init?: RequestInit) => request(path, init),
+  post: (path: string, body?: unknown) => send("POST", path, body),
+  put: (path: string, body?: unknown) => send("PUT", path, body),
+  patch: (path: string, body?: unknown) => send("PATCH", path, body),
+  delete: (path: string) => send("DELETE", path),
+};
 
 /**
  * 2026/11/02〜11/04 (JST)、08:00〜23:00 のイベント。
@@ -53,9 +37,9 @@ export function eventInput(overrides: Record<string, unknown> = {}) {
 }
 
 /** イベントを作成して、その id と参加形態の id を返す */
-export async function createEvent(host: Browser, overrides: Record<string, unknown> = {}) {
+export async function createEvent(overrides: Record<string, unknown> = {}) {
   const input = eventInput(overrides);
-  const res = await host.post("/events", input);
+  const res = await api.post("/events", input);
   if (res.status !== 201) throw new Error(`イベントの作成に失敗しました: ${res.status} ${await res.text()}`);
   const { id } = (await res.json()) as { id: string };
   return { id, input, optionId: input.options[0].id };
@@ -71,6 +55,13 @@ export function submissionInput(optionId: string, overrides: Record<string, unkn
     slots: [{ ...slotOnNov2, optionId }],
     ...overrides,
   };
+}
+
+/** 回答して、その id を返す */
+export async function submit(eventId: string, optionId: string, overrides: Record<string, unknown> = {}) {
+  const res = await api.post(`/events/${eventId}/participants`, submissionInput(optionId, overrides));
+  if (res.status !== 201) throw new Error(`回答に失敗しました: ${res.status} ${await res.text()}`);
+  return ((await res.json()) as { participant: { id: string } }).participant.id;
 }
 
 /** client の index.html の、OG のメタタグの部分 */

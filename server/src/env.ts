@@ -9,6 +9,7 @@ export type Bindings = {
   ASSETS: { fetch(request: Request): Promise<Response> };
   /** 書き込みの、IP ごとのレート制限 (`middleware/rateLimit.ts`) */
   WRITE_RATE_LIMITER: RateLimit;
+  /** 前の browserId の Cookie の署名鍵。前の一覧を交換する口 (`routes/legacy.ts`) で、Cookie を検証するのに使う */
   COOKIE_SECRET: string;
   /** 署名鍵のローテーション中だけ、前の鍵をカンマ区切りで入れる */
   COOKIE_SECRET_PREVIOUS?: string;
@@ -19,7 +20,6 @@ export type Bindings = {
 };
 
 export type AppVariables = {
-  browserId: string;
   actor: Actor;
   db: Db;
 };

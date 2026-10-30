@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { check, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import type { EventSnapshot, ParticipantSnapshot } from "../services/snapshots.js";
 
 const uuid = () => crypto.randomUUID();
@@ -64,10 +64,7 @@ export const slot = sqliteTable(
   ],
 );
 
-/**
- * イベントの参加者。ホスト (作成者) とゲストを role で区別する。
- * name が null なら、まだ回答していない (イベントを作っただけのホスト)。
- */
+/** イベントに回答した人。URL を知っていれば誰でも編集できる */
 export const participant = sqliteTable(
   "participant",
   {
@@ -75,19 +72,14 @@ export const participant = sqliteTable(
     eventId: text()
       .notNull()
       .references(() => event.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    role: text({ enum: ["host", "guest"] }).notNull(),
-    name: text(),
+    name: text().notNull(),
     comment: text(),
-    browserId: text().notNull(),
     updatedAt: text()
       .notNull()
       .$defaultFn(() => new Date().toISOString())
       .$onUpdateFn(() => new Date().toISOString()),
   },
-  (t) => [
-    uniqueIndex("participant_eventId_browserId_key").on(t.eventId, t.browserId),
-    check("participant_role_check", sql`${t.role} IN ('host', 'guest')`),
-  ],
+  (t) => [index("participant_eventId_idx").on(t.eventId)],
 );
 
 /** 参加形態。 */
@@ -129,6 +121,24 @@ export const history = sqliteTable(
     check("history_target_check", sql`${t.target} IN ('event', 'participant')`),
     check("history_action_check", sql`${t.action} IN ('update', 'delete')`),
   ],
+);
+
+/**
+ * browserId (前の、ブラウザごとの識別子) で作ったイベントと回答したイベント。
+ * browserId をやめたので、前の一覧を localStorage の控えに移す (交換する) ためだけに残す。交換した行は消す。
+ * participantId は回答の id。回答していないホストなら null。
+ */
+export const legacyBrowserEvent = sqliteTable(
+  "legacyBrowserEvent",
+  {
+    browserId: text().notNull(),
+    eventId: text()
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    isHost: integer({ mode: "boolean" }).notNull(),
+    participantId: text(),
+  },
+  (t) => [primaryKey({ columns: [t.browserId, t.eventId] })],
 );
 
 export const eventRelations = relations(event, ({ many }) => ({

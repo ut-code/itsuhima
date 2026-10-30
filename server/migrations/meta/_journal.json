@@ -57,6 +57,13 @@
       "when": 1793358562900,
       "tag": "0007_soft_delete_and_history",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793362139545,
+      "tag": "0008_anonymous_model",
+      "breakpoints": true
     }
   ]
 }
