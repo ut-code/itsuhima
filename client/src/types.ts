@@ -31,8 +31,10 @@ type ParticipantPermissions = {
   canEdit: boolean;
   /** 編集できる人と、ログインして作ったイベントの持ち主 */
   canDelete: boolean;
-  /** ログインした人が出した回答か */
+  /** ログインした人が出した回答か (アカウントを削除した人の回答も含む) */
   hasOwner: boolean;
+  /** 回答した人がアカウントを削除したか (誰も編集できない。イベントを編集できる人は削除できる) */
+  ownerDeleted: boolean;
   /** ログインしている自分の回答か */
   isMine: boolean;
 };

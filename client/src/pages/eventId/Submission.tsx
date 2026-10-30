@@ -588,11 +588,17 @@ export default function SubmissionPage() {
                               <div className="min-w-0 flex-1">
                                 <p className="pt-1 font-medium text-base-content text-sm">
                                   {guest.name}
-                                  {guest.hasOwner && (
-                                    <LuLock
-                                      className="ml-1 inline h-3 w-3 align-baseline text-base-content/40"
-                                      aria-label="ログインした人の回答 (本人だけが編集できます)"
-                                    />
+                                  {guest.ownerDeleted ? (
+                                    <span className="ml-1.5 font-normal text-base-content/50 text-xs">
+                                      (削除されたアカウント)
+                                    </span>
+                                  ) : (
+                                    guest.hasOwner && (
+                                      <LuLock
+                                        className="ml-1 inline h-3 w-3 align-baseline text-base-content/40"
+                                        aria-label="ログインした人の回答 (本人だけが編集できます)"
+                                      />
+                                    )
                                   )}
                                   {guest.id === myParticipantId && (
                                     <span className="ml-1.5 font-normal text-base-content/50 text-xs">(あなた)</span>
@@ -618,7 +624,8 @@ export default function SubmissionPage() {
                                 <span className="hidden sm:inline">編集</span>
                               </button>
                             )}
-                            {/* ログインして作ったイベントの持ち主は、ログインした人の回答を消すことだけできる */}
+                            {/* ログインして作ったイベントの持ち主は、ログインした人の回答を消すことだけできる。
+                                アカウントを削除した人の回答も、イベントを編集できる人は消すことだけできる */}
                             {mode === "view" && !guest.canEdit && guest.canDelete && (
                               <button
                                 type="button"

@@ -14,12 +14,14 @@ export type EventSnapshot = {
 /**
  * 履歴に残す、回答。Slot の日時は UTC の ISO 8601。
  * userId は、ログインして出した回答の持ち主 (消した回答を戻すときに、同じ持ち主で作り直す)。API では返さない。
- * 前のものには無い (匿名)。ユーザーを削除すると消す (`auth.ts`)
+ * 前のものには無い (匿名)。回答した人がアカウントを削除すると、userId を消して ownerDeleted を立てる (`auth.ts`。
+ * 戻しても、誰も変えられない回答のままにする)
  */
 export type ParticipantSnapshot = {
   name: string;
   comment: string | null;
   userId?: string;
+  ownerDeleted?: true;
   slots: { startAt: string; endAt: string; optionId: string }[];
 };
 
@@ -49,12 +51,14 @@ export function participantSnapshot(participant: {
   name: string;
   comment: string | null;
   userId: string | null;
+  ownerDeleted: boolean;
   slots: { startAt: string; endAt: string; optionId: string }[];
 }): ParticipantSnapshot {
   return {
     name: participant.name,
     comment: participant.comment,
     ...(participant.userId === null ? {} : { userId: participant.userId }),
+    ...(participant.ownerDeleted ? { ownerDeleted: true as const } : {}),
     slots: participant.slots.map(({ startAt, endAt, optionId }) => ({ startAt, endAt, optionId })),
   };
 }

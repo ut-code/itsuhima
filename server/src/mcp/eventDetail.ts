@@ -91,6 +91,7 @@ function editorsOf(ctx: McpContext, event: EventDetail) {
 /** 回答の、誰が変えられるかの注記 */
 function participantNote(p: EventDetail["participants"][number]) {
   if (p.isMine) return " / あなたの回答 (直すときは update_availability にこの participant_id を渡す)";
+  if (p.ownerDeleted) return " / アカウントを削除した人の回答 (誰も直せない)";
   return p.canEdit ? "" : " / ログインした人の回答 (その人だけが直せる)";
 }
 

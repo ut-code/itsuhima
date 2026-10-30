@@ -258,7 +258,7 @@
           "tableTo": "user",
           "columnsFrom": ["ownerUserId"],
           "columnsTo": ["id"],
-          "onDelete": "set null",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -1559,6 +1559,14 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "ownerDeleted": {
+          "name": "ownerDeleted",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "updatedAt": {
           "name": "updatedAt",

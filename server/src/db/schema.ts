@@ -24,9 +24,9 @@ export const event = sqliteTable(
     deletedAt: text(),
     /**
      * ログインして作った人。null なら匿名で作ったもので、URL を知っている全員が編集できる。
-     * ユーザーを削除すると null (匿名) になる
+     * ユーザーを削除すると、イベントも消える (回答・履歴も CASCADE で消える)
      */
-    ownerUserId: text().references(() => user.id, { onDelete: "set null" }),
+    ownerUserId: text().references(() => user.id, { onDelete: "cascade" }),
   },
   (t) => [index("event_ownerUserId_idx").on(t.ownerUserId)],
 );
@@ -85,9 +85,14 @@ export const participant = sqliteTable(
     comment: text(),
     /**
      * ログインして回答した人。null なら匿名の回答で、URL を知っている全員が編集できる。
-     * ユーザーを削除すると null (匿名) になる
+     * ユーザーを削除すると null になり、ownerDeleted が立つ
      */
     userId: text().references(() => user.id, { onDelete: "set null" }),
+    /**
+     * 回答した人がアカウントを削除したか。立っていれば、誰も変えられない (匿名に戻すと、誰でも変えられてしまう)。
+     * 消すのは、イベントを編集できる人ができる。アカウントを削除する直前に立てる (`auth.ts`)
+     */
+    ownerDeleted: integer({ mode: "boolean" }).notNull().default(false),
     updatedAt: text()
       .notNull()
       .$defaultFn(() => new Date().toISOString())

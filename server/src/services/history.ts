@@ -15,7 +15,7 @@ export async function listHistory(db: Db, actor: Actor, eventId: string) {
     where: eq(schema.event.id, eventId),
     columns: { id: true, deletedAt: true, ownerUserId: true },
     with: {
-      participants: { columns: { id: true, userId: true } },
+      participants: { columns: { id: true, userId: true, ownerDeleted: true } },
       histories: {
         // 同じ時刻のものは、後に足したものを先にする
         orderBy: [desc(schema.history.createdAt), desc(sql`rowid`)],
@@ -33,7 +33,7 @@ export async function listHistory(db: Db, actor: Actor, eventId: string) {
   const participants = new Map(event.participants.map((p) => [p.id, p]));
   return event.histories.map((h) => {
     // 回答の持ち主 (userId) は返さない
-    const { userId: _, ...before } = h.before as ParticipantSnapshot;
+    const { userId: _, ownerDeleted: __, ...before } = h.before as ParticipantSnapshot;
     return {
       id: h.id,
       target: h.target,
@@ -55,11 +55,16 @@ export async function listHistory(db: Db, actor: Actor, eventId: string) {
 function canRestoreParticipant(
   actor: Actor,
   event: { ownerUserId: string | null },
-  current: { userId: string | null } | undefined,
+  current: { userId: string | null; ownerDeleted: boolean } | undefined,
   before: ParticipantSnapshot,
 ) {
   if (current) return canEditParticipant(actor, event, current);
-  return canDeleteParticipant(actor, event, { userId: before.userId ?? null });
+  return canDeleteParticipant(actor, event, snapshotOwner(before));
+}
+
+/** スナップショットの、回答の持ち主 */
+function snapshotOwner(before: ParticipantSnapshot) {
+  return { userId: before.userId ?? null, ownerDeleted: before.ownerDeleted === true };
 }
 
 /**
@@ -102,6 +107,6 @@ export async function restoreHistory(db: Db, actor: Actor, eventId: string, hist
   if (participant) {
     await replaceAnswer(db, actor, eventId, participant, input);
   } else {
-    await recreateAnswer(db, eventId, history.targetId, before.userId ?? null, input);
+    await recreateAnswer(db, eventId, history.targetId, snapshotOwner(before), input);
   }
 }

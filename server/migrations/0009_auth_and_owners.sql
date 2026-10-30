@@ -51,9 +51,10 @@ CREATE TABLE `verification` (
 );
 --> statement-breakpoint
 CREATE INDEX `verification_identifier_idx` ON `verification` (`identifier`);--> statement-breakpoint
-ALTER TABLE `event` ADD `ownerUserId` text REFERENCES `user`(`id`) ON DELETE SET NULL;--> statement-breakpoint
+ALTER TABLE `event` ADD `ownerUserId` text REFERENCES `user`(`id`) ON DELETE CASCADE;--> statement-breakpoint
 CREATE INDEX `event_ownerUserId_idx` ON `event` (`ownerUserId`);--> statement-breakpoint
 ALTER TABLE `history` ADD `userId` text REFERENCES `user`(`id`) ON DELETE SET NULL;--> statement-breakpoint
 ALTER TABLE `participant` ADD `userId` text REFERENCES `user`(`id`) ON DELETE SET NULL;--> statement-breakpoint
+ALTER TABLE `participant` ADD `ownerDeleted` integer DEFAULT false NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX `participant_eventId_userId_key` ON `participant` (`eventId`,`userId`) WHERE "participant"."userId" IS NOT NULL;--> statement-breakpoint
 CREATE INDEX `participant_userId_idx` ON `participant` (`userId`);

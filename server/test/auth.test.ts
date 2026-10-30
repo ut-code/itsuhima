@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 import { hashGoogleSub } from "../src/auth.js";
-import { api, createEvent, login, submit } from "./helpers.js";
+import { api, createEvent, login, submissionInput, submit } from "./helpers.js";
 
 const alice = { sub: "google-alice", email: "alice@example.com", name: "Alice", picture: "https://example.com/a.png" };
 
@@ -119,27 +119,71 @@ describe("ログイン中のアカウントの表示 (GET /me)", () => {
 });
 
 describe("アカウントの削除", () => {
-  test("消すと、作ったイベントと回答は残り、誰でも編集できる匿名のものになる", async () => {
+  test("作ったイベントは、ほかの人の回答ごと消える", async () => {
     const user = await login(alice);
     const { id, optionId } = await createEvent({}, user);
-    const participantId = await submit(id, optionId, {}, user);
-    // 回答を消して、履歴に持ち主を残す
-    await user.delete(`/events/${id}/participants/${participantId}`);
+    await submit(id, optionId);
 
     const res = await user.post("/auth/delete-user", {});
 
     expect(res.status).toBe(200);
     expect(await env.DB.prepare(`SELECT count(*) AS n FROM "user"`).first("n")).toBe(0);
-    const event = await api.get(`/events/${id}`);
-    expect(((await event.json()) as { canEdit: boolean }).canEdit).toBe(true);
+    expect((await api.get(`/events/${id}`)).status).toBe(404);
+    expect(await env.DB.prepare(`SELECT count(*) AS n FROM "participant"`).first("n")).toBe(0);
+  });
+
+  test("ほかの人のイベントへの回答は、アカウントを削除した人の回答として残る。誰も変えられず、イベントを編集できる人は消せる", async () => {
+    const owner = await login({ sub: "google-bob" });
+    const anonymousEvent = await createEvent();
+    const ownedEvent = await createEvent({}, owner);
+    const user = await login(alice);
+    const inAnonymous = await submit(anonymousEvent.id, anonymousEvent.optionId, { name: "アリス" }, user);
+    const inOwned = await submit(ownedEvent.id, ownedEvent.optionId, { name: "アリス" }, user);
+
+    await user.post("/auth/delete-user", {});
+
+    const anonymousView = (await (await api.get(`/events/${anonymousEvent.id}`)).json()) as {
+      participants: { id: string; name: string; canEdit: boolean; canDelete: boolean; ownerDeleted: boolean }[];
+    };
+    expect(anonymousView.participants).toMatchObject([
+      { id: inAnonymous, name: "アリス", canEdit: false, canDelete: true, ownerDeleted: true },
+    ]);
+    const update = submissionInput(anonymousEvent.optionId);
+    expect((await api.put(`/events/${anonymousEvent.id}/participants/${inAnonymous}`, update)).status).toBe(403);
+    // ログインして作ったイベントでは、持ち主だけが消せる
+    expect((await api.delete(`/events/${ownedEvent.id}/participants/${inOwned}`)).status).toBe(403);
+    expect((await owner.delete(`/events/${ownedEvent.id}/participants/${inOwned}`)).status).toBe(204);
+    // 匿名のイベントでは、誰でも消せる
+    expect((await api.delete(`/events/${anonymousEvent.id}/participants/${inAnonymous}`)).status).toBe(204);
+  });
+
+  test("履歴から戻しても、アカウントを削除した人の回答のまま", async () => {
+    const { id, optionId } = await createEvent();
+    const user = await login(alice);
+    const participantId = await submit(id, optionId, {}, user);
+    // 消して、持ち主のある回答を履歴に残す
+    await user.delete(`/events/${id}/participants/${participantId}`);
+
+    await user.post("/auth/delete-user", {});
+
     const history = await env.DB.prepare(`SELECT "before", "userId" FROM "history" WHERE "eventId" = ?`)
       .bind(id)
       .first<{ before: string; userId: string | null }>();
-    expect(JSON.parse(history?.before ?? "{}")).not.toHaveProperty("userId");
+    const before = JSON.parse(history?.before ?? "{}");
+    expect(before).not.toHaveProperty("userId");
+    expect(before.ownerDeleted).toBe(true);
     expect(history?.userId).toBeNull();
-    // 消した回答は、匿名の回答として誰でも戻せる
-    const list = (await (await api.get(`/events/${id}/history`)).json()) as { id: string; canRestore: boolean }[];
-    expect(list[0].canRestore).toBe(true);
-    expect((await api.post(`/events/${id}/history/${list[0].id}/restore`)).status).toBe(204);
+    const [entry] = (await (await api.get(`/events/${id}/history`)).json()) as {
+      id: string;
+      before: object;
+      canRestore: boolean;
+    }[];
+    expect(entry.before).not.toHaveProperty("ownerDeleted");
+    expect(entry.canRestore).toBe(true);
+    expect((await api.post(`/events/${id}/history/${entry.id}/restore`)).status).toBe(204);
+    const event = (await (await api.get(`/events/${id}`)).json()) as {
+      participants: { id: string; canEdit: boolean; ownerDeleted: boolean }[];
+    };
+    expect(event.participants).toMatchObject([{ id: participantId, canEdit: false, ownerDeleted: true }]);
   });
 });

@@ -188,8 +188,10 @@ function toParticipantResponse(actor: Actor, event: { ownerUserId: string | null
     slots: participant.slots,
     canEdit: canEditParticipant(actor, event, participant),
     canDelete: canDeleteParticipant(actor, event, participant),
-    /** ログインした人が出した回答か (その人だけが変えられる) */
-    hasOwner: participant.userId !== null,
+    /** ログインした人が出した回答か (その人だけが変えられる)。アカウントを削除した人の回答も含む */
+    hasOwner: participant.userId !== null || participant.ownerDeleted,
+    /** 回答した人がアカウントを削除したか (誰も変えられない) */
+    ownerDeleted: participant.ownerDeleted,
     /** ログインしている自分の回答か */
     isMine: isOwnParticipant(actor, participant),
   };
@@ -507,7 +509,10 @@ export async function replaceAnswer(
   const answer = { name: input.name, comment: input.comment?.trim() || null };
   const rows = slotRows(input, eventId, participant.id);
   const before = participantSnapshot(participant);
-  const changed = !isSameSnapshot(before, participantSnapshot({ ...answer, userId: participant.userId, slots: rows }));
+  const changed = !isSameSnapshot(
+    before,
+    participantSnapshot({ ...answer, userId: participant.userId, ownerDeleted: participant.ownerDeleted, slots: rows }),
+  );
 
   await runBatch(db, [
     ...(changed
@@ -536,7 +541,7 @@ export async function recreateAnswer(
   db: Db,
   eventId: string,
   participantId: string,
-  userId: string | null,
+  { userId, ownerDeleted }: { userId: string | null; ownerDeleted: boolean },
   input: SubmissionInput,
 ) {
   validateSlots(await findEventForSlots(db, eventId), input.slots);
@@ -551,6 +556,7 @@ export async function recreateAnswer(
       name: input.name,
       comment: input.comment?.trim() || null,
       userId,
+      ownerDeleted,
     }),
     ...insertMany(db, schema.slot, slotRows(input, eventId, participantId)),
   ]);

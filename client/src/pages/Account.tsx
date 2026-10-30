@@ -55,7 +55,7 @@ export default function AccountPage() {
             <section className="rounded-xl border border-base-300 bg-base-100 p-6 shadow-sm">
               <h2 className="font-bold text-lg">アカウントの削除</h2>
               <p className="mt-2 text-base-content/70 text-sm">
-                作成したイベントと回答は残り、URL を知っている人なら誰でも編集できるようになります。
+                ログインして作成したイベントは削除されます。ほかの人のイベントへの回答は、誰も編集できない回答として残ります。
               </p>
               <button
                 type="button"

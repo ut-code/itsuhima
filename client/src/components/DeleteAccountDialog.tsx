@@ -1,15 +1,37 @@
-import { type RefObject, useState } from "react";
+import { hc } from "hono/client";
+import { type RefObject, useEffect, useState } from "react";
+import type { AppType } from "../../../server/src/routes/api";
 import { authClient, signInWithGoogle } from "../lib/auth";
+import { API_ENDPOINT } from "../utils";
+
+const client = hc<AppType>(API_ENDPOINT);
 
 type DeleteError = "session_expired" | "unknown";
 
 /**
  * アカウントを削除する確認のダイアログ。開くのは呼び出し側 (`ref.current.showModal()`)。
- * 消しても、作ったイベントと回答は残り、URL を知っている人は誰でも編集できるものになる。
+ * 消すと、作ったイベントは (ほかの人の回答ごと) 消える。ほかの人のイベントへの回答は
+ * 「削除されたアカウント」の回答として残り、誰も編集できなくなる。
  */
 export default function DeleteAccountDialog({ ref }: { ref: RefObject<HTMLDialogElement | null> }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<DeleteError | null>(null);
+  /** 消えるイベントと、残る回答の数。読めなければ null */
+  const [counts, setCounts] = useState<{ hosted: number; answered: number } | null>(null);
+
+  useEffect(() => {
+    client.me.events
+      .$get()
+      .then(async (res) => {
+        if (res.status !== 200) return;
+        const events = await res.json();
+        setCounts({
+          hosted: events.filter((e) => e.isHost).length,
+          answered: events.filter((e) => !e.isHost && e.participantId !== null).length,
+        });
+      })
+      .catch(() => setCounts(null));
+  }, []);
 
   const deleteAccount = async () => {
     setIsDeleting(true);
@@ -30,11 +52,12 @@ export default function DeleteAccountDialog({ ref }: { ref: RefObject<HTMLDialog
         <h3 className="mb-3 font-bold text-base-content text-lg">アカウントを削除しますか？</h3>
         <ul className="mb-4 list-disc space-y-1 pl-5 text-base-content/70 text-sm">
           <li>
-            作成したイベントと回答は、消えずに残ります。回答の名前とコメントも、ほかの参加者に表示されたままです。
+            ログインして作成したイベント{counts ? ` (${counts.hosted} 件)` : ""}
+            は、ほかの人の回答も含めて削除されます。元に戻せません。
           </li>
           <li>
-            削除した後は、作成したイベントと回答は、URL
-            を知っている人なら誰でも編集・削除できるようになります。消したいイベントや回答は、先に削除してください。
+            ほかの人のイベントへの回答{counts ? ` (${counts.answered} 件)` : ""}
+            は、名前・コメント・日程が「削除されたアカウント」の回答として残り、誰も編集できなくなります。イベントを編集できる人は、削除できます。残したくない回答は、先に削除してください。
           </li>
           <li>MCP で接続しているアプリも、使えなくなります。</li>
           <li>この操作は取り消せません。</li>

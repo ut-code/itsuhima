@@ -189,6 +189,7 @@ describe("GET /events/:eventId", () => {
         canEdit: true,
         canDelete: true,
         hasOwner: false,
+        ownerDeleted: false,
         isMine: false,
       },
     ]);
@@ -597,6 +598,7 @@ describe("PUT /events/:eventId/participants/:participantId", () => {
         canEdit: true,
         canDelete: true,
         hasOwner: false,
+        ownerDeleted: false,
         isMine: false,
       },
     });

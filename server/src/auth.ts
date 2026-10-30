@@ -1,10 +1,10 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { GoogleProfile } from "better-auth/social-providers";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { decodeJwt } from "jose";
 import { authPlugins } from "./authPlugins.js";
-import type { Db } from "./db/index.js";
+import { type Db, runBatch } from "./db/index.js";
 import * as schema from "./db/schema.js";
 import type { Bindings } from "./env.js";
 
@@ -95,16 +95,26 @@ export function createAuth(
       },
     },
     user: {
-      // ユーザーを消しても、作ったイベントと回答は残り、匿名のもの (誰でも編集できる) になる (外部キーは ON DELETE SET NULL)。
+      // ユーザーを消すと、作ったイベントは消える (event.ownerUserId の外部キーが CASCADE)。
+      // ほかの人のイベントへの回答は「アカウントを削除した人の回答」として残り、誰も変えられなくなる (イベントを編集できる人は消せる)。
       // パスワードがないので、ログインして 1 日 (freshAge の既定) 以内のセッションでだけ消せる
       deleteUser: {
         enabled: true,
-        // 履歴に残した回答の持ち主も消す (消した回答を戻すと、匿名の回答になる)。ほかの列は外部キーで null になる
         beforeDelete: async (user) => {
-          await db
-            .update(schema.history)
-            .set({ before: sql`json_remove(${schema.history.before}, '$.userId')` })
-            .where(sql`json_extract(${schema.history.before}, '$.userId') = ${user.id}`);
+          await runBatch(db, [
+            // userId は外部キーで null になる
+            db
+              .update(schema.participant)
+              .set({ ownerDeleted: true })
+              .where(eq(schema.participant.userId, user.id)),
+            // 履歴に残した回答も、戻したときに同じになるようにする
+            db
+              .update(schema.history)
+              .set({
+                before: sql`json_set(json_remove(${schema.history.before}, '$.userId'), '$.ownerDeleted', json('true'))`,
+              })
+              .where(sql`json_extract(${schema.history.before}, '$.userId') = ${user.id}`),
+          ]);
         },
       },
     },

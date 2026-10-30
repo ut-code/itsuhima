@@ -75,7 +75,7 @@ REST fetch ではなく `client.events[":eventId"].$get(...)` 形式で呼び出
 - `event`: 日程調整のイベント。`startDate` / `endDate` は `"YYYY-MM-DD"`（`endDate` を含む）、`timezone` は IANA のタイムゾーン名（現在は全件 `Asia/Tokyo`）。
 - `allowedRange`: 入力できる時間帯（現在はイベントにつき 1 つ）。`startTime` / `endTime` は `"HH:mm"`。終わりは `"24:00"` もありうる。
 - `option`: 参加形態。
-- `event.ownerUserId` / `participant.userId`: ログインして作った人・回答した人。null は匿名。ユーザーを削除すると null になる。
+- `event.ownerUserId` / `participant.userId`: ログインして作った人・回答した人。null は匿名。ユーザーを削除すると、作ったイベントは消え (CASCADE)、ほかの人のイベントへの回答は `ownerDeleted` が立って誰も変えられなくなる (イベントを編集できる人は消せる)。
 - `participant`: 回答。名前の重複は許す。ログインした人は、1 つのイベントに 1 つだけ。
 - `slot`: 参加者が参加できる時間帯。`startAt` / `endAt` は UTC の ISO 8601 で、日をまたがない。
 - `history`: イベントの設定と回答を変える・消す前のスナップショット。履歴から戻すのに使う。
