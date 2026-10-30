@@ -1,5 +1,4 @@
 
-DOMAIN=localhost # browserId の Cookie を送るドメイン
 NODE_ENV=dev # dev or production
 COOKIE_SECRET=your-random-secret-key-for-development # Cookie の署名鍵
 # COOKIE_SECRET_PREVIOUS= # 鍵のローテーション時、前の COOKIE_SECRET をカンマ区切りで指定する。省略可

@@ -1,17 +1,25 @@
-import { ImageResponse } from "@cloudflare/pages-plugin-vercel-og/api";
-import { Hono } from "hono";
+import type { Context } from "hono";
 import { createDb } from "../db/index.js";
 import type { AppEnv } from "../env.js";
 import { type EventPreview, formatDateRange, ogImageVersion } from "../lib/preview.js";
 import { getEventPreview } from "../services/events.js";
 
-const FONT_URL = "https://unpkg.com/@fontsource/m-plus-1p@5.2.8/files/m-plus-1p-japanese-700-normal.woff";
+/**
+ * 静的アセットのフォント (client/public/fonts)。@fontsource/m-plus-1p@5.2.8 の日本語のサブセット。
+ * ライセンスは SIL OFL 1.1 で、再配布するのでライセンス文 (OFL.txt) を横に置いている。
+ * Satori は woff2 を読めないので woff を使う。
+ */
+const FONT_PATH = "/fonts/m-plus-1p-japanese-700-normal.woff";
 
-// isolate が生きている間は使い回す
 let font: Promise<ArrayBuffer> | undefined;
 
-function loadFont() {
-  font ??= fetch(FONT_URL).then((res) => {
+function loadFont(c: Context<AppEnv>) {
+  if (font) {
+    // isolate が生きている間は使い回す
+    return font;
+  }
+  // Promise で持つので、リクエストが重複しても 2 度 fetch することがない
+  font = c.env.ASSETS.fetch(new Request(new URL(FONT_PATH, c.req.url))).then((res) => {
     if (!res.ok) throw new Error(`フォントを取得できませんでした: ${res.status}`);
     return res.arrayBuffer();
   });
@@ -99,12 +107,11 @@ function OgCard({ event }: { event: EventPreview }) {
 }
 
 /**
- * イベントの OG 画像。URL の `?v=` (内容から作った版) ごとに Cache API にキャッシュする。
- * 生成は CPU 時間を多く使うので (1 枚 100ms 前後)、同じ画像は作り直さない。
+ * イベントの OG 画像 (/og/:eventId)。
+ * 画像の版ごとに Cache API にキャッシュする。
  */
-const ogImage = new Hono<AppEnv>().get("/og/:eventId", async (c) => {
-  // Workers の caches.default (型は DOM の CacheStorage に隠れて見えない)
-  const cache = (caches as unknown as { default: Cache }).default;
+export async function ogImage(c: Context<AppEnv, "/og/:eventId">) {
+  const cache = caches.default;
   const cached = await cache.match(c.req.url);
   if (cached) {
     return cached;
@@ -116,27 +123,26 @@ const ogImage = new Hono<AppEnv>().get("/og/:eventId", async (c) => {
     return c.redirect("/og-image.jpg", 302);
   }
 
-  // 版が古い・無いときは、今の版の URL に転送する (キャッシュするのは今の版の URL だけ)
+  // 版が古い・無いときは、今の版の URL に転送する
   const version = await ogImageVersion(event);
   if (c.req.query("v") !== version) {
     return c.redirect(`/og/${event.id}?v=${version}`, 302);
   }
 
+  // 画像生成は初期化が重いので dynamic import する
+  const { ImageResponse } = await import("@cloudflare/pages-plugin-vercel-og/api");
   const image = new ImageResponse(<OgCard event={event} />, {
     width: 1200,
     height: 630,
-    fonts: [{ name: "M PLUS 1p", data: await loadFont(), weight: 700, style: "normal" }],
+    fonts: [{ name: "M PLUS 1p", data: await loadFont(c), weight: 700, style: "normal" }],
   });
   const res = new Response(image.body, {
     headers: {
       "Content-Type": "image/png",
-      // 版ごとに内容は変わらない
+      // 版が同じなら内容は同じなので長期キャッシュしてよい。
       "Cache-Control": "public, max-age=31536000, immutable",
-      "X-Robots-Tag": "noindex",
     },
   });
   c.executionCtx.waitUntil(cache.put(c.req.url, res.clone()));
   return res;
-});
-
-export default ogImage;
+}
