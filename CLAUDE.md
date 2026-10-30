@@ -49,7 +49,7 @@ server/    Hono + Drizzle バックエンド (Cloudflare Workers + D1)。client 
   - `/e/:eventId`: `index.html` の OG メタタグにイベント名と日程を入れる (`eventPage.ts`)
   - `/og/:eventId`: OG 画像を生成し、Cache API にキャッシュする (`ogImage.tsx`。画像を作るライブラリ (`@cloudflare/pages-plugin-vercel-og`) は初期化が重いので、作るときだけ動的に import する)
   - `/api/*`: API (`api.ts`。`/api/auth/*` は Better Auth (Google ログインと、MCP 向けの OAuth の認可サーバー、`server/src/auth.ts`))
-  - `/mcp`・`/mcp/*`: MCP (`mcp.ts`。`/mcp` は OAuth、`/mcp/public` は認証なし。ツールは `server/src/mcp/`、仕様は `docs/mcp.md`)
+  - `/mcp`・`/mcp/*`: MCP (`mcp.ts`。`/mcp` は OAuth、`/mcp/public` は認証なし。ツールは `server/src/mcp/`)
   - `/.well-known/*`: OAuth のメタデータ (`wellKnown.ts`)
 
 Better Auth も大きいので、使うときだけ動的に import する (セッションの Cookie が無いリクエストでは作らない)。
@@ -80,7 +80,6 @@ REST fetch ではなく `client.events[":eventId"].$get(...)` 形式で呼び出
 - `slot`: 参加者が参加できる時間帯。`startAt` / `endAt` は UTC の ISO 8601 で、日をまたがない。
 - `history`: イベントの設定と回答を変える・消す前のスナップショット。履歴から戻すのに使う。
 - `user` / `session` / `account` / `verification`、`jwks`、`oauth*`: Better Auth (`npx auth generate` で生成。手で変えない)。個人情報を持たないよう、Google の `sub` は HMAC (鍵は `ACCOUNT_ID_SECRET`) にして保存し、ほかは保存しない (`server/src/auth.ts`)。メールアドレスは、ログイン中のアカウントを示すためだけに受け取り、暗号化した Cookie に入れる (`server/src/lib/accountEmail.ts`)。
-- `legacyBrowserEvent`: 前の browserId で作ったイベントと回答したイベント。前の一覧を client の控えに移す (交換する) ためだけに残す。
 
 日付と時間帯は、イベントの `timezone` の壁時計の値で持つ。Slot だけは実際の時刻なので UTC で持つ。API も同じ形式で受け取って返す。
 
@@ -96,7 +95,6 @@ API のレスポンスでは、イベントと回答に、編集できるか (`c
 - 本人は `Actor = { userId: string | null }` で表し (`middleware/actor.ts` がセッションから決める)、判定は `server/src/services/permissions.ts` の `canEditEvent` / `canEditParticipant` / `canDeleteParticipant` に集める。API は持ち主の id を返さず、`canEdit`・`hasOwner`・`isMine` だけを返す。
 - 「このブラウザでログインせずに作ったイベント・回答したイベント」は、client が localStorage に控える (`client/src/lib/myEvents.ts`)。控えはログインしていない間だけ使い、ログインしたとわかったら消す (`App.tsx`)。ログイン中のホームの一覧は `GET /api/me/events` だけから出し、控えと混ぜない。ログインする前に、控えが消えることを確かめる (`components/SignInWarning.tsx` の `useSignIn`)。控えは権限には使わない。
 - ログインしていない人は「ゲスト」として扱う。ヘッダーのメニューから、このブラウザの記録 (控え・前の一覧・`visited` の Cookie) を削除できる (`components/DeleteGuestDataDialog.tsx`、`DELETE /api/visited`)。ログアウトとアカウントの削除に当たるが、イベントと回答はサーバーに残る。
-- 前の browserId の Cookie は、交換の口 (`POST /api/legacy/exchange`、`server/src/routes/legacy.ts`) だけが読む。署名鍵は `COOKIE_SECRET` (ローテーション中は `COOKIE_SECRET_PREVIOUS` も)。
 
 ### カレンダーの状態管理（CalendarMatrix）
 
