@@ -19,9 +19,9 @@ run_worker_first = [
   "/api/*",
 ]
 
-# 削除してから 7 日たったイベントを消す (src/scheduled.ts)。毎時 0 分 (UTC)
+# 削除してから 7 日たったイベントを消す (src/scheduled.ts)。毎日 18:00 UTC (3:00 JST)
 [triggers]
-crons = ["0 * * * *"]
+crons = ["0 18 * * *"]
 
 [vars]
 NODE_ENV = "production"

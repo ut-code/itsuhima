@@ -4,7 +4,7 @@ import dayjs from "../lib/dayjs";
 
 type Props = {
   name: string;
-  /** 完全に消える日時 (ISO 8601) */
+  /** 完全に消える日時 (ISO 8601)。実際に消すのは、この後の 1 日 1 回の Cron なので、日付だけ出す */
   purgeAt: string;
   canRestore: boolean;
   restoring: boolean;
@@ -18,7 +18,7 @@ export function DeletedEvent({ name, purgeAt, canRestore, restoring, onRestore }
       <div className="flex min-h-100 w-full flex-col items-center justify-center gap-4 rounded-xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
         <p className="text-base-content/70 text-xl">「{name}」は削除されました。</p>
         <p className="text-base-content/70 text-sm">
-          {dayjs(purgeAt).tz().format("YYYY年M月D日 H:mm")} ごろに完全に消えます。
+          {dayjs(purgeAt).tz().format("YYYY年M月D日")}ごろに完全に消えます。
           {canRestore ? "それまでは元に戻せます。" : "それまでは、イベントを作った人が元に戻せます。"}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-2">
