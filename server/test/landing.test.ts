@@ -24,6 +24,15 @@ describe("GET /", () => {
 });
 
 describe("visited の Cookie", () => {
+  test("DELETE /api/visited で消す", async () => {
+    const res = await requestWorker("/api/visited", { method: "DELETE", headers: { Cookie: "visited=1" } });
+
+    expect(res.status).toBe(204);
+    expect(res.headers.getSetCookie()).toContainEqual(
+      expect.stringMatching(/^visited=; Max-Age=0; Path=\/; HttpOnly; SameSite=Lax$/),
+    );
+  });
+
   test("API を使うと、本人を表さない visited=1 を付ける。あれば付け直さない", async () => {
     const res = await requestWorker("/api");
 

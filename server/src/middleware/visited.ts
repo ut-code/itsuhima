@@ -1,4 +1,5 @@
-import { getCookie, setCookie } from "hono/cookie";
+import type { Context } from "hono";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import type { AppEnv } from "../env.js";
 
@@ -20,3 +21,14 @@ export const visitedMiddleware = createMiddleware<AppEnv>(async (c, next) => {
     });
   }
 });
+
+/** ゲストがこのブラウザの記録を削除したとき。`/` を開いても、`/home` にリダイレクトしないようにする */
+export function deleteVisited(c: Context<AppEnv>) {
+  deleteCookie(c, VISITED_COOKIE, {
+    path: "/",
+    httpOnly: true,
+    secure: c.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
+  return c.body(null, 204);
+}
