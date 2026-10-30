@@ -1,5 +1,6 @@
 // 自分が作ったイベントと回答したイベントを、localStorage に控える。
 // 今はサーバーが browserId で一覧を返すが、browserId をやめたあとはこの控えで一覧を出す。
+// 名前や日付は控えず、表示するときにサーバーから取る (控えた後の変更が古いまま残らないように)。
 // 権限には使わない。消えても、イベントの URL があれば開ける。
 
 import { z } from "zod";
@@ -8,12 +9,7 @@ const STORAGE_KEY = "itsuhima:myEvents";
 
 const myEventSchema = z.object({
   id: z.string(),
-  name: z.string(),
-  /** イベントのタイムゾーンでの日付 ("YYYY-MM-DD") */
-  startDate: z.string(),
-  /** イベントのタイムゾーンでの日付 ("YYYY-MM-DD") */
-  endDate: z.string(),
-  timezone: z.string(),
+  /** 作ったイベントなら true、回答しただけなら false。browserId をやめると、サーバーからはわからなくなる */
   isHost: z.boolean(),
 });
 
@@ -61,6 +57,6 @@ export function forgetMyEvent(eventId: string) {
 }
 
 /** API のレスポンスの余分なフィールドを落とす */
-function pickMyEvent({ id, name, startDate, endDate, timezone, isHost }: MyEvent): MyEvent {
-  return { id, name, startDate, endDate, timezone, isHost };
+function pickMyEvent({ id, isHost }: MyEvent): MyEvent {
+  return { id, isHost };
 }
