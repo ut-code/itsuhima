@@ -46,3 +46,13 @@ describe("検索に載せない (X-Robots-Tag: noindex)", () => {
     }
   });
 });
+
+describe("API のキャッシュ", () => {
+  test("API の応答はブラウザにキャッシュさせない (Cache-Control: no-store)", async () => {
+    for (const path of ["/api", "/api/events/aaaaaaaaaaaaaaaaaaaaa", "/api/unknown"]) {
+      const res = await requestWorker(path);
+
+      expect(res.headers.get("Cache-Control"), path).toBe("no-store");
+    }
+  });
+});

@@ -21,6 +21,11 @@ const serviceErrorStatus = {
 
 /** Web UI 用の API。`/api` の下に置く。client は Hono RPC で `AppType` を使って呼ぶ */
 export const api = new Hono<AppEnv>()
+  .use("*", async (c, next) => {
+    await next();
+    // ブラウザにキャッシュさせない。410 (削除したイベント) などは、指定が無いとキャッシュされ、戻したあとも古い応答が出る
+    c.header("Cache-Control", "no-store");
+  })
   .use("*", rateLimitMiddleware)
   .use("*", browserIdMiddleware)
   .use("*", async (c, next) => {
