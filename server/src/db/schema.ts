@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import { check, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import type { EventSnapshot, ParticipantSnapshot } from "../services/snapshots.js";
 
 const uuid = () => crypto.randomUUID();
 
@@ -17,6 +18,8 @@ export const event = sqliteTable("event", {
   createdAt: text()
     .notNull()
     .$defaultFn(() => new Date().toISOString()),
+  /** 論理削除した日時 (UTC の ISO 8601)。null なら削除されていない */
+  deletedAt: text(),
 });
 
 /** イベントで入力できる時間帯。(注: 現在は 1 つのイベントにつき 1 つのみ設定可能) */
@@ -101,11 +104,39 @@ export const option = sqliteTable(
   (t) => [uniqueIndex("option_eventId_label_key").on(t.eventId, t.label)],
 );
 
+/**
+ * イベントの設定や回答を変える・消す前のスナップショット。履歴から戻すのに使う。
+ * targetId は、target が "event" ならイベントの id、"participant" なら参加者の id (消えていてもよい)。
+ */
+export const history = sqliteTable(
+  "history",
+  {
+    id: text().primaryKey().$defaultFn(uuid),
+    eventId: text()
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    target: text({ enum: ["event", "participant"] }).notNull(),
+    targetId: text().notNull(),
+    action: text({ enum: ["update", "delete"] }).notNull(),
+    /** 変える前の値の JSON。回答なら slots も含む */
+    before: text({ mode: "json" }).$type<EventSnapshot | ParticipantSnapshot>().notNull(),
+    createdAt: text()
+      .notNull()
+      .$defaultFn(() => new Date().toISOString()),
+  },
+  (t) => [
+    index("history_eventId_createdAt_idx").on(t.eventId, t.createdAt),
+    check("history_target_check", sql`${t.target} IN ('event', 'participant')`),
+    check("history_action_check", sql`${t.action} IN ('update', 'delete')`),
+  ],
+);
+
 export const eventRelations = relations(event, ({ many }) => ({
   allowedRanges: many(allowedRange),
   slots: many(slot),
   participants: many(participant),
   options: many(option),
+  histories: many(history),
 }));
 
 export const allowedRangeRelations = relations(allowedRange, ({ one }) => ({
@@ -129,4 +160,8 @@ export const participantRelations = relations(participant, ({ one, many }) => ({
 export const optionRelations = relations(option, ({ one, many }) => ({
   event: one(event, { fields: [option.eventId], references: [event.id] }),
   slots: many(slot),
+}));
+
+export const historyRelations = relations(history, ({ one }) => ({
+  event: one(event, { fields: [history.eventId], references: [event.id] }),
 }));

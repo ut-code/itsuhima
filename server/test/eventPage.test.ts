@@ -46,6 +46,16 @@ describe("GET /e/:eventId", () => {
     expect(await res.text()).toBe(indexHtml);
   });
 
+  test("削除したイベントは、書き換えずに返す", async () => {
+    const host = createBrowser();
+    const { id } = await createEvent(host);
+    await host.delete(`/events/${id}`);
+
+    const res = await requestWorker(`/e/${id}`);
+
+    expect(await res.text()).toBe(indexHtml);
+  });
+
   test("イベント ID の形でなければ、書き換えずに返す", async () => {
     const res = await requestWorker("/e/short");
 

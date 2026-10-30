@@ -1,10 +1,11 @@
 import { Hono } from "hono";
-import type { AppEnv } from "./env.js";
+import type { AppEnv, Bindings } from "./env.js";
 import { noindexMiddleware } from "./middleware/noindex.js";
 import { api } from "./routes/api.js";
 import { eventPage } from "./routes/eventPage.js";
 import { landing } from "./routes/landing.js";
 import { ogImage } from "./routes/ogImage.js";
+import { scheduled } from "./scheduled.js";
 
 /**
  * wrangler.toml の `assets` を参照。
@@ -22,4 +23,4 @@ export const app = new Hono<AppEnv>()
   // 例えば `/e/:eventId/edit` など。
   .notFound((c) => c.env.ASSETS.fetch(c.req.raw));
 
-export default app;
+export default { fetch: app.fetch, scheduled } satisfies ExportedHandler<Bindings>;

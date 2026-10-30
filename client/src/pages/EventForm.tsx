@@ -622,7 +622,7 @@ export default function EventFormPage() {
                 <div className="rounded-lg border border-error/30 bg-error/10 p-6 shadow-sm">
                   <h2 className="mb-2 font-bold text-base text-base-content sm:text-lg">イベントの削除</h2>
                   <p className="mb-4 text-base-content/70 text-sm">
-                    イベントを削除すると復元できません。慎重に行ってください。
+                    削除したイベントは、7 日後に完全に消えます。それまでは、イベントのページから元に戻せます。
                   </p>
                   <button
                     type="button"
@@ -707,7 +707,9 @@ export default function EventFormPage() {
         <dialog ref={deleteDialogRef} className="modal">
           <div className="modal-box">
             <h3 className="mb-2 font-bold text-base-content text-lg">イベントを削除しますか？</h3>
-            <p className="mb-6 text-base-content/70 text-sm">削除すると元に戻せません。</p>
+            <p className="mb-6 text-base-content/70 text-sm">
+              参加者の回答も見られなくなります。7 日以内なら、イベントのページから元に戻せます。
+            </p>
             <div className="modal-action">
               <button type="button" className="btn btn-outline" onClick={() => deleteDialogRef.current?.close()}>
                 キャンセル
@@ -725,7 +727,8 @@ export default function EventFormPage() {
                     if (!res.ok) {
                       throw new Error("削除に失敗しました。");
                     }
-                    navigate("/home");
+                    // 削除されたイベントのページで、すぐに元に戻せるようにする
+                    navigate(`/e/${event.id}`);
                     setToast({ message: "イベントを削除しました。", variant: "success" });
                     setTimeout(() => setToast(null), 3000);
                   } catch (error) {

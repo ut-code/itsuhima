@@ -19,8 +19,19 @@ run_worker_first = [
   "/api/*",
 ]
 
+# 削除してから 7 日たったイベントを消す (src/scheduled.ts)。毎日 18:00 UTC (3:00 JST)
+[triggers]
+crons = ["0 18 * * *"]
+
 [vars]
 NODE_ENV = "production"
+
+# 書き込みの、IP ごとのレート制限 (src/middleware/rateLimit.ts)。数えるのは Cloudflare の拠点ごと。
+# namespace_id はアカウントの中で一意な整数。バインディングは env に引き継がれないので、staging にも書く
+[[ratelimits]]
+name = "WRITE_RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 60, period = 60 }
 
 [[d1_databases]]
 binding = "DB"
@@ -36,6 +47,11 @@ workers_dev = false
 [env.staging.vars]
 NODE_ENV = "production"
 NOINDEX = "true"
+
+[[env.staging.ratelimits]]
+name = "WRITE_RATE_LIMITER"
+namespace_id = "1002"
+simple = { limit = 60, period = 60 }
 
 [[env.staging.d1_databases]]
 binding = "DB"

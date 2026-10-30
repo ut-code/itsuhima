@@ -8,44 +8,72 @@ import {
   deleteEvent,
   getEvent,
   listMyEvents,
+  restoreEvent,
   submitAvailability,
   updateEvent,
   updateMyAvailability,
 } from "../services/events.js";
+import { listHistory, restoreHistory } from "../services/history.js";
 
 const eventIdParamsSchema = z.object({ eventId: z.string().length(21) });
+const historyParamsSchema = eventIdParamsSchema.extend({ historyId: z.string().uuid() });
 
 const router = new Hono<AppEnv>()
   // イベント作成
   .post("/", zValidator("json", eventReqSchema), async (c) => {
-    const event = await createEvent(c.get("db"), c.get("browserId"), c.req.valid("json"));
+    const event = await createEvent(c.get("db"), c.get("actor"), c.req.valid("json"));
     return c.json({ id: event.id, name: event.name }, 201);
   })
 
   // 自分が関連するイベント取得
   .get("/mine", async (c) => {
-    const events = await listMyEvents(c.get("db"), c.get("browserId"));
+    const events = await listMyEvents(c.get("db"), c.get("actor"));
     return c.json(events, 200);
   })
 
   // イベント取得
   .get("/:eventId", zValidator("param", eventIdParamsSchema), async (c) => {
     const { eventId } = c.req.valid("param");
-    const event = await getEvent(c.get("db"), c.get("browserId"), eventId);
-    return c.json(event, 200);
+    const result = await getEvent(c.get("db"), c.get("actor"), eventId);
+    if (result.status === "deleted") {
+      // 削除されたイベントのページに、名前と戻すボタンを出すのに使う
+      return c.json({ message: "このイベントは削除されました。", ...result.event }, 410);
+    }
+    return c.json(result.event, 200);
   })
 
   // イベント編集。省略したフィールドは変えない
   .patch("/:eventId", zValidator("param", eventIdParamsSchema), zValidator("json", editEventReqSchema), async (c) => {
     const { eventId } = c.req.valid("param");
-    const event = await updateEvent(c.get("db"), c.get("browserId"), eventId, c.req.valid("json"));
+    const event = await updateEvent(c.get("db"), c.get("actor"), eventId, c.req.valid("json"));
     return c.json({ event }, 200);
   })
 
-  // イベント削除
+  // イベント削除 (論理削除)
   .delete("/:eventId", zValidator("param", eventIdParamsSchema), async (c) => {
     const { eventId } = c.req.valid("param");
-    await deleteEvent(c.get("db"), c.get("browserId"), eventId);
+    await deleteEvent(c.get("db"), c.get("actor"), eventId);
+    return c.body(null, 204);
+  })
+
+  // 削除したイベントを戻す
+  .post("/:eventId/restore", zValidator("param", eventIdParamsSchema), async (c) => {
+    const { eventId } = c.req.valid("param");
+    await restoreEvent(c.get("db"), c.get("actor"), eventId);
+    return c.body(null, 204);
+  })
+
+  // 変更の履歴 (新しい順)
+  .get("/:eventId/history", zValidator("param", eventIdParamsSchema), async (c) => {
+    const { eventId } = c.req.valid("param");
+    const history = await listHistory(c.get("db"), c.get("actor"), eventId);
+    return c.json(history, 200);
+  })
+
+  // 履歴の、変える前の状態に戻す
+  .post("/:eventId/history/:historyId/restore", zValidator("param", historyParamsSchema), async (c) => {
+    const { eventId, historyId } = c.req.valid("param");
+    await restoreHistory(c.get("db"), c.get("actor"), eventId, historyId);
     return c.body(null, 204);
   })
 
@@ -57,7 +85,7 @@ const router = new Hono<AppEnv>()
     async (c) => {
       const { eventId } = c.req.valid("param");
       const { name, comment, slots } = c.req.valid("json");
-      const guest = await submitAvailability(c.get("db"), c.get("browserId"), eventId, { name, comment, slots });
+      const guest = await submitAvailability(c.get("db"), c.get("actor"), eventId, { name, comment, slots });
       return c.json({ guest }, 201);
     },
   )
@@ -70,7 +98,7 @@ const router = new Hono<AppEnv>()
     async (c) => {
       const { eventId } = c.req.valid("param");
       const { name, comment, slots } = c.req.valid("json");
-      const guest = await updateMyAvailability(c.get("db"), c.get("browserId"), eventId, { name, comment, slots });
+      const guest = await updateMyAvailability(c.get("db"), c.get("actor"), eventId, { name, comment, slots });
       return c.json({ guest }, 200);
     },
   );

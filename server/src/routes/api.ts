@@ -2,13 +2,17 @@ import { Hono } from "hono";
 import { createDb } from "../db/index.js";
 import type { AppEnv } from "../env.js";
 import { browserIdMiddleware } from "../middleware/browserId.js";
+import { rateLimitMiddleware } from "../middleware/rateLimit.js";
 import { ServiceError, type ServiceErrorReason } from "../services/errors.js";
 import eventsRoutes from "./events.js";
 
 const serviceErrorStatus = {
   event_not_found: 404,
+  event_deleted: 410,
   submission_not_found: 404,
+  history_not_found: 404,
   not_host: 403,
+  not_participant: 403,
   already_submitted: 409,
   options_empty: 400,
   option_in_use: 400,
@@ -17,9 +21,16 @@ const serviceErrorStatus = {
 
 /** Web UI 用の API。`/api` の下に置く。client は Hono RPC で `AppType` を使って呼ぶ */
 export const api = new Hono<AppEnv>()
+  .use("*", async (c, next) => {
+    await next();
+    // ブラウザにキャッシュさせない。410 (削除したイベント) などは、指定が無いとキャッシュされ、戻したあとも古い応答が出る
+    c.header("Cache-Control", "no-store");
+  })
+  .use("*", rateLimitMiddleware)
   .use("*", browserIdMiddleware)
   .use("*", async (c, next) => {
     c.set("db", createDb(c.env.DB));
+    c.set("actor", { browserId: c.get("browserId") });
     await next();
   })
   .get("/", (c) => {

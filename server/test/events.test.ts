@@ -414,7 +414,7 @@ describe("DELETE /events/:eventId", () => {
     expect(await res.json()).toEqual({ message: "削除権限がありません。" });
   });
 
-  test("ホストは、ゲストの回答ごと削除できる。204 で本文は無い", async () => {
+  test("ホストは削除できる。204 で本文は無い", async () => {
     const host = createBrowser();
     const { id, optionId } = await createEvent(host);
     await submit(createBrowser(), id, optionId);
@@ -423,7 +423,120 @@ describe("DELETE /events/:eventId", () => {
 
     expect(res.status).toBe(204);
     expect(await res.text()).toBe("");
-    expect((await host.get(`/events/${id}`)).status).toBe(404);
+  });
+
+  test("削除したイベントは 410 で、名前と完全に消える日時だけを返す。戻せるのはホストだけ", async () => {
+    const host = createBrowser();
+    const guest = createBrowser();
+    const { id, optionId } = await createEvent(host);
+    await submit(guest, id, optionId);
+    const before = Date.now();
+    await host.delete(`/events/${id}`);
+
+    const res = await host.get(`/events/${id}`);
+
+    expect(res.status).toBe(410);
+    const body = (await res.json()) as { deletedAt: string; purgeAt: string };
+    expect(body).toEqual({
+      message: "このイベントは削除されました。",
+      id,
+      name: "テストイベント",
+      deletedAt: expect.any(String),
+      purgeAt: expect.any(String),
+      canRestore: true,
+    });
+    expect(new Date(body.deletedAt).getTime()).toBeGreaterThanOrEqual(before);
+    expect(new Date(body.purgeAt).getTime() - new Date(body.deletedAt).getTime()).toBe(7 * 24 * 60 * 60 * 1000);
+    expect(await (await guest.get(`/events/${id}`)).json()).toMatchObject({ canRestore: false });
+  });
+
+  test("もう一度削除しても 204 で、削除した日時は変わらない", async () => {
+    const host = createBrowser();
+    const { id } = await createEvent(host);
+    await host.delete(`/events/${id}`);
+    const first = (await (await host.get(`/events/${id}`)).json()) as { deletedAt: string };
+
+    const res = await host.delete(`/events/${id}`);
+
+    expect(res.status).toBe(204);
+    expect(await (await host.get(`/events/${id}`)).json()).toMatchObject({ deletedAt: first.deletedAt });
+  });
+
+  test("削除したイベントは、編集も回答もできない (410)", async () => {
+    const host = createBrowser();
+    const guest = createBrowser();
+    const { id, optionId } = await createEvent(host);
+    await submit(guest, id, optionId);
+    await host.delete(`/events/${id}`);
+
+    const responses = await Promise.all([
+      host.patch(`/events/${id}`, { name: "新しい名前" }),
+      createBrowser().post(`/events/${id}/submissions`, submissionInput(optionId)),
+      guest.put(`/events/${id}/submissions/mine`, submissionInput(optionId)),
+    ]);
+
+    for (const res of responses) {
+      expect(res.status).toBe(410);
+      expect(await res.json()).toEqual({ message: "このイベントは削除されています。" });
+    }
+  });
+
+  test("削除したイベントは、ホストにもゲストにも /events/mine に出ない", async () => {
+    const host = createBrowser();
+    const guest = createBrowser();
+    const { id, optionId } = await createEvent(host);
+    await submit(guest, id, optionId);
+    await host.delete(`/events/${id}`);
+
+    expect(await (await host.get("/events/mine")).json()).toEqual([]);
+    expect(await (await guest.get("/events/mine")).json()).toEqual([]);
+  });
+});
+
+describe("POST /events/:eventId/restore", () => {
+  test("ホストは、削除したイベントを回答ごと戻せる。204 で本文は無い", async () => {
+    const host = createBrowser();
+    const guest = createBrowser();
+    const { id, optionId } = await createEvent(host);
+    await submit(guest, id, optionId);
+    await host.delete(`/events/${id}`);
+
+    const res = await host.post(`/events/${id}/restore`);
+
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe("");
+    const event = await getEvent(guest, id);
+    expect(event.guests).toHaveLength(1);
+    expect(event.meAsGuest).not.toBeNull();
+    expect(await (await host.get("/events/mine")).json()).toEqual([expect.objectContaining({ id })]);
+  });
+
+  test("ホスト以外は 403 で、削除されたまま", async () => {
+    const host = createBrowser();
+    const { id } = await createEvent(host);
+    await host.delete(`/events/${id}`);
+
+    const res = await createBrowser().post(`/events/${id}/restore`);
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ message: "戻す権限がありません。" });
+    expect((await host.get(`/events/${id}`)).status).toBe(410);
+  });
+
+  test("削除されていなければ、何もせず 204", async () => {
+    const host = createBrowser();
+    const { id } = await createEvent(host);
+
+    const res = await host.post(`/events/${id}/restore`);
+
+    expect(res.status).toBe(204);
+    await getEvent(host, id);
+  });
+
+  test("存在しないイベントは 404", async () => {
+    const res = await createBrowser().post(`/events/${missingEventId}/restore`);
+
+    expect(res.status).toBe(404);
   });
 });
 
