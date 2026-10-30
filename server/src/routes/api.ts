@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { createDb } from "../db/index.js";
 import type { AppEnv } from "../env.js";
 import { browserIdMiddleware } from "../middleware/browserId.js";
+import { rateLimitMiddleware } from "../middleware/rateLimit.js";
 import { ServiceError, type ServiceErrorReason } from "../services/errors.js";
 import eventsRoutes from "./events.js";
 
@@ -20,6 +21,7 @@ const serviceErrorStatus = {
 
 /** Web UI 用の API。`/api` の下に置く。client は Hono RPC で `AppType` を使って呼ぶ */
 export const api = new Hono<AppEnv>()
+  .use("*", rateLimitMiddleware)
   .use("*", browserIdMiddleware)
   .use("*", async (c, next) => {
     c.set("db", createDb(c.env.DB));
