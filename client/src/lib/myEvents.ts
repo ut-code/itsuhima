@@ -1,4 +1,7 @@
-// 自分が作ったイベントと回答したイベントを、localStorage に控える。ホームの一覧はこの控えから出す。
+// このブラウザでログインせずに作ったイベントと回答したイベントを、localStorage に控える。
+// ログインしていないときのホームの一覧は、この控えから出す。
+// ログイン中は読みも書きもしない (別の本人のものを画面の裏に置かないため)。ログインしたとわかったら消す (`clearMyEvents`)。
+// 足す関数には、匿名で作った・回答したと確かめたものだけを渡す。確かめるのは呼ぶ側。
 // 名前や日付は控えず、表示するときにサーバーから取る (控えた後の変更が古いまま残らないように)。
 // 権限には使わない (URL を知っている人は誰でも編集できる)。消えても、イベントの URL があれば開ける。
 
@@ -83,6 +86,15 @@ export function forgetMyEvents(eventIds: string[]) {
   const events = loadMyEvents();
   const rest = events.filter((e) => !ids.has(e.id));
   if (rest.length !== events.length) saveMyEvents(rest);
+}
+
+/** ログインしたとき。控えだけを消す (前の一覧を交換したかは残す) */
+export function clearMyEvents() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.error("Failed to clear my events:", error);
+  }
 }
 
 export function isLegacyExchanged() {

@@ -4,7 +4,8 @@ import type { AppType } from "../../../server/src/routes/api";
 import DeleteAccountDialog from "../components/DeleteAccountDialog";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
-import { authClient, loggedInLabel, signInWithGoogle, useAccountEmail } from "../lib/auth";
+import { useSignIn } from "../components/SignInWarning";
+import { authClient, loggedInLabel, useAccountEmail } from "../lib/auth";
 import dayjs from "../lib/dayjs";
 import { API_ENDPOINT, readErrorMessage } from "../utils";
 import { SCOPE_LABELS } from "./oauth/Consent";
@@ -24,6 +25,7 @@ export default function AccountPage() {
   const { data: session, isPending } = authClient.useSession();
   const email = useAccountEmail(!!session);
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
+  const { signIn, dialog } = useSignIn();
 
   return (
     <div className="flex min-h-screen flex-col bg-base-200 text-base-content">
@@ -38,9 +40,10 @@ export default function AccountPage() {
               ログインすると、作成したイベントと回答をあなただけが編集でき、別の端末や AI
               アシスタントからも操作できます。
             </p>
-            <button type="button" className="btn btn-primary mt-4" onClick={() => signInWithGoogle()}>
+            <button type="button" className="btn btn-primary mt-4" onClick={() => signIn()}>
               Google でログイン
             </button>
+            {dialog}
           </section>
         ) : (
           <>

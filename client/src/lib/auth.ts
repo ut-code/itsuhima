@@ -10,6 +10,7 @@ export const authClient = createAuthClient({ basePath: "/api/auth" });
 /**
  * Google でログインする。終わると callbackURL (既定は今のページ) に戻る。
  * Google のページに移るので、入力中の内容は消える。
+ * 画面からは直接呼ばず、控えが消えることを確かめる `useSignIn` (`components/SignInWarning.tsx`) を使う。
  */
 export function signInWithGoogle(callbackURL = window.location.pathname + window.location.search) {
   return authClient.signIn.social({ provider: "google", callbackURL });

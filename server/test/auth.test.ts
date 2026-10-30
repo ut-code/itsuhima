@@ -83,7 +83,7 @@ describe("ログイン中のアカウントの表示 (GET /me)", () => {
   test("ログインしたブラウザでは、Google のメールアドレスを返す。メールアドレスは暗号化した Cookie に入れる", async () => {
     const user = await login(alice);
 
-    const cookie = user.cookies.find((c) => c.startsWith("itsuhima.account_email="));
+    const cookie = user.cookies.find((c) => c.startsWith("itsuhima.hint="));
     expect(cookie).toBeDefined();
     expect(decodeURIComponent(cookie ?? "")).not.toContain("alice@example.com");
     const res = await user.get("/me");
@@ -94,8 +94,8 @@ describe("ログイン中のアカウントの表示 (GET /me)", () => {
   test("別のユーザーのセッションでは、Cookie のメールアドレスを使わない", async () => {
     const alicesBrowser = await login(alice);
     const bob = await login({ sub: "google-bob", email: "bob@example.com" });
-    const aliceEmailCookie = alicesBrowser.cookies.find((c) => c.startsWith("itsuhima.account_email=")) ?? "";
-    const bobSession = bob.cookies.filter((c) => !c.startsWith("itsuhima.account_email="));
+    const aliceEmailCookie = alicesBrowser.cookies.find((c) => c.startsWith("itsuhima.hint=")) ?? "";
+    const bobSession = bob.cookies.filter((c) => !c.startsWith("itsuhima.hint="));
 
     const res = await bob.get("/me", { headers: { Cookie: [...bobSession, aliceEmailCookie].join("; ") } });
 
@@ -108,9 +108,7 @@ describe("ログイン中のアカウントの表示 (GET /me)", () => {
     const res = await user.post("/auth/sign-out", {});
 
     expect(res.status).toBe(200);
-    expect(
-      res.headers.getSetCookie().some((c) => c.startsWith("itsuhima.account_email=;") && /Max-Age=0/.test(c)),
-    ).toBe(true);
+    expect(res.headers.getSetCookie().some((c) => c.startsWith("itsuhima.hint=;") && /Max-Age=0/.test(c))).toBe(true);
   });
 
   test("ログインしていなければ 401", async () => {

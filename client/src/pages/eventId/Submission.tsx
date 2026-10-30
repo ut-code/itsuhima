@@ -26,6 +26,7 @@ import { DeletedEvent } from "../../components/DeletedEvent";
 import Header from "../../components/Header";
 import { HistoryDialog, type HistoryDialogHandle } from "../../components/HistoryDialog";
 import { OwnershipHint } from "../../components/OwnershipHint";
+import { authClient } from "../../lib/auth";
 import { findMyEvent, forgetMyEvents, forgetMyParticipant, rememberMyEvent } from "../../lib/myEvents";
 import { eventReviver } from "../../revivers";
 import type { Event, Participant, Slot } from "../../types";
@@ -87,7 +88,12 @@ export default function SubmissionPage() {
   /** 削除されたイベントなら、その名前などが入る */
   const [deletedEvent, setDeletedEvent] = useState<{ name: string; purgeAt: string; canRestore: boolean } | null>(null);
   const [eventLoading, setEventLoading] = useState(true);
-  /** このブラウザから出した回答の id (localStorage の控え)。権限には使わない */
+  const { data: session, isPending: sessionPending } = authClient.useSession();
+  const loggedIn = !!session;
+  /**
+   * 自分の回答の id。ログイン中は、ログインして出した回答 (`isMine`)。
+   * していなければ、このブラウザから出した回答 (localStorage の控え)。権限には使わない
+   */
   const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
 
   const [postLoading, setPostLoading] = useState(false);
@@ -115,15 +121,6 @@ export default function SubmissionPage() {
       if (res.status === 200) {
         const data = await res.json();
         const parsedData = eventReviver(data);
-        // 開いたイベントは、ホームの一覧に出す。ログインして出した自分の回答があれば、それを自分の回答として控える
-        const mine = parsedData.participants.find((p) => p.isMine);
-        rememberMyEvent({ id: eventId, isHost: false, participantId: mine?.id });
-        const myParticipantId = findMyEvent(eventId)?.participantId;
-        if (myParticipantId && !parsedData.participants.some((p) => p.id === myParticipantId)) {
-          // 自分の回答が、ほかの人に消された
-          forgetMyParticipant(eventId);
-        }
-        setMyParticipantId(findMyEvent(eventId)?.participantId ?? null);
         setEvent(parsedData);
         setDeletedEvent(null);
       } else if (res.status === 410) {
@@ -155,6 +152,23 @@ export default function SubmissionPage() {
   useEffect(() => {
     fetchEvent();
   }, [fetchEvent]);
+
+  // 自分の回答を決める。控えは、ログインしていないとわかったときだけ読み書きする
+  useEffect(() => {
+    if (!eventId || !event || sessionPending) return;
+    if (loggedIn) {
+      setMyParticipantId(event.participants.find((p) => p.isMine)?.id ?? null);
+      return;
+    }
+    // 開いたイベントは、ホームの一覧に出す
+    rememberMyEvent({ id: eventId, isHost: false });
+    const remembered = findMyEvent(eventId)?.participantId;
+    if (remembered && !event.participants.some((p) => p.id === remembered)) {
+      // 自分の回答が、ほかの人に消された
+      forgetMyParticipant(eventId);
+    }
+    setMyParticipantId(findMyEvent(eventId)?.participantId ?? null);
+  }, [eventId, event, loggedIn, sessionPending]);
 
   const historyDialogRef = useRef<HistoryDialogHandle>(null);
   const showToast = useCallback((message: string, variant: "success" | "error") => {
@@ -259,7 +273,10 @@ export default function SubmissionPage() {
         if (response.ok) {
           if (!editingParticipantId) {
             const { participant } = await response.json();
-            rememberMyEvent({ id: eventId, isHost: false, participantId: participant.id });
+            // 匿名で出せた回答だけを控える
+            if (!loggedIn && !participant.hasOwner) {
+              rememberMyEvent({ id: eventId, isHost: false, participantId: participant.id });
+            }
           }
           showToast(editingParticipantId ? "更新しました。" : "提出しました。", "success");
           stopEditing();
@@ -281,7 +298,7 @@ export default function SubmissionPage() {
       await fetchEvent();
       setPostLoading(false);
     },
-    [guestName, comment, eventId, editingParticipantId, fetchEvent, showToast, stopEditing],
+    [guestName, comment, eventId, editingParticipantId, loggedIn, fetchEvent, showToast, stopEditing],
   );
 
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
@@ -301,7 +318,7 @@ export default function SubmissionPage() {
         param: { eventId, participantId },
       });
       if (res.ok) {
-        if (participantId === myParticipantId) {
+        if (!loggedIn && participantId === myParticipantId) {
           forgetMyParticipant(eventId);
         }
         showToast("回答を削除しました。「履歴」から元に戻せます。", "success");
@@ -315,7 +332,7 @@ export default function SubmissionPage() {
     }
     await fetchEvent();
     setPostLoading(false);
-  }, [eventId, deletingParticipant, myParticipantId, fetchEvent, showToast, stopEditing]);
+  }, [eventId, deletingParticipant, myParticipantId, loggedIn, fetchEvent, showToast, stopEditing]);
 
   // 編集・確認モードではベールがドラッグ入力の邪魔になるため解除する
   useEffect(() => {

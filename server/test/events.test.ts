@@ -18,14 +18,14 @@ async function getParticipant(eventId: string, participantId: string): Promise<a
 }
 
 describe("POST /events", () => {
-  test("作成すると 201 で id と name を返す。回答は無く、誰でも編集できる", async () => {
+  test("作成すると 201 で id と name と hasOwner を返す。回答は無く、誰でも編集できる", async () => {
     const input = eventInput({ description: "  説明  " });
 
     const res = await api.post("/events", input);
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string; name: string };
-    expect(body).toEqual({ id: expect.stringMatching(/^[0-9A-Za-z]{21}$/), name: "テストイベント" });
+    const body = (await res.json()) as { id: string; name: string; hasOwner: boolean };
+    expect(body).toEqual({ id: expect.stringMatching(/^[0-9A-Za-z]{21}$/), name: "テストイベント", hasOwner: false });
 
     const event = await getEvent(body.id);
     expect(event).toEqual({

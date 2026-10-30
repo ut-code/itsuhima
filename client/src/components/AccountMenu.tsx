@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { LuCircleUserRound } from "react-icons/lu";
 import { NavLink } from "react-router";
-import { authClient, loggedInLabel, signInWithGoogle, useAccountEmail } from "../lib/auth";
+import { authClient, loggedInLabel, useAccountEmail } from "../lib/auth";
+import { useSignIn } from "./SignInWarning";
 
 /**
  * ヘッダーの右端に置く、ログインのボタンとアカウントのメニュー。ログインは任意。
@@ -12,6 +13,7 @@ export default function AccountMenu({ compact = false }: { compact?: boolean }) 
   const email = useAccountEmail(!!session);
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { signIn, dialog } = useSignIn();
 
   // 外側を押すか Esc で閉じる
   useEffect(() => {
@@ -35,9 +37,12 @@ export default function AccountMenu({ compact = false }: { compact?: boolean }) 
 
   if (!session) {
     return (
-      <button type="button" className="btn btn-ghost btn-sm" onClick={() => signInWithGoogle()}>
-        ログイン
-      </button>
+      <>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => signIn()}>
+          ログイン
+        </button>
+        {dialog}
+      </>
     );
   }
 

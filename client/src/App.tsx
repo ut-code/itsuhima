@@ -1,5 +1,8 @@
+import { useEffect } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from "react-router";
 import EnvBanner from "./components/EnvBanner.tsx";
+import { authClient } from "./lib/auth.ts";
+import { clearMyEvents } from "./lib/myEvents.ts";
 import AccountPage from "./pages/Account.tsx";
 import EventFormPage from "./pages/EventForm.tsx";
 import SubmissionPage from "./pages/eventId/Submission.tsx";
@@ -39,9 +42,22 @@ function LegacyEventEditRedirect() {
   return <Navigate to={`/e/${eventId}/edit`} replace />;
 }
 
+/**
+ * ログインしているとわかったら、このブラウザの控え (ログインせずに使った一覧) を消す。
+ * ほかのタブでログインした場合も、次に開いた画面で消える。
+ */
+function ClearMyEventsOnLogin() {
+  const loggedIn = !!authClient.useSession().data;
+  useEffect(() => {
+    if (loggedIn) clearMyEvents();
+  }, [loggedIn]);
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
+      <ClearMyEventsOnLogin />
       <EnvBanner />
       <Routes>
         <Route index element={<LandingPage />} />

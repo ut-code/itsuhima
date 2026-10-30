@@ -37,7 +37,8 @@ const router = new Hono<AppEnv>()
   // イベント作成
   .post("/", zValidator("json", eventReqSchema), async (c) => {
     const event = await createEvent(c.get("db"), c.get("actor"), c.req.valid("json"));
-    return c.json({ id: event.id, name: event.name }, 201);
+    // hasOwner: client は、匿名で作れたものだけを控える
+    return c.json({ id: event.id, name: event.name, hasOwner: event.hasOwner }, 201);
   })
 
   // 指定した id のイベントの一覧 (名前・日程・削除したか)。client が控えた id から一覧を出すのに使う
