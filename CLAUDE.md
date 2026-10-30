@@ -27,6 +27,8 @@ cd server && npm run db:generate               # schema.ts の変更からマイ
 cd server && npm run db:migrate:local          # ローカル D1 に適用
 ```
 
+ローカルの D1 (`server/.wrangler/state/v3/d1`) は使い捨てで、データを保持しなくてよい。消したら `npm run db:migrate:local` で作り直す。
+
 ## アーキテクチャ
 
 ### モノレポ構成
