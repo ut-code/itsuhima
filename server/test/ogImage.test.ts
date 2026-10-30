@@ -24,6 +24,17 @@ describe("GET /og/:eventId", () => {
     expect(res.headers.get("Location")).toBe("/og-image.jpg");
   });
 
+  test("削除したイベントは、既定の OG 画像に転送する", async () => {
+    const host = createBrowser();
+    const { id } = await createEvent(host);
+    await host.delete(`/events/${id}`);
+
+    const res = await requestOgImage(`/og/${id}`);
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/og-image.jpg");
+  });
+
   test("版 (?v=) が無い・古いときは、今の版の URL に転送する", async () => {
     const host = createBrowser();
     const { id } = await createEvent(host);

@@ -142,10 +142,10 @@ export async function getEvent(db: Db, actor: Actor, eventId: string) {
   };
 }
 
-/** リンクのプレビュー (OG) に出す、イベントの名前と日程。無ければ null */
+/** リンクのプレビュー (OG) に出す、イベントの名前と日程。無いか、削除したものなら null (汎用の OG を出す) */
 export async function getEventPreview(db: Db, eventId: string) {
   const event = await db.query.event.findFirst({
-    where: eq(schema.event.id, eventId),
+    where: and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)),
     columns: { id: true, name: true, startDate: true, endDate: true },
   });
   return event ?? null;
