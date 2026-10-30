@@ -6,6 +6,7 @@ import { eventPage } from "./routes/eventPage.js";
 import { landing } from "./routes/landing.js";
 import { mcp } from "./routes/mcp.js";
 import { ogImage } from "./routes/ogImage.js";
+import { wellKnown } from "./routes/wellKnown.js";
 import { scheduled } from "./scheduled.js";
 
 /**
@@ -21,6 +22,7 @@ export const app = new Hono<AppEnv>()
   .get("/og/:eventId", ogImage)
   .route("/api", api)
   .route("/mcp", mcp)
+  .route("/.well-known", wellKnown)
   // run_worker_first にマッチしたが、上記のルートにマッチしなかった場合、SPA 側 (上記の 2. 以降) に送る
   // 例えば `/e/:eventId/edit` など。
   .notFound((c) => c.env.ASSETS.fetch(c.req.raw));

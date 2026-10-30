@@ -7,6 +7,7 @@ export type ServiceErrorReason =
   | "participant_not_found"
   | "history_not_found"
   | "forbidden"
+  | "already_submitted"
   | "options_empty"
   | "option_in_use"
   | "invalid_slot";

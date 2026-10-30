@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { findCandidates } from "../../lib/availability.js";
-import type { McpContext } from "../context.js";
+import { type McpContext, missingScope } from "../context.js";
 import { availabilityOf, formatCandidate, headcountNotes, loadEvent } from "../eventDetail.js";
-import { sanitize, toolText, untrustedBlock } from "../format.js";
+import { sanitize, toolError, toolText, untrustedBlock } from "../format.js";
 import { eventUrlSchema } from "../schemas.js";
 
 export function registerFindCommonAvailability(server: McpServer, ctx: McpContext) {
@@ -31,6 +31,9 @@ export function registerFindCommonAvailability(server: McpServer, ctx: McpContex
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async ({ event_url, min_duration_minutes, min_people, top_n }) => {
+      const scopeError = missingScope(ctx, "read");
+      if (scopeError) return toolError(scopeError);
+
       const loaded = await loadEvent(ctx, event_url);
       if (!("event" in loaded)) return loaded;
       const { event } = loaded;

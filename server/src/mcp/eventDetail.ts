@@ -1,6 +1,6 @@
 import { findCandidates, summarizeAvailability } from "../lib/availability.js";
 import { getEvent } from "../services/events.js";
-import { eventUrl, type McpContext } from "./context.js";
+import { eventUrl, isLoggedIn, type McpContext } from "./context.js";
 import { serviceErrorResult } from "./errors.js";
 import { formatDate, formatInterval, formatNow, sanitize, toolError, untrustedBlock } from "./format.js";
 import { INVALID_EVENT_URL_MESSAGE, parseEventId } from "./schemas.js";
@@ -75,6 +75,25 @@ export function formatSlots(slots: { startAt: string; endAt: string; optionId: s
     .map((s) => `${formatInterval(s, timezone)} [option ${s.optionId}]`);
 }
 
+/** イベントの設定を変えられる人 */
+function editorsOf(ctx: McpContext, event: EventDetail) {
+  if (!event.hasOwner) {
+    return "ログインせずに作られたイベント。URL を知っている人は誰でも、設定を変えたり削除したりできる (変更は Web の履歴から戻せる)。";
+  }
+  if (event.canEdit) {
+    return isLoggedIn(ctx)
+      ? "あなた (ログインしているユーザー) が作ったイベント。設定の変更と削除は、あなただけができる。"
+      : "ログインした人が作ったイベント。";
+  }
+  return "ログインした人が作ったイベント。設定の変更と削除は、作った人だけができる (update_event・delete_event は使えない)。";
+}
+
+/** 回答の、誰が変えられるかの注記 */
+function participantNote(p: EventDetail["participants"][number]) {
+  if (p.isMine) return " / あなたの回答 (直すときは update_availability にこの participant_id を渡す)";
+  return p.canEdit ? "" : " / ログインした人の回答 (その人だけが直せる)";
+}
+
 /**
  * イベントの詳細 (get_event、create_event、update_event で使う)。
  * 事実 (ID・日時・人数) はシステムが作った欄に、第三者の文字列 (イベント名・説明・ラベル・名前・コメント) は
@@ -95,7 +114,7 @@ export function formatEventDetail(ctx: McpContext, event: EventDetail, { include
     `現在日時: ${formatNow(tz)}`,
     `日程の範囲: ${formatDate(event.startDate)} 〜 ${formatDate(event.endDate)}`,
     `入力できる時間帯: ${range ? `${range.startTime} 〜 ${range.endTime}` : "終日"} (15 分単位、${tz})`,
-    "編集できる人: URL を知っている人は誰でも、イベントとすべての回答を編集・削除できる (変更は Web の履歴から戻せる)。",
+    `イベントの編集: ${editorsOf(ctx, event)}`,
     "参加形態 (回答で使う ID):",
     ...event.options.map((o) => `  - id=${o.id} (ラベルは下の untrusted ブロックを参照)`),
     "",
@@ -103,7 +122,7 @@ export function formatEventDetail(ctx: McpContext, event: EventDetail, { include
     ...(event.participants.length === 0
       ? ["まだ誰も回答していません。"]
       : shown.flatMap((p) => [
-          `- participant_id=${p.id} (名前は下の untrusted ブロックを参照) / 時間帯 ${p.slots.length} 件`,
+          `- participant_id=${p.id} (名前は下の untrusted ブロックを参照) / 時間帯 ${p.slots.length} 件${participantNote(p)}`,
           ...(includeSlots ? formatSlots(p.slots, tz).map((line) => `    - ${line}`) : []),
         ])),
     ...(omitted > 0 ? [`(残りの ${omitted} 人は省略)`] : []),

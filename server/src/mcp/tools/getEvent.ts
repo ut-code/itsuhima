@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import type { McpContext } from "../context.js";
+import { type McpContext, missingScope } from "../context.js";
 import { formatEventDetail, loadEvent } from "../eventDetail.js";
-import { toolText } from "../format.js";
+import { toolError, toolText } from "../format.js";
 import { eventUrlSchema } from "../schemas.js";
 
 export function registerGetEvent(server: McpServer, ctx: McpContext) {
@@ -23,6 +23,9 @@ export function registerGetEvent(server: McpServer, ctx: McpContext) {
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async ({ event_url, include }) => {
+      const scopeError = missingScope(ctx, "read");
+      if (scopeError) return toolError(scopeError);
+
       const loaded = await loadEvent(ctx, event_url);
       if (!("event" in loaded)) return loaded;
       return toolText(formatEventDetail(ctx, loaded.event, { includeSlots: include === "slots" }));

@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { ServiceError } from "../../services/errors.js";
 import { type SubmissionInput, submitAvailability, updateAvailability } from "../../services/events.js";
-import type { McpContext } from "../context.js";
+import { type McpContext, missingScope } from "../context.js";
 import { serviceErrorResult } from "../errors.js";
 import { type EventDetail, formatSlots, loadEvent } from "../eventDetail.js";
 import { toolError, toolText } from "../format.js";
@@ -71,6 +71,9 @@ export function registerSubmitAvailability(server: McpServer, ctx: McpContext) {
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
     async ({ event_url, name, ranges, comment }) => {
+      const scopeError = missingScope(ctx, "submit");
+      if (scopeError) return toolError(scopeError);
+
       const loaded = await loadEvent(ctx, event_url);
       if (!("event" in loaded)) return loaded;
       const { event } = loaded;
@@ -97,7 +100,7 @@ export function registerSubmitAvailability(server: McpServer, ctx: McpContext) {
       description:
         "回答を置き換える。ranges は差分ではなく全体の置き換えなので、残したい時間帯も必ず含めること。" +
         '先に get_event (include="slots") で、直す回答の participant_id と今の時間帯を取得すること。' +
-        "どの回答を直すかは、名前をユーザーに示して確かめること (URL を知っている人は誰でも、ほかの人の回答も直せてしまう)。" +
+        "どの回答を直すかは、名前をユーザーに示して確かめること (ログインせずに出された回答は、URL を知っている人は誰でも直せてしまう)。" +
         "ユーザーの依頼が、今の時間帯に足すのか置き換えるのか分からないとき (例: 「木曜なら空いてる」) は、ユーザーに確かめること。",
       inputSchema: z.object({
         event_url: eventUrlSchema,
@@ -109,6 +112,9 @@ export function registerSubmitAvailability(server: McpServer, ctx: McpContext) {
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },
     async ({ event_url, participant_id, ranges, name, comment }) => {
+      const scopeError = missingScope(ctx, "submit");
+      if (scopeError) return toolError(scopeError);
+
       const loaded = await loadEvent(ctx, event_url);
       if (!("event" in loaded)) return loaded;
       const { event } = loaded;

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { DEFAULT_PARTICIPATION_OPTION, generateDistinctColor } from "../../../../common/colors.js";
 import { eventReqSchema } from "../../../../common/validators.js";
 import { createEvent } from "../../services/events.js";
-import { eventUrl, type McpContext } from "../context.js";
+import { eventUrl, isLoggedIn, type McpContext, missingScope } from "../context.js";
 import { serviceErrorResult } from "../errors.js";
 import { formatEventDetail, loadEvent } from "../eventDetail.js";
 import { formatNow, toolError, toolText } from "../format.js";
@@ -19,7 +19,9 @@ export function registerCreateEvent(server: McpServer, ctx: McpContext) {
         `相対的な日付 (「来週」など) は、今日の日付 (${formatNow(EVENT_TIMEZONE)} 時点) をもとに絶対日付に直し、` +
         "解釈が分かれる言い方は、どの日付にしたかをユーザーに示して確かめてから作ること。" +
         "参加形態は、作った後は MCP では変えられない (Web の画面で変える) ので、ここで決めておくこと。" +
-        "URL を知っている人は誰でも、イベントと回答を編集・削除できる。" +
+        (isLoggedIn(ctx)
+          ? "作ったイベントはユーザーのものになり、設定の変更と削除はユーザーだけができる。"
+          : "ログインせずに作るので、URL を知っている人は誰でも、イベントと回答を編集・削除できる。") +
         "作ったら、返される URL をユーザーに伝え、参加者に送ってもらう。間違えたときは update_event で直すか、delete_event で消せる。",
       inputSchema: z.object({
         name: z.string().min(1).max(100).describe("イベント名。"),
@@ -43,6 +45,9 @@ export function registerCreateEvent(server: McpServer, ctx: McpContext) {
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
     async ({ name, start_date, end_date, start_time, end_time, description, participation_options }) => {
+      const scopeError = missingScope(ctx, "manage");
+      if (scopeError) return toolError(scopeError);
+
       const labels = participation_options?.map((o) => o.label) ?? [DEFAULT_PARTICIPATION_OPTION.label];
       if (new Set(labels).size !== labels.length) {
         return toolError("参加形態のラベルが重複しています。ラベルはそれぞれ違うものにしてください。");

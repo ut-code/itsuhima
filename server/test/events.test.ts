@@ -46,6 +46,7 @@ describe("POST /events", () => {
       options: [{ ...input.options[0], eventId: body.id }],
       participants: [],
       canEdit: true,
+      hasOwner: false,
     });
   });
 
@@ -186,6 +187,9 @@ describe("GET /events/:eventId", () => {
           },
         ],
         canEdit: true,
+        canDelete: true,
+        hasOwner: false,
+        isMine: false,
       },
     ]);
   });
@@ -591,6 +595,9 @@ describe("PUT /events/:eventId/participants/:participantId", () => {
           },
         ],
         canEdit: true,
+        canDelete: true,
+        hasOwner: false,
+        isMine: false,
       },
     });
     expect((await getParticipant(id, participantId)).slots).toEqual([

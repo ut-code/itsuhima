@@ -14,7 +14,7 @@ function isDismissed() {
   }
 }
 
-/** 編集の仕組みが変わったこと (URL を知っている人は誰でも編集できる) を、一定期間知らせる */
+/** 編集の仕組みが変わったこと (匿名のものは、URL を知っている人は誰でも編集できる) を、一定期間知らせる。匿名のイベントでだけ出す */
 export function AnonymousEditNotice() {
   const [visible, setVisible] = useState(() => new Date().toISOString().slice(0, 10) <= SHOW_UNTIL && !isDismissed());
   if (!visible) return null;
@@ -32,8 +32,8 @@ export function AnonymousEditNotice() {
     <div className="mt-2 flex items-start gap-2 rounded-lg border border-info/30 bg-info/5 px-3 py-2 text-base-content/80 text-sm">
       <LuInfo className="mt-0.5 h-4 w-4 shrink-0 text-info" />
       <p className="min-w-0 flex-1">
-        編集の仕組みが変わりました。URL
-        を知っている人は誰でも、イベントの設定と回答を編集できます。間違えて変えたときは「履歴」から元に戻せます。
+        編集の仕組みが変わりました。ログインせずに作ったイベントと回答は、URL
+        を知っている人は誰でも編集できます。間違えて変えたときは「履歴」から元に戻せます。ログインしてから作ったイベントと回答は、本人だけが編集できます。
       </p>
       <button type="button" className="btn btn-circle btn-ghost btn-xs shrink-0" aria-label="閉じる" onClick={dismiss}>
         <LuX className="h-4 w-4" />

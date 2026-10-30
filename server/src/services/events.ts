@@ -5,7 +5,7 @@ import { type Db, insertMany, runBatch } from "../db/index.js";
 import * as schema from "../db/schema.js";
 import { nanoid } from "../lib/id.js";
 import { ServiceError } from "./errors.js";
-import { type Actor, canEditEvent, canEditParticipant } from "./permissions.js";
+import { type Actor, canDeleteParticipant, canEditEvent, canEditParticipant, isOwnParticipant } from "./permissions.js";
 import { validateSlots } from "./slots.js";
 import { eventSnapshot, insertHistory, isSameSnapshot, participantSnapshot } from "./snapshots.js";
 
@@ -21,9 +21,11 @@ function toIso(value: string | Date): string {
   return new Date(value).toISOString();
 }
 
-export async function createEvent(db: Db, _actor: Actor, input: CreateEventInput) {
+/** イベントを作る。ログインしていれば、その人のもの (持ち主だけが編集できる) になる */
+export async function createEvent(db: Db, actor: Actor, input: CreateEventInput) {
   const event = {
     id: nanoid(),
+    ownerUserId: actor.userId,
     name: input.name,
     description: input.description.trim() || null,
     startDate: input.startDate,
@@ -63,6 +65,50 @@ export async function listEventsByIds(db: Db, eventIds: string[]) {
     columns: { id: true, name: true, startDate: true, endDate: true, timezone: true, deletedAt: true },
   });
   return events.map(({ deletedAt, ...event }) => ({ ...event, deleted: deletedAt !== null }));
+}
+
+/**
+ * ログインした人が作ったイベントと回答したイベント (`GET /me/events`、MCP の `list_events`)。
+ * 作った順に新しいものから。削除したイベントは deleted を true にして返す。
+ */
+export async function listMyEvents(db: Db, userId: string) {
+  const [owned, answered] = await Promise.all([
+    db.query.event.findMany({
+      where: eq(schema.event.ownerUserId, userId),
+      columns: { id: true },
+    }),
+    db.query.participant.findMany({
+      where: eq(schema.participant.userId, userId),
+      columns: { id: true, eventId: true },
+    }),
+  ]);
+  const ownedIds = new Set(owned.map((e) => e.id));
+  const participantIdByEvent = new Map(answered.map((p) => [p.eventId, p.id]));
+  const eventIds = [...new Set([...ownedIds, ...participantIdByEvent.keys()])];
+  if (eventIds.length === 0) return [];
+
+  const events = await db.query.event.findMany({
+    where: inArray(schema.event.id, eventIds),
+    columns: {
+      id: true,
+      name: true,
+      startDate: true,
+      endDate: true,
+      timezone: true,
+      createdAt: true,
+      deletedAt: true,
+    },
+    with: { participants: { columns: { id: true } } },
+  });
+  return events
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map(({ deletedAt, participants, createdAt: _, ...event }) => ({
+      ...event,
+      deleted: deletedAt !== null,
+      isHost: ownedIds.has(event.id),
+      participantId: participantIdByEvent.get(event.id) ?? null,
+      participantCount: participants.length,
+    }));
 }
 
 /**
@@ -113,11 +159,10 @@ export async function getEvent(db: Db, actor: Actor, eventId: string) {
       timezone: event.timezone,
       allowedRanges: event.allowedRanges,
       options: event.options,
-      participants: event.participants.map((participant) => ({
-        ...toParticipantResponse(participant),
-        canEdit: canEditParticipant(actor, event, participant),
-      })),
+      participants: event.participants.map((participant) => toParticipantResponse(actor, event, participant)),
       canEdit: canEditEvent(actor, event),
+      /** ログインした人が作ったイベントか (持ち主だけが編集できる)。誰かは返さない */
+      hasOwner: event.ownerUserId !== null,
     },
   };
 }
@@ -133,13 +178,20 @@ export async function getEventPreview(db: Db, eventId: string) {
 
 type ParticipantWithSlots = typeof schema.participant.$inferSelect & { slots: (typeof schema.slot.$inferSelect)[] };
 
-function toParticipantResponse(participant: ParticipantWithSlots) {
+/** 回答と、その権限。ログインした人の id は返さない (自分の回答かだけを返す) */
+function toParticipantResponse(actor: Actor, event: { ownerUserId: string | null }, participant: ParticipantWithSlots) {
   return {
     id: participant.id,
     name: participant.name,
     comment: participant.comment,
     eventId: participant.eventId,
     slots: participant.slots,
+    canEdit: canEditParticipant(actor, event, participant),
+    canDelete: canDeleteParticipant(actor, event, participant),
+    /** ログインした人が出した回答か (その人だけが変えられる) */
+    hasOwner: participant.userId !== null,
+    /** ログインしている自分の回答か */
+    isMine: isOwnParticipant(actor, participant),
   };
 }
 
@@ -147,8 +199,16 @@ function toParticipantResponse(participant: ParticipantWithSlots) {
 function findEventForPermission(db: Db, eventId: string) {
   return db.query.event.findFirst({
     where: eq(schema.event.id, eventId),
-    columns: { id: true, deletedAt: true },
+    columns: { id: true, deletedAt: true, ownerUserId: true },
   });
+}
+
+async function findEventForPermissionOrThrow(db: Db, eventId: string) {
+  const event = await findEventForPermission(db, eventId);
+  if (!event) {
+    throw new ServiceError("event_not_found", "イベントが見つかりません。");
+  }
+  return event;
 }
 
 function throwIfDeleted(event: { deletedAt: string | null }) {
@@ -244,7 +304,16 @@ export async function updateEvent(db: Db, actor: Actor, eventId: string, input: 
     options: input.options ?? event.options,
   });
   if (!isSameSnapshot(before, after)) {
-    statements.unshift(insertHistory(db, { eventId, target: "event", targetId: eventId, action: "update", before }));
+    statements.unshift(
+      insertHistory(db, {
+        eventId,
+        target: "event",
+        targetId: eventId,
+        action: "update",
+        before,
+        userId: actor.userId,
+      }),
+    );
   }
 
   await runBatch(db, statements);
@@ -258,10 +327,7 @@ export async function updateEvent(db: Db, actor: Actor, eventId: string, input: 
 
 /** 論理削除する。行は、DELETED_EVENT_RETENTION_DAYS 日たってから消す。削除済みなら何もしない */
 export async function deleteEvent(db: Db, actor: Actor, eventId: string) {
-  const event = await findEventForPermission(db, eventId);
-  if (!event) {
-    throw new ServiceError("event_not_found", "イベントが見つかりません。");
-  }
+  const event = await findEventForPermissionOrThrow(db, eventId);
   if (!canEditEvent(actor, event)) {
     throw new ServiceError("forbidden", "このイベントを削除する権限がありません。");
   }
@@ -274,10 +340,7 @@ export async function deleteEvent(db: Db, actor: Actor, eventId: string) {
 
 /** 論理削除したイベントを戻す。削除されていなければ何もしない */
 export async function restoreEvent(db: Db, actor: Actor, eventId: string) {
-  const event = await findEventForPermission(db, eventId);
-  if (!event) {
-    throw new ServiceError("event_not_found", "イベントが見つかりません。");
-  }
+  const event = await findEventForPermissionOrThrow(db, eventId);
   if (!canEditEvent(actor, event)) {
     throw new ServiceError("forbidden", "このイベントを戻す権限がありません。");
   }
@@ -327,13 +390,23 @@ async function findParticipant(db: Db, eventId: string, participantId: string) {
   return participant;
 }
 
-/** 回答と、その権限 (イベントの一覧の canEdit と同じ) */
-async function findParticipantResponse(db: Db, actor: Actor, eventId: string, participantId: string) {
-  const participant = await findParticipant(db, eventId, participantId);
-  return {
-    ...toParticipantResponse(participant),
-    canEdit: canEditParticipant(actor, { id: eventId }, participant),
-  };
+/** 回答と、その権限 (イベントの詳細の participants と同じ形) */
+async function findParticipantResponse(
+  db: Db,
+  actor: Actor,
+  event: { id: string; ownerUserId: string | null },
+  participantId: string,
+) {
+  const participant = await findParticipant(db, event.id, participantId);
+  return toParticipantResponse(actor, event, participant);
+}
+
+/** ログインした人の、イベントへの回答。無ければ undefined */
+export function findOwnParticipant(db: Db, eventId: string, userId: string) {
+  return db.query.participant.findFirst({
+    where: and(eq(schema.participant.eventId, eventId), eq(schema.participant.userId, userId)),
+    columns: { id: true },
+  });
 }
 
 function slotRows(input: SubmissionInput, eventId: string, participantId: string) {
@@ -346,9 +419,19 @@ function slotRows(input: SubmissionInput, eventId: string, participantId: string
   }));
 }
 
-/** 回答を足す。名前の重複は許す */
+/**
+ * 回答を足す。名前の重複は許す。
+ * ログインしていれば、その人の回答 (その人だけが変えられる) になる。ログインした人は、1 つのイベントに 1 つだけ回答できる。
+ */
 export async function submitAvailability(db: Db, actor: Actor, eventId: string, input: SubmissionInput) {
+  const event = await findEventForPermissionOrThrow(db, eventId);
   validateSlots(await findEventForSlots(db, eventId), input.slots);
+  if (actor.userId !== null) {
+    const own = await findOwnParticipant(db, eventId, actor.userId);
+    if (own) {
+      throw new ServiceError("already_submitted", "このイベントには、もう回答しています。回答を編集してください。");
+    }
+  }
 
   const participantId = crypto.randomUUID();
   await runBatch(db, [
@@ -357,11 +440,12 @@ export async function submitAvailability(db: Db, actor: Actor, eventId: string, 
       eventId,
       name: input.name,
       comment: input.comment?.trim() || null,
+      userId: actor.userId,
     }),
     ...insertMany(db, schema.slot, slotRows(input, eventId, participantId)),
   ]);
 
-  return findParticipantResponse(db, actor, eventId, participantId);
+  return findParticipantResponse(db, actor, event, participantId);
 }
 
 export async function updateAvailability(
@@ -371,25 +455,23 @@ export async function updateAvailability(
   participantId: string,
   input: SubmissionInput,
 ) {
+  const event = await findEventForPermissionOrThrow(db, eventId);
   const participant = await findParticipant(db, eventId, participantId);
-  if (!canEditParticipant(actor, { id: eventId }, participant)) {
+  if (!canEditParticipant(actor, event, participant)) {
     throw new ServiceError("forbidden", "この回答を編集する権限がありません。");
   }
 
-  await replaceAnswer(db, eventId, participant, input);
+  await replaceAnswer(db, actor, eventId, participant, input);
 
-  return findParticipantResponse(db, actor, eventId, participantId);
+  return findParticipantResponse(db, actor, event, participantId);
 }
 
 /** 回答を消す。消す前の回答を履歴に残すので、履歴から戻せる */
 export async function deleteAvailability(db: Db, actor: Actor, eventId: string, participantId: string) {
-  const event = await findEventForPermission(db, eventId);
-  if (!event) {
-    throw new ServiceError("event_not_found", "イベントが見つかりません。");
-  }
+  const event = await findEventForPermissionOrThrow(db, eventId);
   throwIfDeleted(event);
   const participant = await findParticipant(db, eventId, participantId);
-  if (!canEditParticipant(actor, event, participant)) {
+  if (!canDeleteParticipant(actor, event, participant)) {
     throw new ServiceError("forbidden", "この回答を削除する権限がありません。");
   }
 
@@ -400,6 +482,7 @@ export async function deleteAvailability(db: Db, actor: Actor, eventId: string, 
       targetId: participant.id,
       action: "delete",
       before: participantSnapshot(participant),
+      userId: actor.userId,
     }),
     // Slot は ON DELETE CASCADE で消える
     db
@@ -414,6 +497,7 @@ export async function deleteAvailability(db: Db, actor: Actor, eventId: string, 
  */
 export async function replaceAnswer(
   db: Db,
+  actor: Actor,
   eventId: string,
   participant: ParticipantWithSlots,
   input: SubmissionInput,
@@ -423,11 +507,20 @@ export async function replaceAnswer(
   const answer = { name: input.name, comment: input.comment?.trim() || null };
   const rows = slotRows(input, eventId, participant.id);
   const before = participantSnapshot(participant);
-  const changed = !isSameSnapshot(before, participantSnapshot({ ...answer, slots: rows }));
+  const changed = !isSameSnapshot(before, participantSnapshot({ ...answer, userId: participant.userId, slots: rows }));
 
   await runBatch(db, [
     ...(changed
-      ? [insertHistory(db, { eventId, target: "participant", targetId: participant.id, action: "update", before })]
+      ? [
+          insertHistory(db, {
+            eventId,
+            target: "participant",
+            targetId: participant.id,
+            action: "update",
+            before,
+            userId: actor.userId,
+          }),
+        ]
       : []),
     db.delete(schema.slot).where(eq(schema.slot.participantId, participant.id)),
     ...insertMany(db, schema.slot, rows),
@@ -436,10 +529,20 @@ export async function replaceAnswer(
 }
 
 /**
- * 消した回答を、同じ id で作り直す。履歴から戻すのに使う。権限は呼び出す側で確かめる。
+ * 消した回答を、同じ id と同じ持ち主で作り直す。履歴から戻すのに使う。権限は呼び出す側で確かめる。
+ * 持ち主が、そのイベントにもう回答し直していれば戻せない (1 つのイベントに 1 つだけなので)。
  */
-export async function recreateAnswer(db: Db, eventId: string, participantId: string, input: SubmissionInput) {
+export async function recreateAnswer(
+  db: Db,
+  eventId: string,
+  participantId: string,
+  userId: string | null,
+  input: SubmissionInput,
+) {
   validateSlots(await findEventForSlots(db, eventId), input.slots);
+  if (userId !== null && (await findOwnParticipant(db, eventId, userId))) {
+    throw new ServiceError("already_submitted", "この回答をした人が、もう回答し直しているので戻せません。");
+  }
 
   await runBatch(db, [
     db.insert(schema.participant).values({
@@ -447,6 +550,7 @@ export async function recreateAnswer(db: Db, eventId: string, participantId: str
       eventId,
       name: input.name,
       comment: input.comment?.trim() || null,
+      userId,
     }),
     ...insertMany(db, schema.slot, slotRows(input, eventId, participantId)),
   ]);

@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { editEventReqSchema } from "../../../../common/validators.js";
 import { updateEvent } from "../../services/events.js";
-import type { McpContext } from "../context.js";
+import { type McpContext, missingScope } from "../context.js";
 import { serviceErrorResult } from "../errors.js";
 import { formatEventDetail, loadEvent } from "../eventDetail.js";
 import { toolError, toolText } from "../format.js";
@@ -17,7 +17,7 @@ export function registerUpdateEvent(server: McpServer, ctx: McpContext) {
         "イベントの名前・説明・日程の範囲・入力できる時間帯を直す。指定しなかった項目は変えない。" +
         "誰かが回答した後は、日程の範囲と入力できる時間帯は変えられない (名前と説明は変えられる)。" +
         "参加形態は、ここでは変えられない (Web の画面で変える)。" +
-        "URL を知っている人は誰でも直せるので、ユーザーが作ったイベントでなくても直せてしまう。ユーザーの依頼がはっきりしているときだけ呼ぶこと。" +
+        "ログインせずに作られたイベントは、URL を知っている人は誰でも直せるので、ユーザーが作ったイベントでなくても直せてしまう。ユーザーの依頼がはっきりしているときだけ呼ぶこと。" +
         "「再来週にずらして」のような相対的な言い方は、どの日付にするかをユーザーに示して確かめてから直すこと。",
       inputSchema: z.object({
         event_url: eventUrlSchema,
@@ -34,6 +34,9 @@ export function registerUpdateEvent(server: McpServer, ctx: McpContext) {
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async ({ event_url, name, description, start_date, end_date, start_time, end_time }) => {
+      const scopeError = missingScope(ctx, "manage");
+      if (scopeError) return toolError(scopeError);
+
       const changesSchedule = [start_date, end_date, start_time, end_time].some((v) => v !== undefined);
       if (name === undefined && description === undefined && !changesSchedule) {
         return toolError("変える項目を 1 つ以上指定してください。");

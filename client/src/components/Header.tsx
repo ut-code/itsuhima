@@ -2,6 +2,7 @@ import { useState } from "react";
 import { LuMenu, LuX } from "react-icons/lu";
 import { NavLink } from "react-router";
 import { EXTERNAL_LINKS } from "../constants/links";
+import AccountMenu from "./AccountMenu";
 
 export default function Header({ compact = false }: { compact?: boolean }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -25,31 +26,38 @@ export default function Header({ compact = false }: { compact?: boolean }) {
           )}
         </NavLink>
 
-        <nav className="hidden items-center gap-6 md:flex">
-          <NavLink to="/home" className="font-medium text-base-content/70 text-sm transition-colors hover:text-primary">
-            ホーム
-          </NavLink>
-          <a
-            href={EXTERNAL_LINKS.GUIDE}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="font-medium text-base-content/70 text-sm transition-colors hover:text-primary"
-          >
-            使い方
-          </a>
-        </nav>
+        <div className="flex items-center gap-2 md:gap-6">
+          <nav className="hidden items-center gap-6 md:flex">
+            <NavLink
+              to="/home"
+              className="font-medium text-base-content/70 text-sm transition-colors hover:text-primary"
+            >
+              ホーム
+            </NavLink>
+            <a
+              href={EXTERNAL_LINKS.GUIDE}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="font-medium text-base-content/70 text-sm transition-colors hover:text-primary"
+            >
+              使い方
+            </a>
+          </nav>
 
-        <div className="flex items-center md:hidden">
-          <button
-            type="button"
-            className="rounded-lg p-2 text-base-content/70 hover:bg-base-200"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label={isMenuOpen ? "メニューを閉じる" : "メニューを開く"}
-            aria-expanded={isMenuOpen}
-            aria-controls="mobile-menu"
-          >
-            {isMenuOpen ? <LuX className="h-6 w-6" /> : <LuMenu className="h-6 w-6" />}
-          </button>
+          <AccountMenu compact={compact} />
+
+          <div className="flex items-center md:hidden">
+            <button
+              type="button"
+              className="rounded-lg p-2 text-base-content/70 hover:bg-base-200"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label={isMenuOpen ? "メニューを閉じる" : "メニューを開く"}
+              aria-expanded={isMenuOpen}
+              aria-controls="mobile-menu"
+            >
+              {isMenuOpen ? <LuX className="h-6 w-6" /> : <LuMenu className="h-6 w-6" />}
+            </button>
+          </div>
         </div>
       </div>
 

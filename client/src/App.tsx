@@ -1,9 +1,12 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from "react-router";
+import AccountPage from "./pages/Account.tsx";
 import EventFormPage from "./pages/EventForm.tsx";
 import SubmissionPage from "./pages/eventId/Submission.tsx";
 import HomePage from "./pages/Home.tsx";
 import LandingPage from "./pages/Landing.tsx";
+import LoginPage from "./pages/Login.tsx";
 import NotFoundPage from "./pages/NotFound.tsx";
+import ConsentPage from "./pages/oauth/Consent.tsx";
 import PrivacyPage from "./pages/Privacy.tsx";
 import TermsPage from "./pages/Terms.tsx";
 
@@ -46,6 +49,10 @@ export default function App() {
         <Route path="terms" element={<TermsPage />} />
         <Route path="home" element={<HomePage />} />
         <Route path="new" element={<EventFormPage />} />
+        <Route path="account" element={<AccountPage />} />
+        {/* MCP の接続 (OAuth) で、認可サーバーが送ってくるページ */}
+        <Route path="login" element={<LoginPage />} />
+        <Route path="oauth/consent" element={<ConsentPage />} />
         <Route path="e">
           <Route path=":eventId" element={<Outlet />}>
             <Route index element={<SubmissionPage />} />
