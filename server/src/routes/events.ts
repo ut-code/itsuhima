@@ -13,8 +13,10 @@ import {
   updateEvent,
   updateMyAvailability,
 } from "../services/events.js";
+import { listHistory, restoreHistory } from "../services/history.js";
 
 const eventIdParamsSchema = z.object({ eventId: z.string().length(21) });
+const historyParamsSchema = eventIdParamsSchema.extend({ historyId: z.string().uuid() });
 
 const router = new Hono<AppEnv>()
   // イベント作成
@@ -58,6 +60,20 @@ const router = new Hono<AppEnv>()
   .post("/:eventId/restore", zValidator("param", eventIdParamsSchema), async (c) => {
     const { eventId } = c.req.valid("param");
     await restoreEvent(c.get("db"), c.get("actor"), eventId);
+    return c.body(null, 204);
+  })
+
+  // 変更の履歴 (新しい順)
+  .get("/:eventId/history", zValidator("param", eventIdParamsSchema), async (c) => {
+    const { eventId } = c.req.valid("param");
+    const history = await listHistory(c.get("db"), c.get("actor"), eventId);
+    return c.json(history, 200);
+  })
+
+  // 履歴の、変える前の状態に戻す
+  .post("/:eventId/history/:historyId/restore", zValidator("param", historyParamsSchema), async (c) => {
+    const { eventId, historyId } = c.req.valid("param");
+    await restoreHistory(c.get("db"), c.get("actor"), eventId, historyId);
     return c.body(null, 204);
   })
 

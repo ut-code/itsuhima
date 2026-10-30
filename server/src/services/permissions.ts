@@ -9,3 +9,8 @@ type Participant = typeof schema.participant.$inferSelect;
 export function canEditEvent(actor: Actor, event: { participants: Pick<Participant, "role" | "browserId">[] }) {
   return event.participants.some((p) => p.role === "host" && p.browserId === actor.browserId);
 }
+
+/** 回答を変えられるか。今は回答した本人 (同じブラウザ) だけ */
+export function canEditParticipant(actor: Actor, participant: Pick<Participant, "browserId">) {
+  return participant.browserId === actor.browserId;
+}
