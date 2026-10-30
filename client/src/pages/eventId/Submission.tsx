@@ -1,5 +1,5 @@
 import { hc } from "hono/client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LuChevronDown,
   LuChevronLeft,
@@ -7,6 +7,7 @@ import {
   LuChevronUp,
   LuCircleAlert,
   LuCircleCheck,
+  LuHistory,
   LuPencil,
   LuSend,
   LuSettings2,
@@ -20,6 +21,7 @@ import { AddToCalendar } from "../../components/AddToCalendar";
 import { Calendar, type Highlight } from "../../components/Calendar";
 import { DeletedEvent } from "../../components/DeletedEvent";
 import Header from "../../components/Header";
+import { HistoryDialog, type HistoryDialogHandle } from "../../components/HistoryDialog";
 import { eventReviver } from "../../revivers";
 import type { Event, Slot } from "../../types";
 import { API_ENDPOINT, readErrorMessage } from "../../utils";
@@ -132,6 +134,20 @@ export default function SubmissionPage() {
   useEffect(() => {
     fetchEvent();
   }, [fetchEvent]);
+
+  const historyDialogRef = useRef<HistoryDialogHandle>(null);
+  const showToast = useCallback((message: string, variant: "success" | "error") => {
+    setToast({ message, variant });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
+  const onHistoryRestored = useCallback(
+    async (message: string) => {
+      showToast(message, "success");
+      await fetchEvent();
+    },
+    [fetchEvent, showToast],
+  );
+  const onHistoryError = useCallback((message: string) => showToast(message, "error"), [showToast]);
 
   const [restoring, setRestoring] = useState(false);
   const restoreEvent = useCallback(async () => {
@@ -357,6 +373,17 @@ export default function SubmissionPage() {
                         participationOptionIdToLabel={participationOptionIdToLabel}
                         participationOptionCount={event.options.length}
                       />
+                    )}
+                    {mode === "view" && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline shrink-0 gap-1.5"
+                        aria-label="変更の履歴"
+                        onClick={() => historyDialogRef.current?.open()}
+                      >
+                        <LuHistory className="h-4 w-4" />
+                        <span className="hidden sm:inline">履歴</span>
+                      </button>
                     )}
                     {isHost && (
                       <NavLink to={`/e/${eventId}/edit`} className="btn btn-sm btn-outline shrink-0 gap-1.5">
@@ -667,6 +694,16 @@ export default function SubmissionPage() {
             </div>
           </div>
         </>
+      )}
+
+      {event && (
+        <HistoryDialog
+          ref={historyDialogRef}
+          eventId={event.id}
+          optionIdToLabel={participationOptionIdToLabel}
+          onRestored={onHistoryRestored}
+          onError={onHistoryError}
+        />
       )}
 
       {toast && (
