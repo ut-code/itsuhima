@@ -493,6 +493,53 @@ describe("DELETE /events/:eventId", () => {
   });
 });
 
+describe("POST /events/:eventId/restore", () => {
+  test("ホストは、削除したイベントを回答ごと戻せる。204 で本文は無い", async () => {
+    const host = createBrowser();
+    const guest = createBrowser();
+    const { id, optionId } = await createEvent(host);
+    await submit(guest, id, optionId);
+    await host.delete(`/events/${id}`);
+
+    const res = await host.post(`/events/${id}/restore`);
+
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe("");
+    const event = await getEvent(guest, id);
+    expect(event.guests).toHaveLength(1);
+    expect(event.meAsGuest).not.toBeNull();
+    expect(await (await host.get("/events/mine")).json()).toEqual([expect.objectContaining({ id })]);
+  });
+
+  test("ホスト以外は 403 で、削除されたまま", async () => {
+    const host = createBrowser();
+    const { id } = await createEvent(host);
+    await host.delete(`/events/${id}`);
+
+    const res = await createBrowser().post(`/events/${id}/restore`);
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ message: "戻す権限がありません。" });
+    expect((await host.get(`/events/${id}`)).status).toBe(410);
+  });
+
+  test("削除されていなければ、何もせず 204", async () => {
+    const host = createBrowser();
+    const { id } = await createEvent(host);
+
+    const res = await host.post(`/events/${id}/restore`);
+
+    expect(res.status).toBe(204);
+    await getEvent(host, id);
+  });
+
+  test("存在しないイベントは 404", async () => {
+    const res = await createBrowser().post(`/events/${missingEventId}/restore`);
+
+    expect(res.status).toBe(404);
+  });
+});
+
 describe("POST /events/:eventId/submissions", () => {
   test("回答すると 201", async () => {
     const { id, optionId } = await createEvent(createBrowser());

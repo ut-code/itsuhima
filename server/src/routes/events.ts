@@ -8,6 +8,7 @@ import {
   deleteEvent,
   getEvent,
   listMyEvents,
+  restoreEvent,
   submitAvailability,
   updateEvent,
   updateMyAvailability,
@@ -50,6 +51,13 @@ const router = new Hono<AppEnv>()
   .delete("/:eventId", zValidator("param", eventIdParamsSchema), async (c) => {
     const { eventId } = c.req.valid("param");
     await deleteEvent(c.get("db"), c.get("actor"), eventId);
+    return c.body(null, 204);
+  })
+
+  // 削除したイベントを戻す
+  .post("/:eventId/restore", zValidator("param", eventIdParamsSchema), async (c) => {
+    const { eventId } = c.req.valid("param");
+    await restoreEvent(c.get("db"), c.get("actor"), eventId);
     return c.body(null, 204);
   })
 

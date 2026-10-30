@@ -281,6 +281,19 @@ export async function deleteEvent(db: Db, actor: Actor, eventId: string) {
     .where(and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)));
 }
 
+/** 論理削除したイベントを戻す。削除されていなければ何もしない */
+export async function restoreEvent(db: Db, actor: Actor, eventId: string) {
+  const event = await findEventForPermission(db, eventId);
+  if (!event) {
+    throw new ServiceError("event_not_found", "イベントが見つかりません。");
+  }
+  if (!canEditEvent(actor, event)) {
+    throw new ServiceError("not_host", "戻す権限がありません。");
+  }
+
+  await db.update(schema.event).set({ deletedAt: null }).where(eq(schema.event.id, eventId));
+}
+
 /** Slot の検証に必要な分だけイベントを読む */
 async function findEventForSlots(db: Db, eventId: string) {
   const event = await db.query.event.findFirst({
