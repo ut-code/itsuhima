@@ -20,6 +20,7 @@ export const api = new Hono<AppEnv>()
   .use("*", browserIdMiddleware)
   .use("*", async (c, next) => {
     c.set("db", createDb(c.env.DB));
+    c.set("actor", { browserId: c.get("browserId") });
     await next();
   })
   .get("/", (c) => {
