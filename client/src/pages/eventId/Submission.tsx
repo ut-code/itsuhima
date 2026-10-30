@@ -11,6 +11,7 @@ import {
   LuPencil,
   LuSend,
   LuSettings2,
+  LuTrash2,
   LuUser,
   LuUsers,
   LuX,
@@ -18,12 +19,14 @@ import {
 import { NavLink, useParams } from "react-router";
 import type { AppType } from "../../../../server/src/routes/api";
 import { AddToCalendar } from "../../components/AddToCalendar";
+import { AnonymousEditNotice } from "../../components/AnonymousEditNotice";
 import { Calendar, type Highlight } from "../../components/Calendar";
 import { DeletedEvent } from "../../components/DeletedEvent";
 import Header from "../../components/Header";
 import { HistoryDialog, type HistoryDialogHandle } from "../../components/HistoryDialog";
+import { findMyEvent, forgetMyEvents, forgetMyParticipant, rememberMyEvent } from "../../lib/myEvents";
 import { eventReviver } from "../../revivers";
-import type { Event, Slot } from "../../types";
+import type { Event, Participant, Slot } from "../../types";
 import { API_ENDPOINT, readErrorMessage } from "../../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
@@ -82,6 +85,8 @@ export default function SubmissionPage() {
   /** 削除されたイベントなら、その名前などが入る */
   const [deletedEvent, setDeletedEvent] = useState<{ name: string; purgeAt: string; canRestore: boolean } | null>(null);
   const [eventLoading, setEventLoading] = useState(true);
+  /** このブラウザから出した回答の id (localStorage の控え)。権限には使わない */
+  const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
 
   const [postLoading, setPostLoading] = useState(false);
 
@@ -103,9 +108,19 @@ export default function SubmissionPage() {
           init: { credentials: "include" },
         },
       );
+      // 404 はサーバーの型に乗らない (ServiceError を onError で返す) ので、数値として比べる
+      const notFound = (res.status as number) === 404;
       if (res.status === 200) {
         const data = await res.json();
         const parsedData = eventReviver(data);
+        // 開いたイベントは、ホームの一覧に出す
+        rememberMyEvent({ id: eventId, isHost: false });
+        const myParticipantId = findMyEvent(eventId)?.participantId;
+        if (myParticipantId && !parsedData.participants.some((p) => p.id === myParticipantId)) {
+          // 自分の回答が、ほかの人に消された
+          forgetMyParticipant(eventId);
+        }
+        setMyParticipantId(findMyEvent(eventId)?.participantId ?? null);
         setEvent(parsedData);
         setDeletedEvent(null);
       } else if (res.status === 410) {
@@ -113,6 +128,9 @@ export default function SubmissionPage() {
         setEvent(null);
         setDeletedEvent({ name, purgeAt, canRestore });
       } else {
+        if (notFound) {
+          forgetMyEvents([eventId]);
+        }
         const errorMessage = await readErrorMessage(res, "イベントの取得に失敗しました。");
         setToast({
           message: errorMessage,
@@ -173,19 +191,20 @@ export default function SubmissionPage() {
     }
   }, [eventId, fetchEvent]);
 
-  const meAsGuest = event?.meAsGuest;
-  const myGuestId = meAsGuest?.id;
-  const isHost = event?.isHost;
+  const me = event?.participants.find((p) => p.id === myParticipantId) ?? null;
 
   const [mode, setMode] = useState<"view" | "edit" | "confirm">("view");
+  /** 編集している回答の id。null なら新しい回答 */
+  const [editingParticipantId, setEditingParticipantId] = useState<string | null>(null);
+  const editingParticipant = event?.participants.find((p) => p.id === editingParticipantId) ?? null;
 
-  const [guestName, setGuestName] = useState(meAsGuest?.name ?? "");
+  const [guestName, setGuestName] = useState("");
 
   const [editingSlots, setEditingSlots] = useState<EditingSlot[]>([]);
 
   const [selectedParticipationOptionId, setSelectedParticipationOptionId] = useState<string | null>(null);
 
-  const [comment, setComment] = useState(meAsGuest?.comment ?? "");
+  const [comment, setComment] = useState("");
 
   const [highlight, setHighlight] = useState<Highlight | null>(null);
 
@@ -197,8 +216,24 @@ export default function SubmissionPage() {
     variant: "success" | "error";
   } | null>(null);
 
+  /** 回答を編集し始める。participant が null なら新しい回答 */
+  const startEditing = useCallback((participant: Participant | null) => {
+    setEditingParticipantId(participant?.id ?? null);
+    setGuestName(participant?.name ?? "");
+    setComment(participant?.comment ?? "");
+    setEditingSlots(participant?.slots ?? []);
+    setMode("edit");
+  }, []);
+
+  const stopEditing = useCallback(() => {
+    setEditingParticipantId(null);
+    setEditingSlots([]);
+    setMode("view");
+  }, []);
+
   const postSubmissions = useCallback(
-    async (slots: { start: Date; end: Date; participationOptionId: string }[], myGuestId: string) => {
+    async (slots: { start: Date; end: Date; participationOptionId: string }[]) => {
+      if (!eventId) return;
       setPostLoading(true);
       const payload = {
         name: guestName,
@@ -209,81 +244,80 @@ export default function SubmissionPage() {
           optionId: slot.participationOptionId,
         })),
       };
-      if (!myGuestId) {
-        const response = await client.events[":eventId"].submissions.$post(
-          {
-            param: { eventId: eventId || "" },
-            json: payload,
-          },
-          {
-            init: { credentials: "include" },
-          },
-        );
+      try {
+        const response = editingParticipantId
+          ? await client.events[":eventId"].participants[":participantId"].$put({
+              param: { eventId, participantId: editingParticipantId },
+              json: payload,
+            })
+          : await client.events[":eventId"].participants.$post({ param: { eventId }, json: payload });
         if (response.ok) {
-          setToast({
-            message: "提出しました。",
-            variant: "success",
-          });
-          setTimeout(() => setToast(null), 3000);
+          if (!editingParticipantId) {
+            const { participant } = await response.json();
+            rememberMyEvent({ id: eventId, isHost: false, participantId: participant.id });
+          }
+          showToast(editingParticipantId ? "更新しました。" : "提出しました。", "success");
+          stopEditing();
         } else {
-          setToast({
-            message: "提出に失敗しました。もう一度お試しください。",
-            variant: "error",
-          });
-          setTimeout(() => setToast(null), 3000);
+          showToast(
+            await readErrorMessage(
+              response,
+              editingParticipantId
+                ? "更新に失敗しました。もう一度お試しください。"
+                : "提出に失敗しました。もう一度お試しください。",
+            ),
+            "error",
+          );
         }
-      } else {
-        const response = await client.events[":eventId"].submissions.mine.$put(
-          {
-            param: { eventId: eventId || "" },
-            json: payload,
-          },
-          {
-            init: { credentials: "include" },
-          },
-        );
-        if (response.ok) {
-          setToast({
-            message: "更新しました。",
-            variant: "success",
-          });
-          setTimeout(() => setToast(null), 3000);
-        } else {
-          setToast({
-            message: "更新に失敗しました。もう一度お試しください。",
-            variant: "error",
-          });
-          setTimeout(() => setToast(null), 3000);
-        }
+      } catch (error) {
+        console.error("Error submitting:", error);
+        showToast("ネットワークエラーが発生しました。", "error");
       }
-      await Promise.all([fetchEvent()]);
+      await fetchEvent();
       setPostLoading(false);
     },
-    [guestName, comment, eventId, fetchEvent],
+    [guestName, comment, eventId, editingParticipantId, fetchEvent, showToast, stopEditing],
   );
 
-  useEffect(() => {
-    if (meAsGuest) {
-      setGuestName(meAsGuest.name);
-      setComment(meAsGuest.comment ?? "");
-      setEditingSlots(meAsGuest.slots);
-      setMode("view");
+  const deleteDialogRef = useRef<HTMLDialogElement>(null);
+  const deleteParticipant = useCallback(async () => {
+    if (!eventId || !editingParticipantId) return;
+    deleteDialogRef.current?.close();
+    setPostLoading(true);
+    try {
+      const res = await client.events[":eventId"].participants[":participantId"].$delete({
+        param: { eventId, participantId: editingParticipantId },
+      });
+      if (res.ok) {
+        if (editingParticipantId === myParticipantId) {
+          forgetMyParticipant(eventId);
+        }
+        showToast("回答を削除しました。「履歴」から元に戻せます。", "success");
+        stopEditing();
+      } else {
+        showToast(await readErrorMessage(res, "削除に失敗しました。"), "error");
+      }
+    } catch (error) {
+      console.error("Error deleting participant:", error);
+      showToast("ネットワークエラーが発生しました。", "error");
     }
-  }, [meAsGuest]);
+    await fetchEvent();
+    setPostLoading(false);
+  }, [eventId, editingParticipantId, myParticipantId, fetchEvent, showToast, stopEditing]);
 
   // 編集・確認モードではベールがドラッグ入力の邪魔になるため解除する
   useEffect(() => {
     if (mode !== "view") setHighlight(null);
   }, [mode]);
 
-  const guestIdToName = useMemo(() => {
+  const participantIdToName = useMemo(() => {
     if (!event) return {};
-    return Object.fromEntries(event.guests.map((g) => [g.id, g.name]));
+    return Object.fromEntries(event.participants.map((p) => [p.id, p.name]));
   }, [event]);
 
-  const guestIdToComment = useMemo(() => {
+  const participantIdToComment = useMemo(() => {
     if (!event) return {};
-    return Object.fromEntries(event.guests.filter((g) => g.comment).map((g) => [g.id, g.comment as string]));
+    return Object.fromEntries(event.participants.filter((p) => p.comment).map((p) => [p.id, p.comment as string]));
   }, [event]);
 
   const participationOptionIdToLabel = useMemo(() => {
@@ -295,29 +329,29 @@ export default function SubmissionPage() {
     if (!event) return [];
 
     if (mode !== "view") {
-      // 編集・確認モードの場合、自分のスロットは editingSlots に入るので、こちらには自分以外のスロットのみ含める
-      return event.guests
-        .filter((g) => g.id !== myGuestId)
+      // 編集・確認モードの場合、編集している回答のスロットは editingSlots に入るので、こちらにはそれ以外のスロットのみ含める
+      return event.participants
+        .filter((g) => g.id !== editingParticipantId)
         .flatMap((g) =>
           g.slots.map((s) => ({
             from: s.from,
             to: s.to,
-            guestId: g.id,
+            participantId: g.id,
             optionId: s.participationOptionId,
           })),
         );
     }
 
     // 閲覧モードの場合は自分も含めて全て
-    return event.guests.flatMap((g) =>
+    return event.participants.flatMap((g) =>
       g.slots.map((s) => ({
         from: s.from,
         to: s.to,
-        guestId: g.id,
+        participantId: g.id,
         optionId: s.participationOptionId,
       })),
     );
-  }, [event, myGuestId, mode]);
+  }, [event, editingParticipantId, mode]);
 
   // event が読み込まれたらデフォルトの参加形態を設定
   useEffect(() => {
@@ -364,12 +398,12 @@ export default function SubmissionPage() {
                   <h1 className="min-w-0 truncate font-bold text-base text-base-content sm:text-lg">{event.name}</h1>
                   <div className="flex shrink-0 items-center gap-1.5">
                     {/* 自分の日程をカレンダーアプリに追加 */}
-                    {mode === "view" && meAsGuest && meAsGuest.slots.length > 0 && (
+                    {mode === "view" && me && me.slots.length > 0 && (
                       <AddToCalendar
                         eventName={event.name}
                         eventId={eventId ?? ""}
                         eventDescription={event.description}
-                        slots={meAsGuest.slots}
+                        slots={me.slots}
                         participationOptionIdToLabel={participationOptionIdToLabel}
                         participationOptionCount={event.options.length}
                       />
@@ -385,7 +419,7 @@ export default function SubmissionPage() {
                         <span className="hidden sm:inline">履歴</span>
                       </button>
                     )}
-                    {isHost && (
+                    {event.canEdit && (
                       <NavLink to={`/e/${eventId}/edit`} className="btn btn-sm btn-outline shrink-0 gap-1.5">
                         <LuSettings2 className="h-4 w-4" />
                         <span>編集</span>
@@ -424,6 +458,8 @@ export default function SubmissionPage() {
                     );
                   })()}
               </div>
+
+              {mode === "view" && <AnonymousEditNotice />}
 
               {/* 参加形態選択ボタン */}
               {mode === "edit" && event.options.length > 1 && selectedParticipationOptionId !== null && (
@@ -467,8 +503,8 @@ export default function SubmissionPage() {
                 allowedRanges={event.allowedRanges}
                 editingSlots={mode !== "view" ? editingSlots : []}
                 viewingSlots={viewingSlots}
-                guestIdToName={guestIdToName}
-                guestIdToComment={guestIdToComment}
+                participantIdToName={participantIdToName}
+                participantIdToComment={participantIdToComment}
                 participationOptions={event.options}
                 currentParticipationOptionId={selectedParticipationOptionId}
                 highlight={mode === "view" ? highlight : null}
@@ -477,7 +513,7 @@ export default function SubmissionPage() {
               />
 
               {/* 参加者一覧 */}
-              {event.guests.length > 0 && (
+              {event.participants.length > 0 && (
                 <div className="mt-1 pb-2">
                   <div className="flex items-center justify-between gap-2">
                     <button
@@ -485,7 +521,7 @@ export default function SubmissionPage() {
                       onClick={() => setGuestListExpanded((prev) => !prev)}
                       className="flex min-w-0 items-center gap-1.5 font-medium text-base-content/80 text-sm hover:text-base-content"
                     >
-                      参加者 ({event.guests.length}人)
+                      参加者 ({event.participants.length}人)
                       {guestListExpanded ? <LuChevronUp className="h-4 w-4" /> : <LuChevronDown className="h-4 w-4" />}
                     </button>
                     {/* ハイライト操作（カレンダーの縦幅を使わないようこの行に置く） */}
@@ -498,7 +534,7 @@ export default function SubmissionPage() {
                             onClick={() => setHighlight(null)}
                           >
                             <LuUser className="h-4 w-4 shrink-0" />
-                            <span className="truncate">{guestIdToName[highlight.guestId] ?? "参加者"}</span>
+                            <span className="truncate">{participantIdToName[highlight.participantId] ?? "参加者"}</span>
                             <LuX className="h-4 w-4 shrink-0" />
                           </button>
                         )}
@@ -519,15 +555,17 @@ export default function SubmissionPage() {
                   </div>
                   {guestListExpanded && (
                     <ul className="mt-1 divide-y divide-base-200">
-                      {event.guests.map((guest) => {
-                        const commentText = guestIdToComment[guest.id];
-                        const isHighlighted = highlight?.type === "guest" && highlight.guestId === guest.id;
+                      {event.participants.map((guest) => {
+                        const commentText = participantIdToComment[guest.id];
+                        const isHighlighted = highlight?.type === "guest" && highlight.participantId === guest.id;
                         return (
-                          <li key={guest.id}>
+                          <li key={guest.id} className="flex items-start gap-1">
                             <button
                               type="button"
                               aria-pressed={isHighlighted}
-                              onClick={() => setHighlight(isHighlighted ? null : { type: "guest", guestId: guest.id })}
+                              onClick={() =>
+                                setHighlight(isHighlighted ? null : { type: "guest", participantId: guest.id })
+                              }
                               className={`flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
                                 isHighlighted ? "bg-primary/10" : "hover:bg-base-200"
                               }`}
@@ -536,7 +574,12 @@ export default function SubmissionPage() {
                                 <LuUser className="h-4 w-4 text-base-content/40" />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="pt-1 font-medium text-base-content text-sm">{guest.name}</p>
+                                <p className="pt-1 font-medium text-base-content text-sm">
+                                  {guest.name}
+                                  {guest.id === myParticipantId && (
+                                    <span className="ml-1.5 font-normal text-base-content/50 text-xs">(あなた)</span>
+                                  )}
+                                </p>
                                 {commentText && (
                                   <div className="mt-1.5 w-fit max-w-full rounded-2xl rounded-tl-none bg-base-300 px-3 py-2 text-base-content text-sm">
                                     <span className="wrap-break-word whitespace-pre-wrap">{commentText}</span>
@@ -544,6 +587,19 @@ export default function SubmissionPage() {
                                 )}
                               </div>
                             </button>
+                            {/* URL を知っている人は誰でも、ほかの人の回答も編集できる (書き間違いの代理の修正など) */}
+                            {mode === "view" && guest.canEdit && (
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm mt-2 shrink-0 gap-1 text-base-content/70"
+                                aria-label={`${guest.name}の回答を編集`}
+                                disabled={loading}
+                                onClick={() => startEditing(guest)}
+                              >
+                                <LuPencil className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">編集</span>
+                              </button>
+                            )}
                           </li>
                         );
                       })}
@@ -567,15 +623,10 @@ export default function SubmissionPage() {
                         type="button"
                         className="btn btn-sm btn-primary gap-1.5"
                         disabled={loading}
-                        onClick={() => {
-                          if (meAsGuest?.slots) {
-                            setEditingSlots(meAsGuest.slots);
-                          }
-                          setMode("edit");
-                        }}
+                        onClick={() => startEditing(me)}
                       >
                         <LuPencil className="h-4 w-4" />
-                        {meAsGuest ? (
+                        {me ? (
                           <>
                             <span className="hidden sm:inline">日程を変更する</span>
                             <span className="sm:hidden">日程変更</span>
@@ -591,15 +642,15 @@ export default function SubmissionPage() {
                         type="button"
                         className="btn btn-sm btn-outline shrink-0"
                         disabled={loading}
-                        onClick={() => {
-                          setEditingSlots(meAsGuest?.slots ?? []);
-                          setGuestName(meAsGuest?.name ?? "");
-                          setComment(meAsGuest?.comment ?? "");
-                          setMode("view");
-                        }}
+                        onClick={stopEditing}
                       >
                         <span>キャンセル</span>
                       </button>
+                      {editingParticipant && (
+                        <span className="min-w-0 truncate text-base-content/70 text-sm">
+                          「{editingParticipant.name}」の回答を編集中
+                        </span>
+                      )}
                       <button
                         type="button"
                         className="btn btn-sm btn-primary ml-auto inline-flex shrink-0 gap-1.5"
@@ -671,6 +722,17 @@ export default function SubmissionPage() {
                   <LuChevronLeft className="h-4 w-4" />
                   <span>戻って修正</span>
                 </button>
+                {editingParticipant && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost shrink-0 gap-1.5 text-error"
+                    disabled={loading}
+                    onClick={() => deleteDialogRef.current?.showModal()}
+                  >
+                    <LuTrash2 className="h-4 w-4" />
+                    <span>回答を削除</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn btn-sm btn-primary ml-auto inline-flex shrink-0 gap-1.5"
@@ -683,18 +745,43 @@ export default function SubmissionPage() {
                         end: slot.to.toDate(),
                         participationOptionId: slot.participationOptionId,
                       })),
-                      myGuestId ?? "",
                     );
                   }}
                 >
                   <LuSend className="h-4 w-4" />
-                  <span>{meAsGuest ? "更新する" : "提出する"}</span>
+                  <span>{editingParticipant ? "更新する" : "提出する"}</span>
                 </button>
               </div>
             </div>
           </div>
         </>
       )}
+
+      {/* 回答の削除の確認 */}
+      <dialog ref={deleteDialogRef} className="modal">
+        <div className="modal-box">
+          <h3 className="mb-2 font-bold text-base-content text-lg">
+            「{editingParticipant?.name}」の回答を削除しますか？
+          </h3>
+          <p className="mb-6 text-base-content/70 text-sm">削除したあとも、「履歴」から元に戻せます。</p>
+          <div className="modal-action">
+            <button type="button" className="btn btn-outline" onClick={() => deleteDialogRef.current?.close()}>
+              キャンセル
+            </button>
+            <button
+              type="button"
+              className="btn gap-1.5 bg-error text-white hover:bg-error/90"
+              onClick={deleteParticipant}
+            >
+              <LuTrash2 className="h-4 w-4" />
+              削除する
+            </button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button type="submit">閉じる</button>
+        </form>
+      </dialog>
 
       {event && (
         <HistoryDialog

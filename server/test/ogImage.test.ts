@@ -2,7 +2,7 @@ import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test"
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 import { app } from "../src/main.js";
-import { createBrowser, createEvent } from "./helpers.js";
+import { api, createEvent } from "./helpers.js";
 
 // 画像の生成は、フォントの取得に外部への通信が要るのでテストしない。Cache API もテストの実行環境では効かない。
 // どちらもローカルの wrangler dev で確かめる
@@ -25,9 +25,8 @@ describe("GET /og/:eventId", () => {
   });
 
   test("削除したイベントは、既定の OG 画像に転送する", async () => {
-    const host = createBrowser();
-    const { id } = await createEvent(host);
-    await host.delete(`/events/${id}`);
+    const { id } = await createEvent();
+    await api.delete(`/events/${id}`);
 
     const res = await requestOgImage(`/og/${id}`);
 
@@ -36,8 +35,7 @@ describe("GET /og/:eventId", () => {
   });
 
   test("版 (?v=) が無い・古いときは、今の版の URL に転送する", async () => {
-    const host = createBrowser();
-    const { id } = await createEvent(host);
+    const { id } = await createEvent();
 
     const res = await requestOgImage(`/og/${id}`);
     expect(res.status).toBe(302);

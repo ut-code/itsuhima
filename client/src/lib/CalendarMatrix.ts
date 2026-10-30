@@ -14,7 +14,7 @@ export type HighlightMatrixSlot = {
 export type ViewingMatrixSlot = {
   from: Dayjs;
   to: Dayjs;
-  guestIdToOptionId: Record<string, string>;
+  participantIdToOptionId: Record<string, string>;
 };
 
 /**
@@ -95,7 +95,7 @@ export class EditingMatrix extends CalendarMatrixBase<string> {
  * 閲覧中イベントの {@link CalendarMatrixBase}
  */
 export class ViewingMatrix extends CalendarMatrixBase<Record<string, string>> {
-  setGuestRange(from: Dayjs, to: Dayjs, guestId: string, optionId: string): void {
+  setGuestRange(from: Dayjs, to: Dayjs, participantId: string, optionId: string): void {
     const [startRow, startCol] = this.getIndex(from);
     const [endRow, endCol] = this.getIndex(to.subtract(1, "minute"));
     for (let r = startRow; r <= endRow; r++) {
@@ -104,7 +104,7 @@ export class ViewingMatrix extends CalendarMatrixBase<Record<string, string>> {
         if (this.matrix[r][c] === null) {
           this.matrix[r][c] = {};
         }
-        (this.matrix[r][c] as Record<string, string>)[guestId] = optionId;
+        (this.matrix[r][c] as Record<string, string>)[participantId] = optionId;
       }
     }
   }
@@ -157,8 +157,8 @@ export class ViewingMatrix extends CalendarMatrixBase<Record<string, string>> {
     return runs.map((run) => {
       const from = this.initialDatetime.add(day, "day").add(run.start * 15, "minute");
       const to = this.initialDatetime.add(day, "day").add(run.end * 15, "minute");
-      const guestIdToOptionId = run.value;
-      return { from, to, guestIdToOptionId };
+      const participantIdToOptionId = run.value;
+      return { from, to, participantIdToOptionId };
     });
   }
 }

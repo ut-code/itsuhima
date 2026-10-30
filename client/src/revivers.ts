@@ -1,7 +1,15 @@
 // レスポンスの日付・日時の文字列を Dayjs に変換
 
 import dayjs from "./lib/dayjs";
-import type { BriefEvent, Event, ISOStringBriefEvent, ISOStringEvent, Slot } from "./types";
+import type {
+  BriefEvent,
+  Event,
+  ISOStringBriefEvent,
+  ISOStringEvent,
+  ISOStringParticipant,
+  Participant,
+  Slot,
+} from "./types";
 
 /**
  * Event の日時のプロパティを ISO 文字列から Date オブジェクトに変換する
@@ -15,23 +23,19 @@ export function eventReviver(event: ISOStringEvent): Event {
     endDate: dayjs.tz(event.endDate),
     allowedRanges: event.allowedRanges.map((range) => ({ ...range })),
     options: event.options.map((opt) => ({ ...opt })),
-    hosts: event.hosts.map((host) => ({ ...host })),
-    guests: event.guests.map((guest) => ({
-      ...guest,
-      comment: guest.comment ?? undefined,
-      slots: guest.slots.map(slotReviver),
-    })),
-    meAsGuest: event.meAsGuest
-      ? {
-          ...event.meAsGuest,
-          comment: event.meAsGuest.comment ?? undefined,
-          slots: event.meAsGuest.slots.map(slotReviver),
-        }
-      : null,
+    participants: event.participants.map(participantReviver),
   };
 }
 
-function slotReviver({ startAt, endAt, optionId, ...slot }: ISOStringEvent["guests"][number]["slots"][number]): Slot {
+export function participantReviver(participant: ISOStringParticipant): Participant {
+  return {
+    ...participant,
+    comment: participant.comment ?? undefined,
+    slots: participant.slots.map(slotReviver),
+  };
+}
+
+function slotReviver({ startAt, endAt, optionId, ...slot }: ISOStringParticipant["slots"][number]): Slot {
   return {
     ...slot,
     from: dayjs.utc(startAt).tz(),
@@ -43,12 +47,13 @@ function slotReviver({ startAt, endAt, optionId, ...slot }: ISOStringEvent["gues
 /**
  * BriefEvent の日時のプロパティを ISO 文字列から Date オブジェクトに変換する
  * @param event
- * @returns
+ * @param isHost 作ったイベントか (localStorage の控えから)
  */
-export function briefEventReviver(event: ISOStringBriefEvent): BriefEvent {
+export function briefEventReviver(event: ISOStringBriefEvent, isHost: boolean): BriefEvent {
   return {
     ...event,
     startDate: dayjs.tz(event.startDate),
     endDate: dayjs.tz(event.endDate),
+    isHost,
   };
 }

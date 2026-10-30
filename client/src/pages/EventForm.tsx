@@ -22,6 +22,7 @@ import type { AppType } from "../../../server/src/routes/api";
 import Header from "../components/Header";
 import { EXTERNAL_LINKS } from "../constants/links";
 import dayjs from "../lib/dayjs";
+import { forgetMyEvents, rememberMyEvent } from "../lib/myEvents";
 import { eventReviver } from "../revivers";
 import type { Event } from "../types";
 import { API_ENDPOINT, readErrorMessage } from "../utils";
@@ -198,6 +199,7 @@ export default function EventFormPage() {
       setSubmitLoading(false);
       if (res.status === 201) {
         const { id, name } = await res.json();
+        rememberMyEvent({ id, isHost: true });
         setDialogStatus({
           eventId: id,
           eventName: name,
@@ -237,17 +239,17 @@ export default function EventFormPage() {
     }
   };
 
-  const isHost = event?.isHost;
+  const canEdit = event?.canEdit;
 
   useEffect(() => {
-    if (!loading && event && !isHost) {
+    if (!loading && event && !canEdit) {
       if (eventId) {
         navigate(`/e/${eventId}`);
       } else {
         navigate("/");
       }
     }
-  }, [loading, event, isHost, eventId, navigate]);
+  }, [loading, event, canEdit, eventId, navigate]);
 
   return (
     <>
@@ -313,9 +315,9 @@ export default function EventFormPage() {
                 <h2 className="mb-4 font-bold text-base text-base-content sm:text-lg">日程の範囲</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div
-                    className={event && event.guests.length > 0 ? "tooltip tooltip-top" : ""}
+                    className={event && event.participants.length > 0 ? "tooltip tooltip-top" : ""}
                     data-tip={
-                      event && event.guests.length > 0
+                      event && event.participants.length > 0
                         ? "すでに日程を登録したユーザーがいるため、開始日の編集はできません"
                         : ""
                     }
@@ -327,16 +329,16 @@ export default function EventFormPage() {
                       type="date"
                       {...register("startDate")}
                       id="input-start"
-                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.startDate ? "border-red-500" : "border-base-300"} ${event && event.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
+                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.startDate ? "border-red-500" : "border-base-300"} ${event && event.participants.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                       onFocus={handleFieldFocus}
-                      disabled={!!(event && event.guests.length > 0)}
+                      disabled={!!(event && event.participants.length > 0)}
                     />
                     {errors.startDate && <p className="mt-1.5 text-error text-sm">{errors.startDate.message}</p>}
                   </div>
                   <div
-                    className={event && event.guests.length > 0 ? "tooltip tooltip-top" : ""}
+                    className={event && event.participants.length > 0 ? "tooltip tooltip-top" : ""}
                     data-tip={
-                      event && event.guests.length > 0
+                      event && event.participants.length > 0
                         ? "すでに日程を登録したユーザーがいるため、終了日の編集はできません"
                         : ""
                     }
@@ -348,9 +350,9 @@ export default function EventFormPage() {
                       type="date"
                       {...register("endDate")}
                       id="input-end"
-                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.endDate ? "border-red-500" : "border-base-300"} ${event && event.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
+                      className={`w-full rounded-lg border px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 ${errors.endDate ? "border-red-500" : "border-base-300"} ${event && event.participants.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                       onFocus={handleFieldFocus}
-                      disabled={!!(event && event.guests.length > 0)}
+                      disabled={!!(event && event.participants.length > 0)}
                     />
                     {errors.endDate && <p className="mt-1.5 text-error text-sm">{errors.endDate.message}</p>}
                   </div>
@@ -371,9 +373,9 @@ export default function EventFormPage() {
                   </div>
                 </div>
                 <div
-                  className={event && event.guests.length > 0 ? "tooltip tooltip-top w-full" : "w-full"}
+                  className={event && event.participants.length > 0 ? "tooltip tooltip-top w-full" : "w-full"}
                   data-tip={
-                    event && event.guests.length > 0
+                    event && event.participants.length > 0
                       ? "すでに日程を登録したユーザーがいるため、時間帯の編集はできません"
                       : ""
                   }
@@ -383,7 +385,7 @@ export default function EventFormPage() {
                     <div className="flex flex-1 items-center gap-1.5 sm:gap-2">
                       <select
                         aria-label="開始時刻（時）"
-                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${event && event.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${event && event.participants.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                         value={allowedRangeFields[0].startTime.split(":")[0]}
                         onChange={(e) => {
                           replace([
@@ -394,7 +396,7 @@ export default function EventFormPage() {
                           ]);
                         }}
                         onFocus={handleFieldFocus}
-                        disabled={!!(event && event.guests.length > 0)}
+                        disabled={!!(event && event.participants.length > 0)}
                       >
                         <option value="" disabled>
                           時
@@ -408,7 +410,7 @@ export default function EventFormPage() {
                       <span className="font-medium text-base-content/70 text-sm sm:text-base">:</span>
                       <select
                         aria-label="開始時刻（分）"
-                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${event && event.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${event && event.participants.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                         value={allowedRangeFields[0].startTime.split(":")[1]}
                         onChange={(e) => {
                           replace([
@@ -419,7 +421,7 @@ export default function EventFormPage() {
                           ]);
                         }}
                         onFocus={handleFieldFocus}
-                        disabled={!!(event && event.guests.length > 0)}
+                        disabled={!!(event && event.participants.length > 0)}
                       >
                         <option value="" disabled>
                           分
@@ -436,7 +438,7 @@ export default function EventFormPage() {
                     <div className="flex flex-1 items-center gap-1.5 sm:gap-2">
                       <select
                         aria-label="終了時刻（時）"
-                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${event && event.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${event && event.participants.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                         value={allowedRangeFields[0].endTime.split(":")[0]}
                         onChange={(e) => {
                           // 24 時は 24:00 だけ
@@ -449,7 +451,7 @@ export default function EventFormPage() {
                           ]);
                         }}
                         onFocus={handleFieldFocus}
-                        disabled={!!(event && event.guests.length > 0)}
+                        disabled={!!(event && event.participants.length > 0)}
                       >
                         <option value="" disabled>
                           時
@@ -463,7 +465,7 @@ export default function EventFormPage() {
                       <span className="font-medium text-base-content/70 text-sm sm:text-base">:</span>
                       <select
                         aria-label="終了時刻（分）"
-                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${event && event.guests.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-3 sm:py-2.5 ${errors.allowedRanges ? "border-red-500" : "border-base-300"} ${event && event.participants.length > 0 ? "cursor-not-allowed bg-base-200 opacity-60" : ""}`}
                         value={allowedRangeFields[0].endTime.split(":")[1]}
                         onChange={(e) => {
                           replace([
@@ -474,7 +476,7 @@ export default function EventFormPage() {
                           ]);
                         }}
                         onFocus={handleFieldFocus}
-                        disabled={!!(event && event.guests.length > 0)}
+                        disabled={!!(event && event.participants.length > 0)}
                       >
                         <option value="" disabled>
                           分
@@ -539,7 +541,7 @@ export default function EventFormPage() {
 
                   <div className="space-y-3">
                     {participationFields.map((field, index) => {
-                      const hasSlots = event?.guests.some((guest) =>
+                      const hasSlots = event?.participants.some((guest) =>
                         guest.slots.some((slot) => slot.participationOptionId === field.id),
                       );
                       const isLastOption = participationFields.length === 1;
@@ -727,6 +729,7 @@ export default function EventFormPage() {
                     if (!res.ok) {
                       throw new Error("削除に失敗しました。");
                     }
+                    forgetMyEvents([event.id]);
                     // 削除されたイベントのページで、すぐに元に戻せるようにする
                     navigate(`/e/${event.id}`);
                     setToast({ message: "イベントを削除しました。", variant: "success" });

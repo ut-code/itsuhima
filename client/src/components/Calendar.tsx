@@ -14,7 +14,7 @@ type AllowedRange = {
 type ViewingSlot = {
   from: Dayjs;
   to: Dayjs;
-  guestId: string;
+  participantId: string;
   optionId: string;
 };
 
@@ -27,7 +27,7 @@ type ParticipationOption = {
 /**
  * ハイライト条件。同時に有効なのは 1 つだけ。
  */
-export type Highlight = { type: "maxCount" } | { type: "guest"; guestId: string };
+export type Highlight = { type: "maxCount" } | { type: "guest"; participantId: string };
 
 type Props = {
   startDate: Dayjs;
@@ -35,8 +35,8 @@ type Props = {
   allowedRanges: AllowedRange[];
   editingSlots: EditingSlot[];
   viewingSlots: ViewingSlot[];
-  guestIdToName: Record<string, string>;
-  guestIdToComment: Record<string, string>;
+  participantIdToName: Record<string, string>;
+  participantIdToComment: Record<string, string>;
   participationOptions: ParticipationOption[];
   currentParticipationOptionId: string;
   highlight: Highlight | null;
@@ -91,8 +91,8 @@ export const Calendar = ({
   allowedRanges,
   editingSlots,
   viewingSlots,
-  guestIdToName,
-  guestIdToComment,
+  participantIdToName,
+  participantIdToComment,
   participationOptions,
   currentParticipationOptionId,
   highlight,
@@ -137,7 +137,7 @@ export const Calendar = ({
   const viewingMatrix = useMemo(() => {
     const matrix = new ViewingMatrix(countDays, startDate);
     for (const slot of viewingSlots) {
-      matrix.setGuestRange(slot.from, slot.to, slot.guestId, slot.optionId);
+      matrix.setGuestRange(slot.from, slot.to, slot.participantId, slot.optionId);
     }
     return matrix;
   }, [viewingSlots, countDays, startDate]);
@@ -148,8 +148,8 @@ export const Calendar = ({
   const highlightSlots = useMemo(() => {
     if (!highlight) return [];
     if (highlight.type === "guest") {
-      const { guestId } = highlight;
-      return viewingMatrix.buildHighlight((cell) => guestId in cell).getSlots();
+      const { participantId } = highlight;
+      return viewingMatrix.buildHighlight((cell) => participantId in cell).getSlots();
     }
     const maxCount = viewingMatrix.getMaxGuestCount();
     if (maxCount === 0) return [];
@@ -421,22 +421,22 @@ export const Calendar = ({
               if (dayIdx < 0 || dayIdx >= countDays || fromSlot < 0 || toSlot <= fromSlot) return null;
 
               const optionGroups = new Map<string, string[]>();
-              for (const [guestId, optionId] of Object.entries(slot.guestIdToOptionId)) {
+              for (const [participantId, optionId] of Object.entries(slot.participantIdToOptionId)) {
                 const group = optionGroups.get(optionId);
                 if (group) {
-                  group.push(guestId);
+                  group.push(participantId);
                 } else {
-                  optionGroups.set(optionId, [guestId]);
+                  optionGroups.set(optionId, [participantId]);
                 }
               }
 
               const breakdown = participationOptions
                 .filter((opt) => optionGroups.has(opt.id))
                 .map((opt) => {
-                  const guestIds = optionGroups.get(opt.id) ?? [];
-                  const opacity = 1 - (1 - OPACITY) ** guestIds.length;
+                  const participantIds = optionGroups.get(opt.id) ?? [];
+                  const opacity = 1 - (1 - OPACITY) ** participantIds.length;
                   const rgb = editMode ? toGrayscale(hexToRgb(opt.color)) : hexToRgb(opt.color);
-                  return { ...opt, guestIds, opacity, rgb, displayColor: `rgb(${rgb.join(",")})` };
+                  return { ...opt, participantIds, opacity, rgb, displayColor: `rgb(${rgb.join(",")})` };
                 });
 
               let background: string;
@@ -470,10 +470,10 @@ export const Calendar = ({
                         <div>
                           <div style="font-weight:bold;margin-bottom:4px;color:${bd.color}">${bd.label}</div>
                           <ul style="margin:0;padding-left:1.2rem;list-style-type:disc">
-                            ${bd.guestIds
-                              .map((guestId) => {
-                                const name = guestIdToName[guestId] ?? guestId;
-                                return `<li>${guestIdToComment[guestId] ? `${name} 💬` : name}</li>`;
+                            ${bd.participantIds
+                              .map((participantId) => {
+                                const name = participantIdToName[participantId] ?? participantId;
+                                return `<li>${participantIdToComment[participantId] ? `${name} 💬` : name}</li>`;
                               })
                               .join("")}
                           </ul>
@@ -492,7 +492,7 @@ export const Calendar = ({
                             data-tooltip-html={tooltipContent}
                             data-tooltip-place="top"
                           >
-                            {bd.guestIds.length}
+                            {bd.participantIds.length}
                           </span>
                         </div>
                       );
