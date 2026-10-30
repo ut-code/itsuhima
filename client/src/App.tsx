@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from "react-router";
+import EnvBanner from "./components/EnvBanner.tsx";
 import AccountPage from "./pages/Account.tsx";
 import EventFormPage from "./pages/EventForm.tsx";
 import SubmissionPage from "./pages/eventId/Submission.tsx";
@@ -41,6 +42,7 @@ function LegacyEventEditRedirect() {
 export default function App() {
   return (
     <BrowserRouter>
+      <EnvBanner />
       <Routes>
         <Route index element={<LandingPage />} />
         {/* / は訪問済みだと /home にリダイレクトするので、リダイレクトしない URL を Google の同意画面のホームページに登録する */}
