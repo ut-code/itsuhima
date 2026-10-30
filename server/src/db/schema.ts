@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { check, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const uuid = () => crypto.randomUUID();
 
@@ -87,6 +87,23 @@ export const participant = sqliteTable(
   ],
 );
 
+/**
+ * ブラウザ (browserId) ごとの、作ったイベントと回答したイベント。`/home` の一覧に使う。
+ * 本人の判定を browserId でしなくなった後も、前の一覧を読み出せるように participant とは別に持つ。
+ */
+export const legacyBrowserEvent = sqliteTable(
+  "legacyBrowserEvent",
+  {
+    browserId: text().notNull(),
+    eventId: text()
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    /** 作ったイベントなら true、回答しただけなら false */
+    isHost: integer({ mode: "boolean" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.browserId, t.eventId] }), index("legacyBrowserEvent_eventId_idx").on(t.eventId)],
+);
+
 /** 参加形態。 */
 export const option = sqliteTable(
   "option",
@@ -106,6 +123,7 @@ export const eventRelations = relations(event, ({ many }) => ({
   slots: many(slot),
   participants: many(participant),
   options: many(option),
+  legacyBrowserEvents: many(legacyBrowserEvent),
 }));
 
 export const allowedRangeRelations = relations(allowedRange, ({ one }) => ({
@@ -129,4 +147,8 @@ export const participantRelations = relations(participant, ({ one, many }) => ({
 export const optionRelations = relations(option, ({ one, many }) => ({
   event: one(event, { fields: [option.eventId], references: [event.id] }),
   slots: many(slot),
+}));
+
+export const legacyBrowserEventRelations = relations(legacyBrowserEvent, ({ one }) => ({
+  event: one(event, { fields: [legacyBrowserEvent.eventId], references: [event.id] }),
 }));

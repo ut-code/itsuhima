@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, notInArray } from "drizzle-orm";
+import { and, eq, isNotNull, notInArray } from "drizzle-orm";
 import type { z } from "zod";
 import type { editEventReqSchema, eventReqSchema, submitReqSchema } from "../../../common/validators.js";
 import { type Db, insertMany, runBatch } from "../db/index.js";
@@ -33,6 +33,7 @@ export async function createEvent(db: Db, browserId: string, input: CreateEventI
       input.allowedRanges.map((range) => ({ ...range, eventId: event.id })),
     ),
     db.insert(schema.participant).values({ eventId: event.id, role: "host", browserId }),
+    db.insert(schema.legacyBrowserEvent).values({ browserId, eventId: event.id, isHost: true }),
     ...insertMany(
       db,
       schema.option,
@@ -50,30 +51,19 @@ export async function createEvent(db: Db, browserId: string, input: CreateEventI
 
 /** ホストまたはゲストとして関わるイベント */
 export async function listMyEvents(db: Db, browserId: string) {
-  const events = await db.query.event.findMany({
-    where: inArray(
-      schema.event.id,
-      db
-        .select({ id: schema.participant.eventId })
-        .from(schema.participant)
-        .where(eq(schema.participant.browserId, browserId)),
-    ),
-    with: {
-      participants: {
-        where: eq(schema.participant.browserId, browserId),
-        columns: { role: true },
-      },
-    },
+  const rows = await db.query.legacyBrowserEvent.findMany({
+    where: eq(schema.legacyBrowserEvent.browserId, browserId),
+    with: { event: true },
   });
 
-  return events.map((p) => ({
-    id: p.id,
-    name: p.name,
-    description: p.description ?? "",
-    startDate: p.startDate,
-    endDate: p.endDate,
-    timezone: p.timezone,
-    isHost: p.participants.some((me) => me.role === "host"),
+  return rows.map(({ event, isHost }) => ({
+    id: event.id,
+    name: event.name,
+    description: event.description ?? "",
+    startDate: event.startDate,
+    endDate: event.endDate,
+    timezone: event.timezone,
+    isHost,
   }));
 }
 
@@ -301,9 +291,12 @@ export async function submitAvailability(db: Db, browserId: string, eventId: str
   const answer = { name: input.name, comment: input.comment?.trim() || null };
   const participantId = me?.id ?? crypto.randomUUID();
   await runBatch(db, [
-    me
-      ? db.update(schema.participant).set(answer).where(eq(schema.participant.id, me.id))
-      : db.insert(schema.participant).values({ id: participantId, eventId, role: "guest", browserId, ...answer }),
+    ...(me
+      ? [db.update(schema.participant).set(answer).where(eq(schema.participant.id, me.id))]
+      : [
+          db.insert(schema.participant).values({ id: participantId, eventId, role: "guest", browserId, ...answer }),
+          db.insert(schema.legacyBrowserEvent).values({ browserId, eventId, isHost: false }),
+        ]),
     ...insertMany(db, schema.slot, slotRows(input, eventId, participantId)),
   ]);
 

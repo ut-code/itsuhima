@@ -258,3 +258,40 @@ describe("0006_merge_host_guest_into_participant", () => {
     expect(await db.prepare(`SELECT id FROM "slot"`).all()).toMatchObject({ results: [{ id: "s1" }] });
   });
 });
+
+describe("0007_legacy_browser_event", () => {
+  test("participant から、ブラウザごとのイベントと、作ったかどうかを写す", async () => {
+    const { db, migrate } = await migrateUntil("0007_legacy_browser_event.sql");
+    await db.batch([
+      db.prepare(`INSERT INTO "event" (id, name, startDate, endDate) VALUES ('p', 'name', '2026-11-02', '2026-11-04')`),
+      db.prepare(`INSERT INTO "event" (id, name, startDate, endDate) VALUES ('q', 'name', '2026-11-02', '2026-11-04')`),
+      // 未回答のホスト、回答したホスト、ゲスト
+      db.prepare(
+        `INSERT INTO "participant" (id, eventId, role, name, browserId, updatedAt) VALUES ('h1', 'p', 'host', NULL, 'a', 'now')`,
+      ),
+      db.prepare(
+        `INSERT INTO "participant" (id, eventId, role, name, browserId, updatedAt) VALUES ('h2', 'q', 'host', 'ホスト', 'b', 'now')`,
+      ),
+      db.prepare(
+        `INSERT INTO "participant" (id, eventId, role, name, browserId, updatedAt) VALUES ('g1', 'p', 'guest', 'ゲスト', 'b', 'now')`,
+      ),
+    ]);
+
+    await migrate();
+
+    const { results } = await db
+      .prepare(`SELECT browserId, eventId, isHost FROM "legacyBrowserEvent" ORDER BY browserId, eventId`)
+      .all();
+    expect(results).toEqual([
+      { browserId: "a", eventId: "p", isHost: 1 },
+      { browserId: "b", eventId: "p", isHost: 0 },
+      { browserId: "b", eventId: "q", isHost: 1 },
+    ]);
+
+    // イベントを消すと、その行も消える
+    await db.prepare(`DELETE FROM "event" WHERE id = 'p'`).run();
+    expect(await db.prepare(`SELECT eventId FROM "legacyBrowserEvent"`).all()).toMatchObject({
+      results: [{ eventId: "q" }],
+    });
+  });
+});

@@ -50,6 +50,13 @@
       "when": 1792697240075,
       "tag": "0006_merge_host_guest_into_participant",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1793351169756,
+      "tag": "0007_legacy_browser_event",
+      "breakpoints": true
     }
   ]
 }
