@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull, lte, notInArray } from "drizzle-orm";
+import { and, eq, inArray, isNull, lte, notInArray } from "drizzle-orm";
 import type { z } from "zod";
 import type { editEventReqSchema, eventReqSchema, submitReqSchema } from "../../../common/validators.js";
 import { type Db, insertMany, runBatch } from "../db/index.js";
@@ -7,6 +7,7 @@ import { nanoid } from "../lib/id.js";
 import { ServiceError } from "./errors.js";
 import { type Actor, canEditEvent } from "./permissions.js";
 import { validateSlots } from "./slots.js";
+import { eventSnapshot, insertHistory, isSameSnapshot, participantSnapshot } from "./snapshots.js";
 
 export type CreateEventInput = z.infer<typeof eventReqSchema>;
 export type UpdateEventInput = z.infer<typeof editEventReqSchema>;
@@ -185,18 +186,20 @@ function throwIfDeleted(event: { deletedAt: string | null }) {
 }
 
 export async function updateEvent(db: Db, actor: Actor, eventId: string, input: UpdateEventInput) {
-  const [event, existingGuest] = await Promise.all([
-    findEventForPermission(db, eventId),
-    db.query.participant.findFirst({
-      where: and(eq(schema.participant.eventId, eventId), isNotNull(schema.participant.name)),
-      columns: { id: true },
-    }),
-  ]);
+  const event = await db.query.event.findFirst({
+    where: eq(schema.event.id, eventId),
+    with: {
+      allowedRanges: true,
+      options: { with: { slots: { columns: { id: true }, limit: 1 } } },
+      participants: { columns: { role: true, browserId: true, name: true } },
+    },
+  });
 
   if (!event || !canEditEvent(actor, event)) {
     throw new ServiceError("not_host", "アクセス権限がありません。");
   }
   throwIfDeleted(event);
+  const existingGuest = event.participants.some(hasAnswered);
 
   const statements: Parameters<typeof runBatch>[1] = [];
 
@@ -207,12 +210,8 @@ export async function updateEvent(db: Db, actor: Actor, eventId: string, input: 
     }
 
     // 削除対象の参加形態に Slot が紐づいているかチェック
-    const existingOptions = await db.query.option.findMany({
-      where: eq(schema.option.eventId, eventId),
-      with: { slots: { columns: { id: true } } },
-    });
     const newOptionIds = input.options.map((o) => o.id);
-    const optionsToDelete = existingOptions.filter((o) => !newOptionIds.includes(o.id));
+    const optionsToDelete = event.options.filter((o) => !newOptionIds.includes(o.id));
     const undeletableOptions = optionsToDelete.filter((o) => o.slots.length > 0);
     if (undeletableOptions.length > 0) {
       const labels = undeletableOptions.map((o) => o.label).join(", ");
@@ -257,6 +256,20 @@ export async function updateEvent(db: Db, actor: Actor, eventId: string, input: 
         input.allowedRanges.map((range) => ({ ...range, eventId })),
       ),
     );
+  }
+
+  // 変える前の設定を履歴に残す。何も変わらなければ残さない
+  const before = eventSnapshot(event);
+  const after = eventSnapshot({
+    name: eventFields.name ?? event.name,
+    description: eventFields.description === undefined ? event.description : eventFields.description,
+    startDate: eventFields.startDate ?? event.startDate,
+    endDate: eventFields.endDate ?? event.endDate,
+    allowedRanges: (!existingGuest && input.allowedRanges) || event.allowedRanges,
+    options: input.options ?? event.options,
+  });
+  if (!isSameSnapshot(before, after)) {
+    statements.unshift(insertHistory(db, { eventId, target: "event", targetId: eventId, action: "update", before }));
   }
 
   await runBatch(db, statements);
@@ -371,22 +384,39 @@ export async function submitAvailability(db: Db, actor: Actor, eventId: string, 
 }
 
 export async function updateMyAvailability(db: Db, actor: Actor, eventId: string, input: SubmissionInput) {
-  const myGuest = await findMyGuest(db, actor, eventId);
-
-  if (!myGuest) {
+  const me = await findMyParticipant(db, actor, eventId);
+  if (!me || !hasAnswered(me)) {
     throw new ServiceError("submission_not_found", "既存の日程が見つかりません。");
   }
 
-  validateSlots(await findEventForSlots(db, eventId), input.slots);
-
-  await runBatch(db, [
-    db.delete(schema.slot).where(eq(schema.slot.participantId, myGuest.id)),
-    ...insertMany(db, schema.slot, slotRows(input, eventId, myGuest.id)),
-    db
-      .update(schema.participant)
-      .set({ name: input.name, comment: input.comment?.trim() || null })
-      .where(eq(schema.participant.id, myGuest.id)),
-  ]);
+  await replaceAnswer(db, eventId, me, input);
 
   return findMyGuest(db, actor, eventId);
+}
+
+/**
+ * 回答の名前・コメント・Slot を置き換える。変える前の回答を履歴に残す (何も変わらなければ残さない)。
+ * 権限は呼び出す側で確かめる。
+ */
+export async function replaceAnswer(
+  db: Db,
+  eventId: string,
+  participant: ParticipantWithSlots & { name: string },
+  input: SubmissionInput,
+) {
+  validateSlots(await findEventForSlots(db, eventId), input.slots);
+
+  const answer = { name: input.name, comment: input.comment?.trim() || null };
+  const rows = slotRows(input, eventId, participant.id);
+  const before = participantSnapshot(participant);
+  const changed = !isSameSnapshot(before, participantSnapshot({ ...answer, slots: rows }));
+
+  await runBatch(db, [
+    ...(changed
+      ? [insertHistory(db, { eventId, target: "participant", targetId: participant.id, action: "update", before })]
+      : []),
+    db.delete(schema.slot).where(eq(schema.slot.participantId, participant.id)),
+    ...insertMany(db, schema.slot, rows),
+    db.update(schema.participant).set(answer).where(eq(schema.participant.id, participant.id)),
+  ]);
 }

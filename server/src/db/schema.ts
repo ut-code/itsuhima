@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import { check, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import type { EventSnapshot, ParticipantSnapshot } from "../services/snapshots.js";
 
 const uuid = () => crypto.randomUUID();
 
@@ -118,7 +119,7 @@ export const history = sqliteTable(
     targetId: text().notNull(),
     action: text({ enum: ["update", "delete"] }).notNull(),
     /** 変える前の値の JSON。回答なら slots も含む */
-    before: text({ mode: "json" }).notNull(),
+    before: text({ mode: "json" }).$type<EventSnapshot | ParticipantSnapshot>().notNull(),
     createdAt: text()
       .notNull()
       .$defaultFn(() => new Date().toISOString()),
