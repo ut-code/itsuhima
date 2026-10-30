@@ -49,6 +49,7 @@ server/    Hono + Drizzle バックエンド (Cloudflare Workers + D1)。client 
   - `/e/:eventId`: `index.html` の OG メタタグにイベント名と日程を入れる (`eventPage.ts`)
   - `/og/:eventId`: OG 画像を生成し、Cache API にキャッシュする (`ogImage.tsx`。画像を作るライブラリ (`@cloudflare/pages-plugin-vercel-og`) は初期化が重いので、作るときだけ動的に import する)
   - `/api/*`: API (`api.ts`)
+  - `/mcp/*`: MCP (`mcp.ts`。`/mcp/public` は認証なし。ツールは `server/src/mcp/`、仕様は `docs/mcp.md`)
 
 wrangler はバンドルを分割しないので、動的 import で遅れるのはモジュールの初期化 (起動時間) だけで、バンドルの大きさは変わらない。重い本体を `routes/` の薄いファイルから動的に import し、`main.ts` は割り振りだけにする。
 
