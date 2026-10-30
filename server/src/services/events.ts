@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull, notInArray } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lte, notInArray } from "drizzle-orm";
 import type { z } from "zod";
 import type { editEventReqSchema, eventReqSchema, submitReqSchema } from "../../../common/validators.js";
 import { type Db, insertMany, runBatch } from "../db/index.js";
@@ -292,6 +292,13 @@ export async function restoreEvent(db: Db, actor: Actor, eventId: string) {
   }
 
   await db.update(schema.event).set({ deletedAt: null }).where(eq(schema.event.id, eventId));
+}
+
+/** 論理削除してから DELETED_EVENT_RETENTION_DAYS 日たったイベントを、行ごと消す (回答や履歴も CASCADE で消える) */
+export async function purgeDeletedEvents(db: Db, now = new Date()) {
+  const threshold = new Date(now);
+  threshold.setUTCDate(threshold.getUTCDate() - DELETED_EVENT_RETENTION_DAYS);
+  await db.delete(schema.event).where(lte(schema.event.deletedAt, threshold.toISOString()));
 }
 
 /** Slot の検証に必要な分だけイベントを読む */
