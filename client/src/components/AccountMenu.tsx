@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { LuCircleUserRound } from "react-icons/lu";
 import { NavLink } from "react-router";
-import { authClient, signInWithGoogle } from "../lib/auth";
+import { authClient, loggedInLabel, signInWithGoogle, useAccountEmail } from "../lib/auth";
 
 /**
  * ヘッダーの右端に置く、ログインのボタンとアカウントのメニュー。ログインは任意。
- * 名前やメールアドレスは保存しないので、「Google でログイン中」とだけ出す。
+ * メールアドレスは DB に保存せず、このブラウザでログインしたときの Cookie から出す (`useAccountEmail`)。
  */
 export default function AccountMenu({ compact = false }: { compact?: boolean }) {
   const { data: session, isPending } = authClient.useSession();
+  const email = useAccountEmail(!!session);
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -53,7 +54,7 @@ export default function AccountMenu({ compact = false }: { compact?: boolean }) 
       </button>
       {isOpen && (
         <div className="absolute right-0 z-50 mt-2 w-60 rounded-box border border-base-300 bg-base-100 p-4 shadow-lg">
-          <p className="text-base-content/70 text-sm">Google でログイン中</p>
+          <p className="break-all text-base-content/70 text-sm">{loggedInLabel(email)}</p>
           <NavLink to="/account" className="btn btn-sm btn-outline mt-3 w-full" onClick={() => setIsOpen(false)}>
             アカウントと接続中のアプリ
           </NavLink>

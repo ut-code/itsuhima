@@ -1,6 +1,8 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import type { GoogleProfile } from "better-auth/social-providers";
 import { sql } from "drizzle-orm";
+import { decodeJwt } from "jose";
 import { authPlugins } from "./authPlugins.js";
 import type { Db } from "./db/index.js";
 import * as schema from "./db/schema.js";
@@ -22,15 +24,40 @@ const discardedTokens = {
 };
 
 /**
+ * Google の `sub` の HMAC (16 進)。DB にはこれを `sub` の代わりに残す。
+ * ダミーのメールアドレスにも使うので、大文字を含まない形にする (Better Auth はメールアドレスを小文字にする)。
+ * 鍵 (ACCOUNT_ID_SECRET) を替えたりなくしたりすると、全員が別のユーザーになる
+ */
+export async function hashGoogleSub(secret: string, sub: string) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`google:${sub}`)));
+  return [...mac].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
  * Better Auth (Google ログインと、MCP 向けの OAuth 認可サーバー) のインスタンス。
  * Workers では env (D1・シークレット) がリクエストの中でしか取れないので、リクエストごとに作る。
  * 大きいので、使うときだけ動的に import する (セッションの Cookie が無いリクエストでは作らない)。
  *
- * 個人情報を最小にするため、DB に残すのは Google の `sub` (`account.accountId`) だけにする。
+ * 個人情報を最小にするため、DB に残すのは Google の `sub` の HMAC (`account.accountId`) だけにする。
  * メールアドレス・名前・画像・Google のトークン・IP・User-Agent は保存しない。
+ * メールアドレスは、どのアカウントでログインしたかを本人に示すために受け取り、onSignIn に渡す
+ * (呼び出し側が、暗号化した Cookie に入れる。`lib/accountEmail.ts`)。
  */
-export function createAuth(env: Bindings, db: Db) {
+export function createAuth(
+  env: Bindings,
+  db: Db,
+  { onSignIn }: { onSignIn?: (account: { userId: string; email: string }) => void } = {},
+) {
   const acceptAnyIdToken = authTestOverrides.acceptAnyIdToken === true;
+  /** このリクエストでログインした Google アカウントのメールアドレス (セッションができたときに onSignIn に渡す) */
+  let signedInEmail: string | null = null;
 
   return betterAuth({
     baseURL: env.PUBLIC_ORIGIN,
@@ -43,11 +70,25 @@ export function createAuth(env: Bindings, db: Db) {
       google: {
         clientId: env.GOOGLE_CLIENT_ID,
         clientSecret: env.GOOGLE_CLIENT_SECRET,
-        // openid だけにする。ID トークンにも、メールアドレスと名前が入らない
+        // 名前と画像 (profile) は求めない。メールアドレスは、ログイン中のアカウントを示すためだけに受け取る
         disableDefaultScope: true,
-        scope: ["openid"],
-        // user.email は NOT NULL で、Better Auth はメールアドレスが無いとログインを止めるので、ダミーを入れる
-        mapProfileToUser: (profile) => ({ email: `${profile.sub}@google.invalid`, name: "", image: undefined }),
+        scope: ["openid", "email"],
+        // 勝手に 1 つのアカウントでログインしないよう、毎回アカウントを選ばせる
+        prompt: "select_account",
+        // sub を HMAC に置き換える (Better Auth は、ここで返した data.sub でアカウントを引く)。
+        // user.email は NOT NULL で、Better Auth はメールアドレスが無いとログインを止めるので、HMAC からダミーを作る
+        getUserInfo: async (token) => {
+          if (!token.idToken) return null;
+          const claims = decodeJwt(token.idToken);
+          if (typeof claims.sub !== "string") return null;
+          const sub = await hashGoogleSub(env.ACCOUNT_ID_SECRET, claims.sub);
+          signedInEmail = typeof claims.email === "string" ? claims.email : null;
+          return {
+            user: { email: `${sub}@google.invalid`, name: "", emailVerified: false },
+            // 名前などは求めていないので入っていない。メールアドレスは Better Auth に渡さない
+            data: { ...claims, sub, email: undefined } as unknown as GoogleProfile,
+          };
+        },
         // ID トークンでのログインは使わないので閉じる
         disableIdTokenSignIn: !acceptAnyIdToken,
         ...(acceptAnyIdToken ? { verifyIdToken: async () => true } : {}),
@@ -88,6 +129,9 @@ export function createAuth(env: Bindings, db: Db) {
       session: {
         create: {
           before: async (session) => ({ data: { ...session, ipAddress: null, userAgent: null } }),
+          after: async (session) => {
+            if (signedInEmail !== null) onSignIn?.({ userId: session.userId, email: signedInEmail });
+          },
         },
       },
       account: {

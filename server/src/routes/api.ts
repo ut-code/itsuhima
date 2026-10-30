@@ -5,6 +5,7 @@ import { actorMiddleware } from "../middleware/actor.js";
 import { rateLimitMiddleware } from "../middleware/rateLimit.js";
 import { visitedMiddleware } from "../middleware/visited.js";
 import { ServiceError, type ServiceErrorReason } from "../services/errors.js";
+import { authHandler } from "./auth.js";
 import eventsRoutes from "./events.js";
 import legacyRoutes from "./legacy.js";
 import meRoutes from "./me.js";
@@ -40,11 +41,7 @@ export const api = new Hono<AppEnv>()
     return c.json({ message: "Hello! イツヒマ？" });
   })
   // ログイン (Google) と、MCP クライアント向けの OAuth の認可サーバー (Better Auth)
-  .on(["GET", "POST"], "/auth/*", async (c) => {
-    // Better Auth は大きいので、使うときだけ読み込む
-    const { createAuth } = await import("../auth.js");
-    return createAuth(c.env, c.get("db")).handler(c.req.raw);
-  })
+  .on(["GET", "POST"], "/auth/*", authHandler)
   .route("/events", eventsRoutes)
   .route("/me", meRoutes)
   .route("/legacy", legacyRoutes)

@@ -4,7 +4,7 @@ import type { AppType } from "../../../server/src/routes/api";
 import DeleteAccountDialog from "../components/DeleteAccountDialog";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
-import { authClient, signInWithGoogle } from "../lib/auth";
+import { authClient, loggedInLabel, signInWithGoogle, useAccountEmail } from "../lib/auth";
 import dayjs from "../lib/dayjs";
 import { API_ENDPOINT, readErrorMessage } from "../utils";
 import { SCOPE_LABELS } from "./oauth/Consent";
@@ -22,6 +22,7 @@ type Connection = {
 /** アカウントのページ。ログインの状態、MCP で接続中のアプリ、アカウントの削除 */
 export default function AccountPage() {
   const { data: session, isPending } = authClient.useSession();
+  const email = useAccountEmail(!!session);
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
 
   return (
@@ -45,7 +46,10 @@ export default function AccountPage() {
           <>
             <section className="rounded-xl border border-base-300 bg-base-100 p-6 shadow-sm">
               <h2 className="font-bold text-lg">ログイン</h2>
-              <p className="mt-2 text-base-content/70 text-sm">Google でログイン中</p>
+              <p className="mt-2 break-all text-base-content/70 text-sm">{loggedInLabel(email)}</p>
+              <p className="mt-1 text-base-content/50 text-xs">
+                メールアドレスは保存していません。このブラウザでログインしたときに受け取ったものを表示しています。
+              </p>
             </section>
             <Connections />
             <section className="rounded-xl border border-base-300 bg-base-100 p-6 shadow-sm">

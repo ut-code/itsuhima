@@ -1,5 +1,5 @@
 import { LuInfo, LuLock } from "react-icons/lu";
-import { authClient, signInWithGoogle } from "../lib/auth";
+import { authClient, loggedInLabel, signInWithGoogle, useAccountEmail } from "../lib/auth";
 
 const TARGET_LABEL = { event: "イベント", answer: "回答" } as const;
 
@@ -16,6 +16,7 @@ export function OwnershipHint({
   showLoginButton?: boolean;
 }) {
   const { data: session, isPending } = authClient.useSession();
+  const email = useAccountEmail(!!session);
   if (isPending) return null;
   const label = TARGET_LABEL[target];
 
@@ -23,7 +24,9 @@ export function OwnershipHint({
     return (
       <p className="flex items-start gap-2 text-base-content/70 text-sm">
         <LuLock className="mt-0.5 h-4 w-4 shrink-0" />
-        <span>Google でログイン中なので、あなただけが編集できる{label}になります。</span>
+        <span>
+          {loggedInLabel(email)}なので、あなただけが編集できる{label}になります。
+        </span>
       </p>
     );
   }

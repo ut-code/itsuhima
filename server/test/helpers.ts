@@ -10,7 +10,8 @@ function apiClient(cookies: string[] = []) {
   const request = (path: string, init: RequestInit = {}) => {
     const headers = new Headers(init.headers);
     if (cookies.length > 0) {
-      headers.set("Cookie", cookies.join("; "));
+      // Cookie を指定したリクエストは、そのまま送る
+      if (!headers.has("Cookie")) headers.set("Cookie", cookies.join("; "));
       // Better Auth は、Cookie 付きの POST の Origin を確かめる
       headers.set("Origin", env.PUBLIC_ORIGIN);
     }

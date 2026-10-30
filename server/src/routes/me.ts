@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
 import type { AppEnv } from "../env.js";
+import { readAccountEmail } from "../lib/accountEmail.js";
 import { listConnections, revokeConnection } from "../services/connections.js";
 import { listMyEvents } from "../services/events.js";
 
@@ -19,6 +20,12 @@ const requireLogin = createMiddleware<AppEnv & { Variables: { userId: string } }
 /** ログインした人のもの */
 const router = new Hono<AppEnv>()
   .use("*", requireLogin)
+
+  // ログイン中の Google アカウント。email は、このブラウザでログインしたときに Cookie に入れたもの (無ければ null)
+  .get("/", async (c) => {
+    const email = await readAccountEmail(c.env, c.req.header("Cookie"), c.get("userId"));
+    return c.json({ email }, 200);
+  })
 
   // 作ったイベントと回答したイベント。client は localStorage の控えと合わせて一覧を出す
   .get("/events", async (c) => {

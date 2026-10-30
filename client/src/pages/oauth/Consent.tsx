@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Header from "../../components/Header";
-import { authClient } from "../../lib/auth";
+import { authClient, loggedInLabel, useAccountEmail } from "../../lib/auth";
 
 /** スコープの説明。知らないスコープはそのまま出す */
 export const SCOPE_LABELS: Record<string, string> = {
@@ -34,6 +34,7 @@ export default function ConsentPage() {
   })();
 
   const { data: session, isPending } = authClient.useSession();
+  const email = useAccountEmail(!!session);
   const [clientName, setClientName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +79,9 @@ export default function ConsentPage() {
               <h1 className="mb-2 font-bold text-xl">
                 「{clientName ?? "不明なアプリ"}」にイツヒマの操作を許可しますか？
               </h1>
-              <p className="mb-4 text-base-content/70 text-sm">Google でログイン中のアカウントとして操作します。</p>
+              <p className="mb-4 break-all text-base-content/70 text-sm">
+                {loggedInLabel(email)}。このアカウントとして操作します。
+              </p>
               <dl className="mb-4 rounded-lg bg-base-200 p-3 text-sm">
                 <dt className="text-base-content/60">許可した後に戻る先</dt>
                 <dd className="font-mono">{redirectHost || "(不明)"}</dd>

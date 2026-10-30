@@ -79,7 +79,7 @@ REST fetch ではなく `client.events[":eventId"].$get(...)` 形式で呼び出
 - `participant`: 回答。名前の重複は許す。ログインした人は、1 つのイベントに 1 つだけ。
 - `slot`: 参加者が参加できる時間帯。`startAt` / `endAt` は UTC の ISO 8601 で、日をまたがない。
 - `history`: イベントの設定と回答を変える・消す前のスナップショット。履歴から戻すのに使う。
-- `user` / `session` / `account` / `verification`、`jwks`、`oauth*`: Better Auth (`npx auth generate` で生成。手で変えない)。個人情報を持たないよう、Google の `sub` のほかは保存しない (`server/src/auth.ts`)。
+- `user` / `session` / `account` / `verification`、`jwks`、`oauth*`: Better Auth (`npx auth generate` で生成。手で変えない)。個人情報を持たないよう、Google の `sub` は HMAC (鍵は `ACCOUNT_ID_SECRET`) にして保存し、ほかは保存しない (`server/src/auth.ts`)。メールアドレスは、ログイン中のアカウントを示すためだけに受け取り、暗号化した Cookie に入れる (`server/src/lib/accountEmail.ts`)。
 - `legacyBrowserEvent`: 前の browserId で作ったイベントと回答したイベント。前の一覧を client の控えに移す (交換する) ためだけに残す。
 
 日付と時間帯は、イベントの `timezone` の壁時計の値で持つ。Slot だけは実際の時刻なので UTC で持つ。API も同じ形式で受け取って返す。

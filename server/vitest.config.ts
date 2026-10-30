@@ -15,6 +15,7 @@ export default defineConfig(async () => ({
           NODE_ENV: "test",
           PUBLIC_ORIGIN: "http://localhost:3000",
           BETTER_AUTH_SECRET: "test-better-auth-secret-0123456789abcdef",
+          ACCOUNT_ID_SECRET: "test-account-id-secret-0123456789abcdef",
           GOOGLE_CLIENT_ID: "test-google-client-id",
           GOOGLE_CLIENT_SECRET: "test-google-client-secret",
         },

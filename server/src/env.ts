@@ -22,8 +22,10 @@ export type Bindings = {
    * Google のリダイレクト URI (<PUBLIC_ORIGIN>/api/auth/callback/google) もここから作るので、リクエストの Host からは決めない
    */
   PUBLIC_ORIGIN: string;
-  /** Better Auth の署名・暗号化の鍵 (32 文字以上のランダム値) */
+  /** Better Auth の署名・暗号化の鍵 (32 文字以上のランダム値)。ログイン中のメールアドレスの Cookie の暗号化にも使う */
   BETTER_AUTH_SECRET: string;
+  /** Google の sub を HMAC にする鍵 (32 文字以上のランダム値)。替えたりなくしたりすると、全員が別のユーザーになる */
+  ACCOUNT_ID_SECRET: string;
   /** Google の OAuth クライアント (ログイン) */
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
