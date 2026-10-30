@@ -1,16 +1,13 @@
 // このブラウザでログインせずに作ったイベントと回答したイベントを、localStorage に控える。
-// ログインしていないときのホームの一覧は、この控えから出す。
-// ログイン中は読みも書きもしない (別の本人のものを画面の裏に置かないため)。ログインしたとわかったら消す (`clearMyEvents`)。
-// 足す関数には、匿名で作った・回答したと確かめたものだけを渡す。確かめるのは呼ぶ側。
+// ゲストの状態は、この控えだけが持つ。ゲストのホームの一覧と、`/` からホームに移るか (`pages/Landing.tsx`) は、これで決める。
+// ログイン中は読まない (別の本人のものを画面の裏に置かないため)。ログインしたとわかったら消す (`clearMyEvents`)。
+// 足すのは、作成と回答の応答で匿名 (`hasOwner: false`) と確かめたときだけ。開いただけでは足さない。確かめるのは呼ぶ側。
 // 名前や日付は控えず、表示するときにサーバーから取る (控えた後の変更が古いまま残らないように)。
 // 権限には使わない (URL を知っている人は誰でも編集できる)。消えても、イベントの URL があれば開ける。
 
 import { z } from "zod";
 
 const STORAGE_KEY = "itsuhima:myEvents";
-
-/** 前の一覧 (browserId でサーバーが持っていたもの) を、控えに移したか */
-const LEGACY_EXCHANGED_KEY = "itsuhima:legacyExchanged";
 
 const myEventSchema = z.object({
   id: z.string(),
@@ -94,22 +91,5 @@ export function clearMyEvents() {
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
     console.error("Failed to clear my events:", error);
-  }
-}
-
-export function isLegacyExchanged() {
-  try {
-    return localStorage.getItem(LEGACY_EXCHANGED_KEY) !== null;
-  } catch (_) {
-    // localStorage が使えないなら、交換しても控えられない
-    return true;
-  }
-}
-
-export function markLegacyExchanged() {
-  try {
-    localStorage.setItem(LEGACY_EXCHANGED_KEY, "1");
-  } catch (error) {
-    console.error("Failed to mark legacy exchanged:", error);
   }
 }

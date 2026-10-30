@@ -4,7 +4,6 @@ import { z } from "zod";
 import { editEventReqSchema, eventReqSchema, submitReqSchema } from "../../../common/validators.js";
 import type { AppEnv } from "../env.js";
 import { ID_PATTERN } from "../lib/id.js";
-import { visitedMiddleware } from "../middleware/visited.js";
 import {
   createEvent,
   deleteAvailability,
@@ -35,8 +34,6 @@ const eventIdsQuerySchema = z.object({
 });
 
 const router = new Hono<AppEnv>()
-  // 書き込んだら (作成・編集・削除・戻す)、`/` から `/home` に飛ぶようにする
-  .use("*", visitedMiddleware)
   // イベント作成
   .post("/", zValidator("json", eventReqSchema), async (c) => {
     const event = await createEvent(c.get("db"), c.get("actor"), c.req.valid("json"));

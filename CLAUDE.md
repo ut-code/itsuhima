@@ -45,7 +45,7 @@ server/    Hono + Drizzle バックエンド (Cloudflare Workers + D1)。client 
 
 - 静的アセット (`client/dist`) は Worker を通らずに配信する。SPA のパスは `index.html` になる。
 - `server/wrangler.toml` の `run_worker_first` に当たるパスだけ Worker を通る。`main.ts` はパスの最初の区切りだけで振り分け、1 行を `run_worker_first` の 1 項目に対応させる。`server/src/routes/` の各ファイルは自分のプレフィックスより下だけを受け持ち、受け持ちは重ならない (ハンドラが 1 つだけなら Hono のルーターにせず、関数を `.get` で載せる)。ルートを足すときは両方に足す:
-  - `/`: ログインしていれば (セッションの Cookie があれば)、ゲストならイベントか回答を書き込んだことがあれば (`visited` の Cookie があれば)、`/home` にリダイレクトする (`landing.ts`)。ログアウトとアカウントの削除で `visited` を消す。`visited` は `/api/events` の下の書き込み (作成・編集・削除・戻す) でだけ付ける (`middleware/visited.ts`)
+  - `/`: ログインしていれば (セッションの Cookie があれば) `/home` にリダイレクトする (`landing.ts`)。ゲストは、client が控えを見て決める (`client/src/pages/Landing.tsx`)
   - `/e/:eventId`: `index.html` の OG メタタグにイベント名と日程を入れる (`eventPage.ts`)
   - `/og/:eventId`: OG 画像を生成し、Cache API にキャッシュする (`ogImage.tsx`。画像を作るライブラリ (`@cloudflare/pages-plugin-vercel-og`) は初期化が重いので、作るときだけ動的に import する)
   - `/api/*`: API (`api.ts`。`/api/auth/*` は Better Auth (Google ログインと、MCP 向けの OAuth の認可サーバー、`server/src/auth.ts`))
@@ -93,8 +93,8 @@ API のレスポンスでは、イベントと回答に、編集できるか (`c
 
 - 匿名のイベントと回答は、URL を知っている人は誰でも編集・削除できる。ログインして作ったイベントは持ち主だけ、ログインして出した回答はその人だけが編集できる (イベントの持ち主は、回答を消すことだけできる)。間違えて変えたときのために、論理削除と変更の履歴 (戻せる人は、編集できる人と同じ) と、書き込みのレート制限がある。
 - 本人は `Actor = { userId: string | null }` で表し (`middleware/actor.ts` がセッションから決める)、判定は `server/src/services/permissions.ts` の `canEditEvent` / `canEditParticipant` / `canDeleteParticipant` に集める。API は持ち主の id を返さず、`canEdit`・`hasOwner`・`isMine` だけを返す。
-- 「このブラウザでログインせずに作ったイベント・回答したイベント」は、client が localStorage に控える (`client/src/lib/myEvents.ts`)。控えはログインしていない間だけ使い、ログインしたとわかったら消す (`App.tsx`)。ログイン中のホームの一覧は `GET /api/me/events` だけから出し、控えと混ぜない。ログインする前に、控えが消えることを確かめる (`components/SignInWarning.tsx` の `useSignIn`)。控えは権限には使わない。
-- ログインしていない人は「ゲスト」として扱う。ヘッダーのメニューから、このブラウザの記録 (控え・前の一覧・`visited` の Cookie) を削除できる (`components/DeleteGuestDataDialog.tsx`、`DELETE /api/visited`)。ログアウトとアカウントの削除に当たるが、イベントと回答はサーバーに残る。
+- ログインしていない人は「ゲスト」として扱う。ゲストの状態は、client の localStorage の控え (`client/src/lib/myEvents.ts`) だけが持つ (サーバーはゲストを識別しない)。控えに足すのは、作成と回答の応答が匿名 (`hasOwner: false`) のときだけで、開いただけでは足さない。ログインしたとわかったら消す (`components/SessionEffects.tsx`)。ログイン中のホームの一覧は `GET /api/me/events` だけから出し、控えと混ぜない。ログインする前に、控えが消えることを確かめる (`components/SignInWarning.tsx` の `useSignIn`)。控えは権限には使わない。
+- ゲストは、ヘッダーのメニューから、このブラウザの記録 (控え) を削除できる (`components/DeleteGuestDataDialog.tsx`)。ログアウトとアカウントの削除に当たる。イベントと回答はサーバーに残る。ログアウト・アカウントの削除・ゲストの記録の削除の後は、どれも `/` に移る。
 
 ### カレンダーの状態管理（CalendarMatrix）
 

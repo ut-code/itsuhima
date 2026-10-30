@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { LuChevronRight, LuCircleCheck, LuPalette, LuSmartphone } from "react-icons/lu";
-import { NavLink } from "react-router";
+import { Navigate, NavLink } from "react-router";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
+import { loadMyEvents } from "../lib/myEvents";
 
 function HeroSection() {
   return (
@@ -122,7 +124,14 @@ function LoginSection() {
   );
 }
 
-export default function LandingPage() {
+/**
+ * @param redirectIfUsed このブラウザでゲストとして使ったことがあれば (控えが有れば)、描く前にホームに移る。
+ *   `/` だけで使う (`/about` は Google の同意画面に登録したホームページなので、移らない)。
+ *   ログインしていれば、サーバー (`server/src/routes/landing.ts`) がもう `/home` に移している。
+ */
+export default function LandingPage({ redirectIfUsed = false }: { redirectIfUsed?: boolean }) {
+  const [used] = useState(() => redirectIfUsed && loadMyEvents().length > 0);
+  if (used) return <Navigate to="/home" replace />;
   return (
     <div className="min-h-screen bg-base-200 text-base-content">
       <Header />

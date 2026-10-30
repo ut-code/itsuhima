@@ -17,6 +17,8 @@ export default function AccountMenu({ compact = false }: { compact?: boolean }) 
   const ref = useRef<HTMLDivElement>(null);
   const { signIn, dialog } = useSignIn();
   const [isDeletingGuestData, setIsDeletingGuestData] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [signOutFailed, setSignOutFailed] = useState(false);
 
   // 外側を押すか Esc で閉じる
   useEffect(() => {
@@ -60,14 +62,26 @@ export default function AccountMenu({ compact = false }: { compact?: boolean }) 
               <button
                 type="button"
                 className="btn btn-sm btn-ghost mt-2 w-full"
+                disabled={isSigningOut}
                 onClick={async () => {
-                  await authClient.signOut();
-                  // ログインしているときだけ見えていたイベントを消すため、読み込み直す
-                  window.location.reload();
+                  setIsSigningOut(true);
+                  setSignOutFailed(false);
+                  const { error } = await authClient.signOut();
+                  if (error) {
+                    setSignOutFailed(true);
+                    setIsSigningOut(false);
+                    return;
+                  }
+                  // 初めて来たときと同じ画面に戻す (ログインしているときだけ見えていたものも消える)
+                  window.location.assign("/");
                 }}
               >
+                {isSigningOut && <span className="loading loading-spinner loading-sm" />}
                 ログアウト
               </button>
+              {signOutFailed && (
+                <p className="mt-2 text-error text-xs">ログアウトできませんでした。もう一度お試しください。</p>
+              )}
             </>
           ) : (
             <>

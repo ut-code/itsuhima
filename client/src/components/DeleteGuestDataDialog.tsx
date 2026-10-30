@@ -1,27 +1,16 @@
-import { hc } from "hono/client";
 import { useEffect, useRef, useState } from "react";
-import type { AppType } from "../../../server/src/routes/api";
-import { clearMyEvents, isLegacyExchanged, loadMyEvents, markLegacyExchanged } from "../lib/myEvents";
-import { API_ENDPOINT } from "../utils";
+import { forgetLegacyBrowser } from "../lib/legacyExchange";
+import { clearMyEvents, loadMyEvents } from "../lib/myEvents";
 import { RememberedEventLinks } from "./RememberedEventLinks";
-
-const client = hc<AppType>(API_ENDPOINT);
 
 /**
  * ゲスト (ログインしていない人) が、このブラウザの記録を削除する。ログイン中のアカウントの削除に当たる。
- * 消すのは、ホームの一覧の控え、前の一覧 (未交換なら交換して捨てる)、`/` から `/home` に飛ぶための Cookie。
+ * 消すのは、ホームの一覧の控えと、(一時的) 前の一覧と browserId の Cookie。
  * イベントと回答はサーバーに残る (URL を知っている人は誰でも編集できるので、本人のものとは決められない)。
  */
 async function deleteGuestData() {
-  if (!isLegacyExchanged()) {
-    // 前の一覧がサーバーに残っていれば、交換して捨てる (サーバーの行は交換で消える)
-    const res = await client.legacy.exchange.$post();
-    if (res.status !== 200) throw new Error("Failed to exchange legacy events");
-    markLegacyExchanged();
-  }
+  await forgetLegacyBrowser();
   clearMyEvents();
-  const res = await client.visited.$delete();
-  if (!res.ok) throw new Error("Failed to delete visited cookie");
 }
 
 /** 確かめてから、このブラウザの記録を削除する。描くと開き、閉じると onClose を呼ぶ */

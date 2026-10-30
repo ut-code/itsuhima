@@ -3,7 +3,6 @@ import { createDb } from "../db/index.js";
 import type { AppEnv } from "../env.js";
 import { actorMiddleware } from "../middleware/actor.js";
 import { rateLimitMiddleware } from "../middleware/rateLimit.js";
-import { deleteVisited } from "../middleware/visited.js";
 import { ServiceError, type ServiceErrorReason } from "../services/errors.js";
 import { authHandler } from "./auth.js";
 import eventsRoutes from "./events.js";
@@ -44,8 +43,6 @@ export const api = new Hono<AppEnv>()
   .route("/events", eventsRoutes)
   .route("/me", meRoutes)
   .route("/legacy", legacyRoutes)
-  // ゲスト (ログインしていない人) が、このブラウザの記録を削除する
-  .delete("/visited", deleteVisited)
   // `/api` の下に未定義のパスは、画面 (index.html) に落とさず 404 にする
   .all("*", (c) => c.json({ message: "Not Found" }, 404))
   .onError((err, c) => {

@@ -102,7 +102,7 @@ describe("ログイン中のアカウントの表示 (GET /me)", () => {
     expect(await res.json()).toEqual({ email: null });
   });
 
-  test("ログアウトすると、メールアドレスと visited の Cookie を消す", async () => {
+  test("ログアウトすると、メールアドレスの Cookie を消す", async () => {
     const user = await login(alice);
 
     const res = await user.post("/auth/sign-out", {});
@@ -110,7 +110,6 @@ describe("ログイン中のアカウントの表示 (GET /me)", () => {
     expect(res.status).toBe(200);
     const cookies = res.headers.getSetCookie();
     expect(cookies.some((c) => c.startsWith("itsuhima.hint=;") && /Max-Age=0/.test(c))).toBe(true);
-    expect(cookies.some((c) => c.startsWith("visited=;") && /Max-Age=0/.test(c))).toBe(true);
   });
 
   test("ログインしていなければ 401", async () => {
@@ -119,7 +118,7 @@ describe("ログイン中のアカウントの表示 (GET /me)", () => {
 });
 
 describe("アカウントの削除", () => {
-  test("メールアドレスと visited の Cookie を消す", async () => {
+  test("メールアドレスの Cookie を消す", async () => {
     const user = await login(alice);
 
     const res = await user.post("/auth/delete-user", {});
@@ -127,7 +126,6 @@ describe("アカウントの削除", () => {
     expect(res.status).toBe(200);
     const cookies = res.headers.getSetCookie();
     expect(cookies.some((c) => c.startsWith("itsuhima.hint=;") && /Max-Age=0/.test(c))).toBe(true);
-    expect(cookies.some((c) => c.startsWith("visited=;") && /Max-Age=0/.test(c))).toBe(true);
   });
 
   test("作ったイベントは、ほかの人の回答ごと消える", async () => {
