@@ -1,3 +1,4 @@
+import type { Context } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { serialize } from "hono/utils/cookie";
@@ -36,4 +37,10 @@ export function clearVisitedCookie(env: Bindings) {
     sameSite: "Lax",
     maxAge: 0,
   });
+}
+
+/** ゲストがこのブラウザの記録を削除したとき。`/` を開いても、`/home` にリダイレクトしないようにする */
+export function deleteVisited(c: Context<AppEnv>) {
+  c.header("Set-Cookie", clearVisitedCookie(c.env), { append: true });
+  return c.body(null, 204);
 }

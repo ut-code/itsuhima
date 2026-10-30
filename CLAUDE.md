@@ -95,6 +95,7 @@ API のレスポンスでは、イベントと回答に、編集できるか (`c
 - 匿名のイベントと回答は、URL を知っている人は誰でも編集・削除できる。ログインして作ったイベントは持ち主だけ、ログインして出した回答はその人だけが編集できる (イベントの持ち主は、回答を消すことだけできる)。間違えて変えたときのために、論理削除と変更の履歴 (戻せる人は、編集できる人と同じ) と、書き込みのレート制限がある。
 - 本人は `Actor = { userId: string | null }` で表し (`middleware/actor.ts` がセッションから決める)、判定は `server/src/services/permissions.ts` の `canEditEvent` / `canEditParticipant` / `canDeleteParticipant` に集める。API は持ち主の id を返さず、`canEdit`・`hasOwner`・`isMine` だけを返す。
 - 「このブラウザでログインせずに作ったイベント・回答したイベント」は、client が localStorage に控える (`client/src/lib/myEvents.ts`)。控えはログインしていない間だけ使い、ログインしたとわかったら消す (`App.tsx`)。ログイン中のホームの一覧は `GET /api/me/events` だけから出し、控えと混ぜない。ログインする前に、控えが消えることを確かめる (`components/SignInWarning.tsx` の `useSignIn`)。控えは権限には使わない。
+- ログインしていない人は「ゲスト」として扱う。ヘッダーのメニューから、このブラウザの記録 (控え・前の一覧・`visited` の Cookie) を削除できる (`components/DeleteGuestDataDialog.tsx`、`DELETE /api/visited`)。ログアウトとアカウントの削除に当たるが、イベントと回答はサーバーに残る。
 - 前の browserId の Cookie は、交換の口 (`POST /api/legacy/exchange`、`server/src/routes/legacy.ts`) だけが読む。署名鍵は `COOKIE_SECRET` (ローテーション中は `COOKIE_SECRET_PREVIOUS` も)。
 
 ### カレンダーの状態管理（CalendarMatrix）
