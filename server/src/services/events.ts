@@ -51,7 +51,7 @@ export async function createEvent(db: Db, actor: Actor, input: CreateEventInput)
     ),
   ]);
 
-  return { id: event.id, name: event.name };
+  return { id: event.id, name: event.name, hasOwner: event.ownerUserId !== null };
 }
 
 /**

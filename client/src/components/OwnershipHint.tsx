@@ -1,5 +1,6 @@
 import { LuInfo, LuLock } from "react-icons/lu";
-import { authClient, loggedInLabel, signInWithGoogle, useAccountEmail } from "../lib/auth";
+import { authClient, loggedInLabel, useAccountEmail } from "../lib/auth";
+import { useSignIn } from "./SignInWarning";
 
 const TARGET_LABEL = { event: "イベント", answer: "回答" } as const;
 
@@ -17,6 +18,7 @@ export function OwnershipHint({
 }) {
   const { data: session, isPending } = authClient.useSession();
   const email = useAccountEmail(!!session);
+  const { signIn, dialog } = useSignIn();
   if (isPending) return null;
   const label = TARGET_LABEL[target];
 
@@ -37,7 +39,7 @@ export function OwnershipHint({
         ログインしていないので、URL を知っている人は誰でもこの{label}を編集できます。
         {showLoginButton ? (
           <>
-            <button type="button" className="link link-primary" onClick={() => signInWithGoogle()}>
+            <button type="button" className="link link-primary" onClick={() => signIn()}>
               Google でログイン
             </button>
             してから作ると、あなただけが編集できます。
@@ -46,6 +48,7 @@ export function OwnershipHint({
           "ログインしてから回答すると、あなただけが編集できます。"
         )}
       </p>
+      {dialog}
     </div>
   );
 }

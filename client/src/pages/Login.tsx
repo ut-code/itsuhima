@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import Header from "../components/Header";
-import { authClient, signInWithGoogle } from "../lib/auth";
+import { useSignIn } from "../components/SignInWarning";
+import { authClient } from "../lib/auth";
 
 /**
  * MCP クライアント (Claude など) と接続するときのログイン画面。
@@ -9,6 +10,7 @@ import { authClient, signInWithGoogle } from "../lib/auth";
  */
 export default function LoginPage() {
   const { data: session, isPending } = authClient.useSession();
+  const { signIn, dialog } = useSignIn();
   const resumeUrl = `/api/auth/oauth2/authorize${window.location.search}`;
 
   useEffect(() => {
@@ -29,10 +31,11 @@ export default function LoginPage() {
             type="button"
             className="btn btn-primary w-full"
             disabled={isPending || !!session}
-            onClick={() => signInWithGoogle(resumeUrl)}
+            onClick={() => signIn(resumeUrl)}
           >
             Google でログイン
           </button>
+          {dialog}
         </div>
       </main>
     </div>

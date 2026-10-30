@@ -23,7 +23,7 @@ import Header from "../components/Header";
 import { OwnershipHint } from "../components/OwnershipHint";
 import { EXTERNAL_LINKS } from "../constants/links";
 import dayjs from "../lib/dayjs";
-import { forgetMyEvents, rememberMyEvent } from "../lib/myEvents";
+import { rememberMyEvent } from "../lib/myEvents";
 import { eventReviver } from "../revivers";
 import type { Event } from "../types";
 import { API_ENDPOINT, readErrorMessage } from "../utils";
@@ -199,8 +199,9 @@ export default function EventFormPage() {
 
       setSubmitLoading(false);
       if (res.status === 201) {
-        const { id, name } = await res.json();
-        rememberMyEvent({ id, isHost: true });
+        const { id, name, hasOwner } = await res.json();
+        // 匿名で作れたものだけを控える
+        if (!hasOwner) rememberMyEvent({ id, isHost: true });
         setDialogStatus({
           eventId: id,
           eventName: name,
@@ -738,7 +739,7 @@ export default function EventFormPage() {
                     if (!res.ok) {
                       throw new Error("削除に失敗しました。");
                     }
-                    forgetMyEvents([event.id]);
+                    // 控えからは外さない。ホームに「削除済み」で出し、戻したときも「主催」のままにする
                     // 削除されたイベントのページで、すぐに元に戻せるようにする
                     navigate(`/e/${event.id}`);
                     setToast({ message: "イベントを削除しました。", variant: "success" });

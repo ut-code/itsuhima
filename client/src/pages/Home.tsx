@@ -5,6 +5,7 @@ import { NavLink } from "react-router";
 import type { AppType } from "../../../server/src/routes/api";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
+import { fetchEventsByIds } from "../lib/eventsByIds";
 import {
   forgetMyEvents,
   isLegacyExchanged,
@@ -18,11 +19,8 @@ import { API_ENDPOINT, readErrorMessage } from "../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
 
-/** 一度に引けるイベントの数 (サーバーの `GET /events?ids=` の上限) */
-const MAX_EVENT_IDS = 100;
-
 /**
- * 前の一覧 (browserId でサーバーが持っていたもの) を、一度だけ控えに移す。
+ * 前の一覧 (browserId でサーバーが持っていたもの) を、一度だけ控えに移す。ログインしていないときだけ呼ぶ。
  * 失敗したら、次にホームを開いたときにやり直す。
  */
 async function exchangeLegacyEvents() {
@@ -37,15 +35,38 @@ async function exchangeLegacyEvents() {
   }
 }
 
-/** ログインしていれば、ログインして作ったイベントと回答したイベント。していなければ空 */
-async function fetchLoggedInEvents() {
+/** ログインしていないとき。このブラウザの控えから一覧を出す */
+async function fetchRememberedEvents() {
+  await exchangeLegacyEvents();
+  const myEvents = loadMyEvents();
+  const isHostById = new Map(myEvents.map((e) => [e.id, e.isHost]));
+  const events = await fetchEventsByIds(myEvents.map((e) => e.id));
+  // 返ってこなかったイベントは、もう無い (完全に消えた) ので控えから外す
+  const found = new Set(events.map((e) => e.id));
+  forgetMyEvents(myEvents.map((e) => e.id).filter((id) => !found.has(id)));
+  return events.map((e) => briefEventReviver(e, isHostById.get(e.id) ?? false));
+}
+
+/**
+ * ログイン中ならアカウントのイベントだけ、していなければこのブラウザの控えから一覧を出す。
+ * 2 つを混ぜない (ログイン中は控えを読まない)。
+ */
+async function fetchInvolvedEvents() {
   const res = await client.me.events.$get();
-  if (res.status !== 200) return [];
-  return await res.json();
+  if (res.status === 200) {
+    const events = await res.json();
+    return { loggedIn: true, events: events.map((e) => briefEventReviver(e, e.isHost)) };
+  }
+  if (res.status === 401) {
+    return { loggedIn: false, events: await fetchRememberedEvents() };
+  }
+  // ログインしているかわからないので、控えにフォールバックしない
+  throw new Error(await readErrorMessage(res, "イベントの取得に失敗しました。"));
 }
 
 export default function HomePage() {
   const [involvedEvents, setInvolvedEvents] = useState<BriefEvent[] | null>(null);
+  const [loggedIn, setLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{
     message: string;
@@ -53,35 +74,12 @@ export default function HomePage() {
   } | null>(null);
 
   useEffect(() => {
-    const fetchInvolvedEvents = async () => {
+    const load = async () => {
       setLoading(true);
       try {
-        const [, loggedInEvents] = await Promise.all([exchangeLegacyEvents(), fetchLoggedInEvents()]);
-        const myEvents = loadMyEvents();
-        const isHostById = new Map(myEvents.map((e) => [e.id, e.isHost]));
-        // ログインして作った・回答したイベントは、`/me/events` が名前などを返すので、控えから引かない
-        const loggedInIds = new Set(loggedInEvents.map((e) => e.id));
-        const rest = myEvents.filter((e) => !loggedInIds.has(e.id));
-        const chunks = [];
-        for (let i = 0; i < rest.length; i += MAX_EVENT_IDS) {
-          chunks.push(rest.slice(i, i + MAX_EVENT_IDS).map((e) => e.id));
-        }
-        const results = await Promise.all(
-          chunks.map(async (ids) => {
-            const res = await client.events.$get({ query: { ids: ids.join(",") } });
-            if (res.status !== 200) {
-              throw new Error(await readErrorMessage(res, "イベントの取得に失敗しました。"));
-            }
-            return { ids, events: await res.json() };
-          }),
-        );
-        // 返ってこなかったイベントは、もう無い (完全に消えた) ので控えから外す
-        const found = new Set(results.flatMap((r) => r.events.map((e) => e.id)));
-        forgetMyEvents(results.flatMap((r) => r.ids).filter((id) => !found.has(id)));
-        setInvolvedEvents([
-          ...loggedInEvents.map((e) => briefEventReviver(e, e.isHost || (isHostById.get(e.id) ?? false))),
-          ...results.flatMap((r) => r.events.map((e) => briefEventReviver(e, isHostById.get(e.id) ?? false))),
-        ]);
+        const result = await fetchInvolvedEvents();
+        setLoggedIn(result.loggedIn);
+        setInvolvedEvents(result.events);
       } catch (error) {
         console.error("Error fetching involved events:", error);
         setToast({
@@ -94,7 +92,7 @@ export default function HomePage() {
         setLoading(false);
       }
     };
-    fetchInvolvedEvents();
+    load();
   }, []);
 
   return (
@@ -116,7 +114,7 @@ export default function HomePage() {
           ) : involvedEvents && involvedEvents.length > 0 ? (
             <EventDashboard involvedEvents={involvedEvents} />
           ) : (
-            <EmptyState />
+            <EmptyState loggedIn={loggedIn} />
           )}
         </main>
         <Footer />
@@ -212,7 +210,7 @@ function EventRow({ event, isLast }: { event: BriefEvent; isLast: boolean }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ loggedIn }: { loggedIn: boolean }) {
   return (
     <div className="flex min-h-[300px] flex-col items-center justify-center rounded-xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
       <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-base-200">
@@ -220,7 +218,10 @@ function EmptyState() {
       </div>
       <h3 className="mb-2 font-bold text-base-content text-lg">まだイベントがありません</h3>
       <p className="max-w-sm text-base-content/50 text-sm">
-        「新規作成」ボタンから、新しい日程調整を始めましょう。このブラウザで作ったイベントと回答したイベントが、ここに出ます。ログインしていれば、別の端末でログインして作ったものも出ます。
+        「新規作成」ボタンから、新しい日程調整を始めましょう。
+        {loggedIn
+          ? "このアカウントで作ったイベントと回答したイベントが、ここに出ます。別の端末でログインして作ったものも出ます。"
+          : "このブラウザでログインせずに作ったイベントと回答したイベントが、ここに出ます。"}
       </p>
     </div>
   );

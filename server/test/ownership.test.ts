@@ -23,6 +23,15 @@ async function listHistory(client: ApiClient, id: string) {
 }
 
 describe("ログインして作ったイベント", () => {
+  test("作成の応答で hasOwner が true になる", async () => {
+    const owner = await login(alice);
+
+    const res = await owner.post("/events", eventInput());
+
+    expect(res.status).toBe(201);
+    expect(await res.json()).toMatchObject({ hasOwner: true });
+  });
+
   test("持ち主だけが、設定を変え、削除し、戻せる", async () => {
     const owner = await login(alice);
     const other = await login(bob);

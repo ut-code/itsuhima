@@ -1,8 +1,9 @@
 import { hc } from "hono/client";
 import { type RefObject, useEffect, useState } from "react";
 import type { AppType } from "../../../server/src/routes/api";
-import { authClient, signInWithGoogle } from "../lib/auth";
+import { authClient } from "../lib/auth";
 import { API_ENDPOINT } from "../utils";
+import { useSignIn } from "./SignInWarning";
 
 const client = hc<AppType>(API_ENDPOINT);
 
@@ -17,6 +18,7 @@ export default function DeleteAccountDialog({ ref }: { ref: RefObject<HTMLDialog
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<DeleteError | null>(null);
   /** 消えるイベントと、残る回答の数。読めなければ null */
+  const { signIn, dialog } = useSignIn();
   const [counts, setCounts] = useState<{ hosted: number; answered: number } | null>(null);
 
   useEffect(() => {
@@ -65,9 +67,10 @@ export default function DeleteAccountDialog({ ref }: { ref: RefObject<HTMLDialog
         {error === "session_expired" && (
           <div className="mb-2 rounded-lg bg-warning/10 px-3 py-2 text-sm">
             <p className="text-base-content/80">安全のため、ログインし直してから削除してください。</p>
-            <button type="button" className="btn btn-sm btn-outline mt-2" onClick={() => signInWithGoogle()}>
+            <button type="button" className="btn btn-sm btn-outline mt-2" onClick={() => signIn()}>
               Google でログインし直す
             </button>
+            {dialog}
           </div>
         )}
         {error === "unknown" && (
