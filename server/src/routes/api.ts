@@ -7,6 +7,7 @@ import eventsRoutes from "./events.js";
 
 const serviceErrorStatus = {
   event_not_found: 404,
+  event_deleted: 410,
   submission_not_found: 404,
   not_host: 403,
   already_submitted: 409,

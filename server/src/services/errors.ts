@@ -3,6 +3,7 @@
  */
 export type ServiceErrorReason =
   | "event_not_found"
+  | "event_deleted"
   | "submission_not_found"
   | "not_host"
   | "already_submitted"

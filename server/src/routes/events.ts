@@ -31,8 +31,12 @@ const router = new Hono<AppEnv>()
   // イベント取得
   .get("/:eventId", zValidator("param", eventIdParamsSchema), async (c) => {
     const { eventId } = c.req.valid("param");
-    const event = await getEvent(c.get("db"), c.get("actor"), eventId);
-    return c.json(event, 200);
+    const result = await getEvent(c.get("db"), c.get("actor"), eventId);
+    if (result.status === "deleted") {
+      // 削除されたイベントのページに、名前と戻すボタンを出すのに使う
+      return c.json({ message: "このイベントは削除されました。", ...result.event }, 410);
+    }
+    return c.json(result.event, 200);
   })
 
   // イベント編集。省略したフィールドは変えない
@@ -42,7 +46,7 @@ const router = new Hono<AppEnv>()
     return c.json({ event }, 200);
   })
 
-  // イベント削除
+  // イベント削除 (論理削除)
   .delete("/:eventId", zValidator("param", eventIdParamsSchema), async (c) => {
     const { eventId } = c.req.valid("param");
     await deleteEvent(c.get("db"), c.get("actor"), eventId);

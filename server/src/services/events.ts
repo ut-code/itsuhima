@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, notInArray } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, notInArray } from "drizzle-orm";
 import type { z } from "zod";
 import type { editEventReqSchema, eventReqSchema, submitReqSchema } from "../../../common/validators.js";
 import { type Db, insertMany, runBatch } from "../db/index.js";
@@ -11,6 +11,9 @@ import { validateSlots } from "./slots.js";
 export type CreateEventInput = z.infer<typeof eventReqSchema>;
 export type UpdateEventInput = z.infer<typeof editEventReqSchema>;
 export type SubmissionInput = z.infer<typeof submitReqSchema>;
+
+/** 論理削除したイベントを、行ごと消すまでの日数 */
+export const DELETED_EVENT_RETENTION_DAYS = 7;
 
 /** DB には日時を ISO 8601 の文字列で入れる */
 function toIso(value: string | Date): string {
@@ -49,15 +52,18 @@ export async function createEvent(db: Db, actor: Actor, input: CreateEventInput)
   return { id: event.id, name: event.name };
 }
 
-/** ホストまたはゲストとして関わるイベント */
+/** ホストまたはゲストとして関わるイベント。削除したものは除く */
 export async function listMyEvents(db: Db, actor: Actor) {
   const events = await db.query.event.findMany({
-    where: inArray(
-      schema.event.id,
-      db
-        .select({ id: schema.participant.eventId })
-        .from(schema.participant)
-        .where(eq(schema.participant.browserId, actor.browserId)),
+    where: and(
+      inArray(
+        schema.event.id,
+        db
+          .select({ id: schema.participant.eventId })
+          .from(schema.participant)
+          .where(eq(schema.participant.browserId, actor.browserId)),
+      ),
+      isNull(schema.event.deletedAt),
     ),
     with: {
       participants: {
@@ -78,7 +84,10 @@ export async function listMyEvents(db: Db, actor: Actor) {
   }));
 }
 
-/** イベントの詳細。URL (イベント ID) を知っていれば誰でも見られる。 */
+/**
+ * イベントの詳細。URL (イベント ID) を知っていれば誰でも見られる。
+ * 削除したイベントは、名前と、いつ完全に消えるかだけを返す (回答者の名前などは返さない)。
+ */
 export async function getEvent(db: Db, actor: Actor, eventId: string) {
   const event = await db.query.event.findFirst({
     where: eq(schema.event.id, eventId),
@@ -97,21 +106,39 @@ export async function getEvent(db: Db, actor: Actor, eventId: string) {
     throw new ServiceError("event_not_found", "イベントが見つかりません。");
   }
 
+  if (event.deletedAt !== null) {
+    const purgeAt = new Date(event.deletedAt);
+    purgeAt.setUTCDate(purgeAt.getUTCDate() + DELETED_EVENT_RETENTION_DAYS);
+    return {
+      status: "deleted" as const,
+      event: {
+        id: event.id,
+        name: event.name,
+        deletedAt: event.deletedAt,
+        purgeAt: purgeAt.toISOString(),
+        canRestore: canEditEvent(actor, event),
+      },
+    };
+  }
+
   const me = event.participants.find((p) => p.browserId === actor.browserId);
 
   return {
-    id: event.id,
-    name: event.name,
-    description: event.description ?? "",
-    startDate: event.startDate,
-    endDate: event.endDate,
-    timezone: event.timezone,
-    allowedRanges: event.allowedRanges,
-    options: event.options,
-    hosts: event.participants.filter((p) => p.role === "host").map((p) => ({ id: p.id, eventId: p.eventId })),
-    guests: event.participants.filter(hasAnswered).map(toGuest),
-    isHost: canEditEvent(actor, event),
-    meAsGuest: me && hasAnswered(me) ? toGuest(me) : null,
+    status: "active" as const,
+    event: {
+      id: event.id,
+      name: event.name,
+      description: event.description ?? "",
+      startDate: event.startDate,
+      endDate: event.endDate,
+      timezone: event.timezone,
+      allowedRanges: event.allowedRanges,
+      options: event.options,
+      hosts: event.participants.filter((p) => p.role === "host").map((p) => ({ id: p.id, eventId: p.eventId })),
+      guests: event.participants.filter(hasAnswered).map(toGuest),
+      isHost: canEditEvent(actor, event),
+      meAsGuest: me && hasAnswered(me) ? toGuest(me) : null,
+    },
   };
 }
 
@@ -142,28 +169,34 @@ function toGuest(participant: ParticipantWithSlots & { name: string }) {
   };
 }
 
-/** イベントの設定を変えられるか。イベントが無ければ false */
-async function canEditEventById(db: Db, actor: Actor, eventId: string) {
-  const event = await db.query.event.findFirst({
+/** 権限の判定に要る分だけイベントを読む */
+function findEventForPermission(db: Db, eventId: string) {
+  return db.query.event.findFirst({
     where: eq(schema.event.id, eventId),
-    columns: { id: true },
+    columns: { id: true, deletedAt: true },
     with: { participants: { columns: { role: true, browserId: true } } },
   });
-  return event !== undefined && canEditEvent(actor, event);
+}
+
+function throwIfDeleted(event: { deletedAt: string | null }) {
+  if (event.deletedAt !== null) {
+    throw new ServiceError("event_deleted", "このイベントは削除されています。");
+  }
 }
 
 export async function updateEvent(db: Db, actor: Actor, eventId: string, input: UpdateEventInput) {
-  const [canEdit, existingGuest] = await Promise.all([
-    canEditEventById(db, actor, eventId),
+  const [event, existingGuest] = await Promise.all([
+    findEventForPermission(db, eventId),
     db.query.participant.findFirst({
       where: and(eq(schema.participant.eventId, eventId), isNotNull(schema.participant.name)),
       columns: { id: true },
     }),
   ]);
 
-  if (!canEdit) {
+  if (!event || !canEditEvent(actor, event)) {
     throw new ServiceError("not_host", "アクセス権限がありません。");
   }
+  throwIfDeleted(event);
 
   const statements: Parameters<typeof runBatch>[1] = [];
 
@@ -235,19 +268,24 @@ export async function updateEvent(db: Db, actor: Actor, eventId: string, input: 
   });
 }
 
+/** 論理削除する。行は、DELETED_EVENT_RETENTION_DAYS 日たってから消す。削除済みなら何もしない */
 export async function deleteEvent(db: Db, actor: Actor, eventId: string) {
-  if (!(await canEditEventById(db, actor, eventId))) {
+  const event = await findEventForPermission(db, eventId);
+  if (!event || !canEditEvent(actor, event)) {
     throw new ServiceError("not_host", "削除権限がありません。");
   }
 
-  await db.delete(schema.event).where(eq(schema.event.id, eventId));
+  await db
+    .update(schema.event)
+    .set({ deletedAt: new Date().toISOString() })
+    .where(and(eq(schema.event.id, eventId), isNull(schema.event.deletedAt)));
 }
 
 /** Slot の検証に必要な分だけイベントを読む */
 async function findEventForSlots(db: Db, eventId: string) {
   const event = await db.query.event.findFirst({
     where: eq(schema.event.id, eventId),
-    columns: { timezone: true, startDate: true, endDate: true },
+    columns: { timezone: true, startDate: true, endDate: true, deletedAt: true },
     with: {
       allowedRanges: { columns: { startTime: true, endTime: true } },
       options: { columns: { id: true } },
@@ -256,6 +294,7 @@ async function findEventForSlots(db: Db, eventId: string) {
   if (!event) {
     throw new ServiceError("event_not_found", "イベントが見つかりません。");
   }
+  throwIfDeleted(event);
   return {
     timezone: event.timezone,
     startDate: event.startDate,
