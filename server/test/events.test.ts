@@ -195,10 +195,10 @@ describe("GET /events/:eventId", () => {
     ]);
   });
 
-  test("Cookie を発行しない (visited を除く)", async () => {
+  test("Cookie を発行しない", async () => {
     const { id } = await createEvent();
 
-    const res = await api.get(`/events/${id}`, { headers: { Cookie: "visited=1" } });
+    const res = await api.get(`/events/${id}`);
 
     expect(res.headers.get("Set-Cookie")).toBeNull();
   });

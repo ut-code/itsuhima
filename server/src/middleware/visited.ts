@@ -6,11 +6,12 @@ import type { AppEnv } from "../env.js";
 export const VISITED_COOKIE = "visited";
 
 /**
- * API を使ったブラウザに `visited=1` の Cookie を付ける。`/` から `/home` へのリダイレクト (`routes/landing.ts`) に使う。
+ * イベントを作ったか回答したブラウザに `visited=1` の Cookie を付ける。`/` から `/home` へのリダイレクト (`routes/landing.ts`) に使う。
+ * 作成と回答の経路にだけ付ける (ページを開くだけで呼ぶ API に付けると、LP を見ただけでリダイレクトされるようになる)。
  */
 export const visitedMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   await next();
-  if (getCookie(c, VISITED_COOKIE) === undefined) {
+  if (c.res.ok && getCookie(c, VISITED_COOKIE) === undefined) {
     setCookie(c, VISITED_COOKIE, "1", {
       path: "/",
       httpOnly: true,

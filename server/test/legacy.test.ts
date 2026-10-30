@@ -42,7 +42,7 @@ describe("POST /api/legacy/exchange", () => {
     // 一度交換したら、次からは空
     expect(await (await exchange(cookie)).json()).toEqual([]);
     // Cookie は消さない
-    expect(res.headers.get("Set-Cookie")).not.toMatch(/browserId/);
+    expect(res.headers.get("Set-Cookie") ?? "").not.toMatch(/browserId/);
   });
 
   test("Cookie が無ければ空の配列", async () => {

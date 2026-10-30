@@ -4,6 +4,7 @@ import { z } from "zod";
 import { editEventReqSchema, eventReqSchema, submitReqSchema } from "../../../common/validators.js";
 import type { AppEnv } from "../env.js";
 import { ID_PATTERN } from "../lib/id.js";
+import { visitedMiddleware } from "../middleware/visited.js";
 import {
   createEvent,
   deleteAvailability,
@@ -35,7 +36,7 @@ const eventIdsQuerySchema = z.object({
 
 const router = new Hono<AppEnv>()
   // イベント作成
-  .post("/", zValidator("json", eventReqSchema), async (c) => {
+  .post("/", visitedMiddleware, zValidator("json", eventReqSchema), async (c) => {
     const event = await createEvent(c.get("db"), c.get("actor"), c.req.valid("json"));
     // hasOwner: client は、匿名で作れたものだけを控える
     return c.json({ id: event.id, name: event.name, hasOwner: event.hasOwner }, 201);
@@ -96,6 +97,7 @@ const router = new Hono<AppEnv>()
   // 回答する
   .post(
     "/:eventId/participants",
+    visitedMiddleware,
     zValidator("param", eventIdParamsSchema),
     zValidator("json", submitReqSchema),
     async (c) => {

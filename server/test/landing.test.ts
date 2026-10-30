@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { indexHtml, requestWorker } from "./helpers.js";
+import { createEvent, eventInput, indexHtml, requestWorker, submissionInput } from "./helpers.js";
 
 describe("GET /", () => {
   test("visited の Cookie が無ければ、ランディングページ (index.html) を返す", async () => {
@@ -23,12 +23,48 @@ describe("GET /", () => {
   });
 });
 
-describe("visited の Cookie", () => {
-  test("API を使うと、本人を表さない visited=1 を付ける。あれば付け直さない", async () => {
-    const res = await requestWorker("/api");
+const VISITED_SET_COOKIE = /^visited=1; Max-Age=31536000; Path=\/; HttpOnly; SameSite=Lax$/;
 
-    expect(res.headers.get("Set-Cookie")).toMatch(/^visited=1; Max-Age=31536000; Path=\/; HttpOnly; SameSite=Lax$/);
-    const again = await requestWorker("/api", { headers: { Cookie: "visited=1" } });
+function postJson(path: string, body: unknown, cookie?: string) {
+  return requestWorker(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(cookie ? { Cookie: cookie } : {}) },
+    body: JSON.stringify(body),
+  });
+}
+
+describe("visited の Cookie", () => {
+  test("イベントを作ると、本人を表さない visited=1 を付ける。あれば付け直さない", async () => {
+    const res = await postJson("/api/events", eventInput());
+
+    expect(res.status).toBe(201);
+    expect(res.headers.get("Set-Cookie")).toMatch(VISITED_SET_COOKIE);
+    const again = await postJson("/api/events", eventInput(), "visited=1");
     expect(again.headers.get("Set-Cookie")).toBeNull();
+  });
+
+  test("回答すると、visited=1 を付ける", async () => {
+    const { id, optionId } = await createEvent();
+
+    const res = await postJson(`/api/events/${id}/participants`, submissionInput(optionId));
+
+    expect(res.status).toBe(201);
+    expect(res.headers.get("Set-Cookie")).toMatch(VISITED_SET_COOKIE);
+  });
+
+  test("失敗したときは付けない", async () => {
+    const res = await postJson("/api/events", { name: "" });
+
+    expect(res.status).toBe(400);
+    expect(res.headers.get("Set-Cookie")).toBeNull();
+  });
+
+  test("ページを開くだけで呼ぶ API (ログインの状態、イベントの取得) では付けない", async () => {
+    const { id } = await createEvent();
+
+    for (const path of ["/api/auth/get-session", `/api/events/${id}`, "/api/me/events", "/api"]) {
+      const res = await requestWorker(path);
+      expect(res.headers.get("Set-Cookie") ?? "", path).not.toMatch(/visited=/);
+    }
   });
 });
