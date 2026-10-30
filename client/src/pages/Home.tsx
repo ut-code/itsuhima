@@ -37,6 +37,13 @@ async function exchangeLegacyEvents() {
   }
 }
 
+/** ログインしていれば、ログインして作ったイベントと回答したイベント。していなければ空 */
+async function fetchLoggedInEvents() {
+  const res = await client.me.events.$get();
+  if (res.status !== 200) return [];
+  return await res.json();
+}
+
 export default function HomePage() {
   const [involvedEvents, setInvolvedEvents] = useState<BriefEvent[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,12 +56,15 @@ export default function HomePage() {
     const fetchInvolvedEvents = async () => {
       setLoading(true);
       try {
-        await exchangeLegacyEvents();
+        const [, loggedInEvents] = await Promise.all([exchangeLegacyEvents(), fetchLoggedInEvents()]);
         const myEvents = loadMyEvents();
         const isHostById = new Map(myEvents.map((e) => [e.id, e.isHost]));
+        // ログインして作った・回答したイベントは、`/me/events` が名前などを返すので、控えから引かない
+        const loggedInIds = new Set(loggedInEvents.map((e) => e.id));
+        const rest = myEvents.filter((e) => !loggedInIds.has(e.id));
         const chunks = [];
-        for (let i = 0; i < myEvents.length; i += MAX_EVENT_IDS) {
-          chunks.push(myEvents.slice(i, i + MAX_EVENT_IDS).map((e) => e.id));
+        for (let i = 0; i < rest.length; i += MAX_EVENT_IDS) {
+          chunks.push(rest.slice(i, i + MAX_EVENT_IDS).map((e) => e.id));
         }
         const results = await Promise.all(
           chunks.map(async (ids) => {
@@ -68,9 +78,10 @@ export default function HomePage() {
         // 返ってこなかったイベントは、もう無い (完全に消えた) ので控えから外す
         const found = new Set(results.flatMap((r) => r.events.map((e) => e.id)));
         forgetMyEvents(results.flatMap((r) => r.ids).filter((id) => !found.has(id)));
-        setInvolvedEvents(
-          results.flatMap((r) => r.events.map((e) => briefEventReviver(e, isHostById.get(e.id) ?? false))),
-        );
+        setInvolvedEvents([
+          ...loggedInEvents.map((e) => briefEventReviver(e, e.isHost || (isHostById.get(e.id) ?? false))),
+          ...results.flatMap((r) => r.events.map((e) => briefEventReviver(e, isHostById.get(e.id) ?? false))),
+        ]);
       } catch (error) {
         console.error("Error fetching involved events:", error);
         setToast({
@@ -209,7 +220,7 @@ function EmptyState() {
       </div>
       <h3 className="mb-2 font-bold text-base-content text-lg">まだイベントがありません</h3>
       <p className="max-w-sm text-base-content/50 text-sm">
-        「新規作成」ボタンから、新しい日程調整を始めましょう。このブラウザで作ったイベントと回答したイベントが、ここに出ます。
+        「新規作成」ボタンから、新しい日程調整を始めましょう。このブラウザで作ったイベントと回答したイベントが、ここに出ます。ログインしていれば、別の端末でログインして作ったものも出ます。
       </p>
     </div>
   );

@@ -4,25 +4,56 @@
 
 ## 接続する
 
-認証なしの `/mcp/public` は、URL を足すだけで使える。ログインや API キーは要らない。Google でログインして使う `/mcp` は、これから足す。
+URL は 2 つある。URL は変えない (変えると、接続済みのコネクタは登録し直しになる)。
 
-```
-https://itsuhima.utcode.net/mcp/public
-```
+| URL | 認証 | 本人 |
+|---|---|---|
+| `https://itsuhima.utcode.net/mcp` | OAuth (Google でログイン) | ログインしたユーザー |
+| `https://itsuhima.utcode.net/mcp/public` | なし | 匿名 |
 
-- **Claude Code**: `claude mcp add --transport http itsuhima https://itsuhima.utcode.net/mcp/public`
-- **Claude (claude.ai・デスクトップ)・ChatGPT**: カスタムコネクタとして上の URL を足す (認証は「なし」)。
+### ログインして使う (`/mcp`)
+
+URL を足すと、クライアントが OAuth を始める (`/mcp` が 401 と `WWW-Authenticate` を返し、`/.well-known/oauth-protected-resource/mcp` から認可サーバーを見つける)。ブラウザで Google でログインし、同意画面で許可すると使える。クライアントの登録は動的クライアント登録 (DCR) で行う。
+
+- **Claude Code**: `claude mcp add --transport http itsuhima https://itsuhima.utcode.net/mcp`
+- **Claude (claude.ai・デスクトップ)・ChatGPT**: カスタムコネクタとして上の URL を足す (クライアント ID などは空のまま)。
 - **Cursor など、`mcp.json` で設定するクライアント**:
 
   ```json
-  { "mcpServers": { "itsuhima": { "url": "https://itsuhima.utcode.net/mcp/public" } } }
+  { "mcpServers": { "itsuhima": { "url": "https://itsuhima.utcode.net/mcp" } } }
   ```
 
-ステージングは `https://itsuhima-staging.utcode.net/mcp/public`、ローカルは `npm run dev:server` の後に `http://localhost:3000/mcp/public`。動作は MCP Inspector (`npx @modelcontextprotocol/inspector --web --transport http --server-url http://localhost:3000/mcp/public`) で確かめられる。
+接続中のアプリは、Web のアカウントのページ (`/account`) で見られ、接続を切れる。切るとすぐに使えなくなる (`/mcp` は、アクセストークンの検証のあと、許可が残っているかを確かめる)。
+
+### 認証なしで使う (`/mcp/public`)
+
+URL を足すだけで使える。ログインや API キーは要らない。上の手順の URL を `/mcp/public` にする (claude.ai などのカスタムコネクタでは、認証は「なし」)。
+
+### ステージングとローカル
+
+ステージングは `https://itsuhima-staging.utcode.net/mcp` (と `/mcp/public`)。ローカルは `npm run dev:server` と `npm run dev:client` の後に `http://localhost:5173/mcp` (`server/.dev.vars` の `PUBLIC_ORIGIN` を `http://localhost:5173` にする。OAuth の issuer と resource がこのオリジンになる)。動作は MCP Inspector (`npx @modelcontextprotocol/inspector --web --transport http --server-url http://localhost:5173/mcp`) で確かめられる。
 
 ## 権限
 
-`/mcp/public` は認証なしで、URL を知っている人が Web でできることと同じことができる。イベントは URL (または ID) で指定し、URL を知っている人は誰でも、イベントとすべての回答を見て、編集・削除できる。間違えて変えたときは、Web のイベントのページの変更の履歴から戻せる。消したイベントは、7 日以内なら Web で URL を開くと戻せる。
+権限は Web と同じ (`server/src/services/permissions.ts`)。
+
+- ログインせずに作ったイベントと回答は、URL を知っている人は誰でも見て、編集・削除できる。
+- ログインして作ったイベントの設定の変更と削除は、作った人だけができる。ログインして出した回答は、その人だけが変えられる (イベントを作った人は、Web で消すことだけできる)。ログインした人は、1 つのイベントに 1 つだけ回答できる。
+- `/mcp` で作ったイベントと回答は、ログインしたユーザーのもの。`/mcp/public` で作ったものは匿名のもの。
+- アカウントを削除した人の回答は、誰も変えられない (`get_event` に「アカウントを削除した人の回答」と出る)。
+
+間違えて変えたときは、Web のイベントのページの変更の履歴から戻せる。消したイベントは、7 日以内なら Web で URL を開くと戻せる。
+
+### スコープ (`/mcp`)
+
+| スコープ | ツール |
+|---|---|
+| `read` | `list_events`、`get_event`、`find_common_availability` |
+| `submit` | `submit_availability`、`update_availability` |
+| `manage` | `create_event`、`update_event`、`delete_event` |
+| `offline_access` | リフレッシュトークンを出す |
+
+スコープが足りないツールは、ツールのエラー (`isError`) で、接続をやり直して権限を許可するよう案内する。`openid`・`profile`・`email` は公開しない。`/mcp/public` には、スコープの制限はない。
 
 ## ツール
 
@@ -30,6 +61,7 @@ https://itsuhima.utcode.net/mcp/public
 
 | ツール | すること |
 |---|---|
+| `list_events` | 自分が作ったイベントと回答したイベントの一覧 (`/mcp` だけ) |
 | `create_event` | イベントを作り、共有する URL を返す |
 | `get_event` | 日程の範囲・時間帯・現在日時・参加形態の ID・回答 (`participant_id`)・集計 |
 | `update_event` | 名前・説明・日程の範囲・時間帯を直す (回答があれば日程と時間帯は変えられない) |

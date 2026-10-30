@@ -20,6 +20,7 @@ import { DEFAULT_PARTICIPATION_OPTION, generateDistinctColor } from "../../../co
 import { editEventReqSchema, eventReqSchema } from "../../../common/validators";
 import type { AppType } from "../../../server/src/routes/api";
 import Header from "../components/Header";
+import { OwnershipHint } from "../components/OwnershipHint";
 import { EXTERNAL_LINKS } from "../constants/links";
 import dayjs from "../lib/dayjs";
 import { forgetMyEvents, rememberMyEvent } from "../lib/myEvents";
@@ -272,6 +273,11 @@ export default function EventFormPage() {
           <main className="mx-auto max-w-7xl px-4 py-8 pb-24 sm:px-6 lg:px-8">
             <div className="mb-6">
               <h1 className="font-bold text-2xl text-base-content">{event ? `${event.name} の編集` : "新規作成"}</h1>
+              {!event && (
+                <div className="mt-3">
+                  <OwnershipHint target="event" showLoginButton />
+                </div>
+              )}
             </div>
 
             <form id="event-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">

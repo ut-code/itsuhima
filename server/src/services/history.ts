@@ -3,7 +3,7 @@ import type { Db } from "../db/index.js";
 import * as schema from "../db/schema.js";
 import { ServiceError } from "./errors.js";
 import { recreateAnswer, replaceAnswer, updateEvent } from "./events.js";
-import { type Actor, canEditEvent, canEditParticipant } from "./permissions.js";
+import { type Actor, canDeleteParticipant, canEditEvent, canEditParticipant } from "./permissions.js";
 import type { EventSnapshot, ParticipantSnapshot } from "./snapshots.js";
 
 /** 一覧に出す履歴の上限 */
@@ -13,8 +13,9 @@ const HISTORY_LIMIT = 100;
 export async function listHistory(db: Db, actor: Actor, eventId: string) {
   const event = await db.query.event.findFirst({
     where: eq(schema.event.id, eventId),
-    columns: { id: true, deletedAt: true },
+    columns: { id: true, deletedAt: true, ownerUserId: true },
     with: {
+      participants: { columns: { id: true, userId: true, ownerDeleted: true } },
       histories: {
         // 同じ時刻のものは、後に足したものを先にする
         orderBy: [desc(schema.history.createdAt), desc(sql`rowid`)],
@@ -29,16 +30,41 @@ export async function listHistory(db: Db, actor: Actor, eventId: string) {
     throw new ServiceError("event_deleted", "このイベントは削除されています。");
   }
 
-  return event.histories.map((h) => ({
-    id: h.id,
-    target: h.target,
-    targetId: h.targetId,
-    action: h.action,
-    before: h.before,
-    createdAt: h.createdAt,
-    canRestore:
-      h.target === "event" ? canEditEvent(actor, event) : canEditParticipant(actor, event, { id: h.targetId }),
-  }));
+  const participants = new Map(event.participants.map((p) => [p.id, p]));
+  return event.histories.map((h) => {
+    // 回答の持ち主 (userId) は返さない
+    const { userId: _, ownerDeleted: __, ...before } = h.before as ParticipantSnapshot;
+    return {
+      id: h.id,
+      target: h.target,
+      targetId: h.targetId,
+      action: h.action,
+      before: h.target === "event" ? h.before : before,
+      createdAt: h.createdAt,
+      canRestore:
+        h.target === "event"
+          ? canEditEvent(actor, event)
+          : canRestoreParticipant(actor, event, participants.get(h.targetId), h.before as ParticipantSnapshot),
+    };
+  });
+}
+
+/**
+ * 回答の履歴を戻せるか。残っている回答なら、変えられる人。消した回答なら、消せる人 (消した時の持ち主で判定する)。
+ */
+function canRestoreParticipant(
+  actor: Actor,
+  event: { ownerUserId: string | null },
+  current: { userId: string | null; ownerDeleted: boolean } | undefined,
+  before: ParticipantSnapshot,
+) {
+  if (current) return canEditParticipant(actor, event, current);
+  return canDeleteParticipant(actor, event, snapshotOwner(before));
+}
+
+/** スナップショットの、回答の持ち主 */
+function snapshotOwner(before: ParticipantSnapshot) {
+  return { userId: before.userId ?? null, ownerDeleted: before.ownerDeleted === true };
 }
 
 /**
@@ -58,22 +84,29 @@ export async function restoreHistory(db: Db, actor: Actor, eventId: string, hist
     return;
   }
 
-  if (!canEditParticipant(actor, { id: eventId }, { id: history.targetId })) {
-    throw new ServiceError("forbidden", "この回答を戻す権限がありません。");
+  const event = await db.query.event.findFirst({
+    where: eq(schema.event.id, eventId),
+    columns: { ownerUserId: true },
+  });
+  if (!event) {
+    throw new ServiceError("event_not_found", "イベントが見つかりません。");
   }
   const before = history.before as ParticipantSnapshot;
+  const participant = await db.query.participant.findFirst({
+    where: and(eq(schema.participant.id, history.targetId), eq(schema.participant.eventId, eventId)),
+    with: { slots: true },
+  });
+  if (!canRestoreParticipant(actor, event, participant, before)) {
+    throw new ServiceError("forbidden", "この回答を戻す権限がありません。");
+  }
   const input = {
     name: before.name,
     comment: before.comment,
     slots: before.slots.map((slot) => ({ ...slot, startAt: new Date(slot.startAt), endAt: new Date(slot.endAt) })),
   };
-  const participant = await db.query.participant.findFirst({
-    where: and(eq(schema.participant.id, history.targetId), eq(schema.participant.eventId, eventId)),
-    with: { slots: true },
-  });
   if (participant) {
-    await replaceAnswer(db, eventId, participant, input);
+    await replaceAnswer(db, actor, eventId, participant, input);
   } else {
-    await recreateAnswer(db, eventId, history.targetId, input);
+    await recreateAnswer(db, eventId, history.targetId, snapshotOwner(before), input);
   }
 }

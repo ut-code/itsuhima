@@ -8,6 +8,7 @@ import {
   LuCircleAlert,
   LuCircleCheck,
   LuHistory,
+  LuLock,
   LuPencil,
   LuSend,
   LuSettings2,
@@ -24,6 +25,7 @@ import { Calendar, type Highlight } from "../../components/Calendar";
 import { DeletedEvent } from "../../components/DeletedEvent";
 import Header from "../../components/Header";
 import { HistoryDialog, type HistoryDialogHandle } from "../../components/HistoryDialog";
+import { OwnershipHint } from "../../components/OwnershipHint";
 import { findMyEvent, forgetMyEvents, forgetMyParticipant, rememberMyEvent } from "../../lib/myEvents";
 import { eventReviver } from "../../revivers";
 import type { Event, Participant, Slot } from "../../types";
@@ -113,8 +115,9 @@ export default function SubmissionPage() {
       if (res.status === 200) {
         const data = await res.json();
         const parsedData = eventReviver(data);
-        // 開いたイベントは、ホームの一覧に出す
-        rememberMyEvent({ id: eventId, isHost: false });
+        // 開いたイベントは、ホームの一覧に出す。ログインして出した自分の回答があれば、それを自分の回答として控える
+        const mine = parsedData.participants.find((p) => p.isMine);
+        rememberMyEvent({ id: eventId, isHost: false, participantId: mine?.id });
         const myParticipantId = findMyEvent(eventId)?.participantId;
         if (myParticipantId && !parsedData.participants.some((p) => p.id === myParticipantId)) {
           // 自分の回答が、ほかの人に消された
@@ -192,6 +195,8 @@ export default function SubmissionPage() {
   }, [eventId, fetchEvent]);
 
   const me = event?.participants.find((p) => p.id === myParticipantId) ?? null;
+  /** 「日程を変更する」で編集する自分の回答。ログインして出した回答は、ログアウトすると編集できない */
+  const editableMe = me?.canEdit ? me : null;
 
   const [mode, setMode] = useState<"view" | "edit" | "confirm">("view");
   /** 編集している回答の id。null なら新しい回答 */
@@ -280,16 +285,23 @@ export default function SubmissionPage() {
   );
 
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
+  /** 削除の確認をしている回答 */
+  const [deletingParticipant, setDeletingParticipant] = useState<Participant | null>(null);
+  const confirmDelete = useCallback((participant: Participant) => {
+    setDeletingParticipant(participant);
+    deleteDialogRef.current?.showModal();
+  }, []);
   const deleteParticipant = useCallback(async () => {
-    if (!eventId || !editingParticipantId) return;
+    if (!eventId || !deletingParticipant) return;
+    const participantId = deletingParticipant.id;
     deleteDialogRef.current?.close();
     setPostLoading(true);
     try {
       const res = await client.events[":eventId"].participants[":participantId"].$delete({
-        param: { eventId, participantId: editingParticipantId },
+        param: { eventId, participantId },
       });
       if (res.ok) {
-        if (editingParticipantId === myParticipantId) {
+        if (participantId === myParticipantId) {
           forgetMyParticipant(eventId);
         }
         showToast("回答を削除しました。「履歴」から元に戻せます。", "success");
@@ -303,7 +315,7 @@ export default function SubmissionPage() {
     }
     await fetchEvent();
     setPostLoading(false);
-  }, [eventId, editingParticipantId, myParticipantId, fetchEvent, showToast, stopEditing]);
+  }, [eventId, deletingParticipant, myParticipantId, fetchEvent, showToast, stopEditing]);
 
   // 編集・確認モードではベールがドラッグ入力の邪魔になるため解除する
   useEffect(() => {
@@ -459,7 +471,7 @@ export default function SubmissionPage() {
                   })()}
               </div>
 
-              {mode === "view" && <AnonymousEditNotice />}
+              {mode === "view" && !event.hasOwner && <AnonymousEditNotice />}
 
               {/* 参加形態選択ボタン */}
               {mode === "edit" && event.options.length > 1 && selectedParticipationOptionId !== null && (
@@ -576,6 +588,18 @@ export default function SubmissionPage() {
                               <div className="min-w-0 flex-1">
                                 <p className="pt-1 font-medium text-base-content text-sm">
                                   {guest.name}
+                                  {guest.ownerDeleted ? (
+                                    <span className="ml-1.5 font-normal text-base-content/50 text-xs">
+                                      (削除されたアカウント)
+                                    </span>
+                                  ) : (
+                                    guest.hasOwner && (
+                                      <LuLock
+                                        className="ml-1 inline h-3 w-3 align-baseline text-base-content/40"
+                                        aria-label="ログインした人の回答 (本人だけが編集できます)"
+                                      />
+                                    )
+                                  )}
                                   {guest.id === myParticipantId && (
                                     <span className="ml-1.5 font-normal text-base-content/50 text-xs">(あなた)</span>
                                   )}
@@ -598,6 +622,20 @@ export default function SubmissionPage() {
                               >
                                 <LuPencil className="h-3.5 w-3.5" />
                                 <span className="hidden sm:inline">編集</span>
+                              </button>
+                            )}
+                            {/* ログインして作ったイベントの持ち主は、ログインした人の回答を消すことだけできる。
+                                アカウントを削除した人の回答も、イベントを編集できる人は消すことだけできる */}
+                            {mode === "view" && !guest.canEdit && guest.canDelete && (
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm mt-2 shrink-0 gap-1 text-error"
+                                aria-label={`${guest.name}の回答を削除`}
+                                disabled={loading}
+                                onClick={() => confirmDelete(guest)}
+                              >
+                                <LuTrash2 className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">削除</span>
                               </button>
                             )}
                           </li>
@@ -623,10 +661,10 @@ export default function SubmissionPage() {
                         type="button"
                         className="btn btn-sm btn-primary gap-1.5"
                         disabled={loading}
-                        onClick={() => startEditing(me)}
+                        onClick={() => startEditing(editableMe)}
                       >
                         <LuPencil className="h-4 w-4" />
-                        {me ? (
+                        {editableMe ? (
                           <>
                             <span className="hidden sm:inline">日程を変更する</span>
                             <span className="sm:hidden">日程変更</span>
@@ -711,6 +749,7 @@ export default function SubmissionPage() {
                     className="w-full resize-none rounded-lg border border-base-300 px-3 py-2 text-base transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
+                {!editingParticipant && <OwnershipHint target="answer" />}
               </div>
               <div className="flex items-center justify-between gap-2">
                 <button
@@ -722,12 +761,12 @@ export default function SubmissionPage() {
                   <LuChevronLeft className="h-4 w-4" />
                   <span>戻って修正</span>
                 </button>
-                {editingParticipant && (
+                {editingParticipant?.canDelete && (
                   <button
                     type="button"
                     className="btn btn-sm btn-ghost shrink-0 gap-1.5 text-error"
                     disabled={loading}
-                    onClick={() => deleteDialogRef.current?.showModal()}
+                    onClick={() => confirmDelete(editingParticipant)}
                   >
                     <LuTrash2 className="h-4 w-4" />
                     <span>回答を削除</span>
@@ -761,7 +800,7 @@ export default function SubmissionPage() {
       <dialog ref={deleteDialogRef} className="modal">
         <div className="modal-box">
           <h3 className="mb-2 font-bold text-base-content text-lg">
-            「{editingParticipant?.name}」の回答を削除しますか？
+            「{deletingParticipant?.name}」の回答を削除しますか？
           </h3>
           <p className="mb-6 text-base-content/70 text-sm">削除したあとも、「履歴」から元に戻せます。</p>
           <div className="modal-action">

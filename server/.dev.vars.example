@@ -2,3 +2,8 @@
 NODE_ENV=dev # dev or production
 COOKIE_SECRET=your-random-secret-key-for-development # Cookie の署名鍵
 # COOKIE_SECRET_PREVIOUS= # 鍵のローテーション時、前の COOKIE_SECRET をカンマ区切りで指定する。省略可
+PUBLIC_ORIGIN=http://localhost:5173 # ブラウザから見えるオリジン。npm run dev:worker のときは http://localhost:3000
+BETTER_AUTH_SECRET=your-random-secret-at-least-32-characters # openssl rand -base64 32
+ACCOUNT_ID_SECRET=your-random-secret-at-least-32-characters # Google の sub を HMAC にする鍵。openssl rand -base64 32
+GOOGLE_CLIENT_ID=your-google-client-id # 開発用の OAuth クライアント。リダイレクト URI は <PUBLIC_ORIGIN>/api/auth/callback/google
+GOOGLE_CLIENT_SECRET=your-google-client-secret
