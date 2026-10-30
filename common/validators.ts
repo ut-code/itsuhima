@@ -79,8 +79,11 @@ const baseEventSchema = z.object({
   options: z.array(optionCreateSchema).min(1, "参加形態は最低1つ必要です"),
 });
 
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+// zod 4 では、形式の誤りがあっても refine が走る。形式が正しいときだけ前後を比べる (誤りを二重に出さない)
 const isDateOrdered = (data: { startDate?: string; endDate?: string }) => {
-  if (data.startDate && data.endDate) {
+  if (data.startDate && data.endDate && DATE_PATTERN.test(data.startDate) && DATE_PATTERN.test(data.endDate)) {
     return data.startDate <= data.endDate;
   }
   return true;

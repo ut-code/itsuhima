@@ -492,8 +492,11 @@ export default function EventFormPage() {
                     </div>
                   </div>
                 </div>
-                {errors.allowedRanges && typeof errors.allowedRanges?.message === "string" && (
-                  <p className="mt-2 text-error text-sm">{errors.allowedRanges.message}</p>
+                {/* 配列全体の検証 (refine) のエラーは、useFieldArray の配列では root に入る */}
+                {(errors.allowedRanges?.root?.message ?? errors.allowedRanges?.message) && (
+                  <p className="mt-2 text-error text-sm">
+                    {errors.allowedRanges?.root?.message ?? errors.allowedRanges?.message}
+                  </p>
                 )}
               </div>
 

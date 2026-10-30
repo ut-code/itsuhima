@@ -1,0 +1,89 @@
+import type { McpServer } from "@modelcontextprotocol/server";
+import { z } from "zod";
+import { editEventReqSchema } from "../../../../common/validators.js";
+import { updateEvent } from "../../services/events.js";
+import type { McpContext } from "../context.js";
+import { serviceErrorResult } from "../errors.js";
+import { formatEventDetail, loadEvent } from "../eventDetail.js";
+import { toolError, toolText } from "../format.js";
+import { dateSchema, eventUrlSchema, timeSchema } from "../schemas.js";
+
+export function registerUpdateEvent(server: McpServer, ctx: McpContext) {
+  server.registerTool(
+    "update_event",
+    {
+      title: "イベントを直す",
+      description:
+        "イベントの名前・説明・日程の範囲・入力できる時間帯を直す。指定しなかった項目は変えない。" +
+        "誰かが回答した後は、日程の範囲と入力できる時間帯は変えられない (名前と説明は変えられる)。" +
+        "参加形態は、ここでは変えられない (Web の画面で変える)。" +
+        "URL を知っている人は誰でも直せるので、ユーザーが作ったイベントでなくても直せてしまう。ユーザーの依頼がはっきりしているときだけ呼ぶこと。" +
+        "「再来週にずらして」のような相対的な言い方は、どの日付にするかをユーザーに示して確かめてから直すこと。",
+      inputSchema: z.object({
+        event_url: eventUrlSchema,
+        name: z.string().min(1).max(100).optional().describe("新しいイベント名。"),
+        description: z.string().max(1000).optional().describe("新しい説明。空文字にすると消える。"),
+        start_date: dateSchema("新しい候補の期間の最初の日").optional(),
+        end_date: dateSchema("新しい候補の期間の最後の日 (この日を含む)").optional(),
+        start_time: timeSchema("新しい、1 日のうち回答できる時間帯の始まり", "省略すると今のまま").optional(),
+        end_time: timeSchema(
+          "新しい、1 日のうち回答できる時間帯の終わり",
+          "その日の終わりまでなら 24:00。省略すると今のまま",
+        ).optional(),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ event_url, name, description, start_date, end_date, start_time, end_time }) => {
+      const changesSchedule = [start_date, end_date, start_time, end_time].some((v) => v !== undefined);
+      if (name === undefined && description === undefined && !changesSchedule) {
+        return toolError("変える項目を 1 つ以上指定してください。");
+      }
+
+      const loaded = await loadEvent(ctx, event_url);
+      if (!("event" in loaded)) return loaded;
+      const { event } = loaded;
+      // サービス層は、回答があると日程と時間帯の変更を黙って無視するので、ここで断る
+      if (changesSchedule && event.participants.length > 0) {
+        return toolError(
+          `もう ${event.participants.length} 人が回答しているので、日程の範囲と入力できる時間帯は変えられません。` +
+            "名前と説明だけなら変えられます。日程を変えたいときは、そのことをユーザーに伝えてください。",
+        );
+      }
+
+      // 前後を確かめられるよう、片方だけ指定されたら、もう片方は今の値で補う
+      const range = event.allowedRanges[0];
+      const parsed = editEventReqSchema.safeParse({
+        name,
+        description,
+        ...(start_date !== undefined || end_date !== undefined
+          ? { startDate: start_date ?? event.startDate, endDate: end_date ?? event.endDate }
+          : {}),
+        ...(start_time !== undefined || end_time !== undefined
+          ? {
+              allowedRanges: [
+                {
+                  startTime: start_time ?? range?.startTime ?? "00:00",
+                  endTime: end_time ?? range?.endTime ?? "24:00",
+                },
+              ],
+            }
+          : {}),
+      });
+      if (!parsed.success) {
+        const issues = parsed.error.issues.map((issue) => `- ${issue.message}`).join("\n");
+        return toolError(`イベントを直せませんでした。次を直して、もう一度呼んでください。\n${issues}`);
+      }
+
+      try {
+        await updateEvent(ctx.db, ctx.actor, event.id, parsed.data);
+      } catch (e) {
+        return serviceErrorResult(e);
+      }
+      const updated = await loadEvent(ctx, event.id);
+      if (!("event" in updated)) return updated;
+      return toolText(
+        `イベントを直しました (変える前の状態は、Web の変更の履歴から戻せます)。\n\n${formatEventDetail(ctx, updated.event)}`,
+      );
+    },
+  );
+}
