@@ -16,6 +16,15 @@ describe("GET /", () => {
     expect(res.headers.get("Location")).toBe("/home");
   });
 
+  test("ログインしていれば (セッションの Cookie があれば)、visited が無くても /home にリダイレクトする", async () => {
+    for (const name of ["better-auth.session_token", "__Secure-better-auth.session_token"]) {
+      const res = await requestWorker("/", { headers: { Cookie: `${name}=xxx` } });
+
+      expect(res.status, name).toBe(302);
+      expect(res.headers.get("Location")).toBe("/home");
+    }
+  });
+
   test("browserId の Cookie だけでは、リダイレクトしない (本人を表す Cookie に頼らない)", async () => {
     const res = await requestWorker("/", { headers: { Cookie: "browserId=xxx" } });
 

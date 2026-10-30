@@ -1,6 +1,7 @@
 import { getCookie, setCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
-import type { AppEnv } from "../env.js";
+import { serialize } from "hono/utils/cookie";
+import type { AppEnv, Bindings } from "../env.js";
 
 /** 使ったことがあるか。本人は表さない (値はいつも "1") */
 export const VISITED_COOKIE = "visited";
@@ -25,3 +26,14 @@ export const visitedMiddleware = createMiddleware<AppEnv>(async (c, next) => {
     });
   }
 });
+
+/** `visited` を消す Set-Cookie の値 (ログアウトとアカウントの削除。そのあとは、初めて来たブラウザと同じに戻す) */
+export function clearVisitedCookie(env: Bindings) {
+  return serialize(VISITED_COOKIE, "", {
+    path: "/",
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "Lax",
+    maxAge: 0,
+  });
+}

@@ -1,8 +1,9 @@
 import type { Context } from "hono";
 import type { AppEnv } from "../env.js";
 import { accountEmailCookie, clearAccountEmailCookie } from "../lib/accountEmail.js";
+import { clearVisitedCookie } from "../middleware/visited.js";
 
-/** ログイン中のメールアドレスの Cookie を消すパス (ログアウトとアカウントの削除) */
+/** ログイン中のメールアドレスと `visited` の Cookie を消すパス (ログアウトとアカウントの削除) */
 const SIGN_OUT_PATHS = ["/api/auth/sign-out", "/api/auth/delete-user"];
 
 /**
@@ -20,13 +21,13 @@ export async function authHandler(c: Context<AppEnv>) {
   });
   const res = await auth.handler(c.req.raw);
 
-  const setCookie = signedIn
-    ? await accountEmailCookie(c.env, signedIn)
+  const setCookies = signedIn
+    ? [await accountEmailCookie(c.env, signedIn)]
     : SIGN_OUT_PATHS.includes(c.req.path) && res.ok
-      ? clearAccountEmailCookie(c.env)
-      : null;
-  if (setCookie === null) return res;
+      ? [clearAccountEmailCookie(c.env), clearVisitedCookie(c.env)]
+      : [];
+  if (setCookies.length === 0) return res;
   const headers = new Headers(res.headers);
-  headers.append("Set-Cookie", setCookie);
+  for (const value of setCookies) headers.append("Set-Cookie", value);
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }
