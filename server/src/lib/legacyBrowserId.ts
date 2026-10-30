@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { getCookie, getSignedCookie } from "hono/cookie";
-import type { AppEnv } from "../env.js";
+import { serialize } from "hono/utils/cookie";
+import type { AppEnv, Bindings } from "../env.js";
 
 /**
  * 前の、ブラウザごとの識別子 (browserId) の Cookie。今は発行しない。
@@ -34,4 +35,22 @@ export async function readLegacyBrowserId(c: Context<AppEnv>): Promise<string | 
   }
   console.warn("browserId Cookie の署名を検証できませんでした");
   return null;
+}
+
+/**
+ * browserId の Cookie を消す Set-Cookie の値。main は `Domain=<ホスト名>` 付きで発行し、#123 からは host-only で発行したので、
+ * ブラウザには 2 つありうる。名前・Domain・Path が同じものしか消せないので、両方に送る。
+ */
+export function clearLegacyBrowserIdCookies(env: Bindings) {
+  const options = {
+    path: "/",
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "Lax",
+    maxAge: 0,
+  } as const;
+  return [
+    serialize(COOKIE_NAME, "", options),
+    serialize(COOKIE_NAME, "", { ...options, domain: new URL(env.PUBLIC_ORIGIN).hostname }),
+  ];
 }

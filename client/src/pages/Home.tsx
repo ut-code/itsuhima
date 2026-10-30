@@ -6,38 +6,18 @@ import type { AppType } from "../../../server/src/routes/api";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { fetchEventsByIds } from "../lib/eventsByIds";
-import {
-  forgetMyEvents,
-  isLegacyExchanged,
-  loadMyEvents,
-  markLegacyExchanged,
-  rememberMyEvents,
-} from "../lib/myEvents";
+import { ensureLegacyExchanged } from "../lib/legacyExchange";
+import { forgetMyEvents, loadMyEvents } from "../lib/myEvents";
 import { briefEventReviver } from "../revivers";
 import type { BriefEvent } from "../types";
 import { API_ENDPOINT, readErrorMessage } from "../utils";
 
 const client = hc<AppType>(API_ENDPOINT);
 
-/**
- * 前の一覧 (browserId でサーバーが持っていたもの) を、一度だけ控えに移す。ログインしていないときだけ呼ぶ。
- * 失敗したら、次にホームを開いたときにやり直す。
- */
-async function exchangeLegacyEvents() {
-  if (isLegacyExchanged()) return;
-  try {
-    const res = await client.legacy.exchange.$post();
-    if (res.status !== 200) return;
-    rememberMyEvents(await res.json());
-    markLegacyExchanged();
-  } catch (error) {
-    console.error("Error exchanging legacy events:", error);
-  }
-}
-
 /** ログインしていないとき。このブラウザの控えから一覧を出す */
 async function fetchRememberedEvents() {
-  await exchangeLegacyEvents();
+  // 前の一覧の交換 (アプリの根が始めている) が終わってから読む
+  await ensureLegacyExchanged();
   const myEvents = loadMyEvents();
   const isHostById = new Map(myEvents.map((e) => [e.id, e.isHost]));
   const events = await fetchEventsByIds(myEvents.map((e) => e.id));

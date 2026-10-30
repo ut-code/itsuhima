@@ -20,13 +20,13 @@ export async function authHandler(c: Context<AppEnv>) {
   });
   const res = await auth.handler(c.req.raw);
 
-  const setCookie = signedIn
-    ? await accountEmailCookie(c.env, signedIn)
+  const setCookies = signedIn
+    ? [await accountEmailCookie(c.env, signedIn)]
     : SIGN_OUT_PATHS.includes(c.req.path) && res.ok
-      ? clearAccountEmailCookie(c.env)
-      : null;
-  if (setCookie === null) return res;
+      ? [clearAccountEmailCookie(c.env)]
+      : [];
+  if (setCookies.length === 0) return res;
   const headers = new Headers(res.headers);
-  headers.append("Set-Cookie", setCookie);
+  for (const value of setCookies) headers.append("Set-Cookie", value);
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }

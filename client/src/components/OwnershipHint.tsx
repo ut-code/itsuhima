@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { LuInfo, LuLock } from "react-icons/lu";
 import { authClient, loggedInLabel, useAccountEmail } from "../lib/auth";
 import { useSignIn } from "./SignInWarning";
@@ -7,6 +8,9 @@ const TARGET_LABEL = { event: "イベント", answer: "回答" } as const;
 /**
  * 作るもの (イベント・回答) を誰が編集できるかを知らせる。
  * ログインしていれば本人だけ、していなければ URL を知っている人は誰でも編集できる。
+ * 出すときにセッションを取り直す。画面を開いたままセッションが変わる (期限が切れる、別の端末でアカウントを削除する) と、
+ * この画面の表示は古いままになり、送ったものがここに書いたのと違う扱いになるため。
+ * (ほかのタブでのログイン・ログアウトは、Better Auth の client がタブの間で知らせ、タブを切り替えたときにも取り直す)
  * @param showLoginButton ログインのボタンを出す (Google のページに移るので、入力の前の画面でだけ出す)
  */
 export function OwnershipHint({
@@ -16,7 +20,10 @@ export function OwnershipHint({
   target: keyof typeof TARGET_LABEL;
   showLoginButton?: boolean;
 }) {
-  const { data: session, isPending } = authClient.useSession();
+  const { data: session, isPending, refetch } = authClient.useSession();
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
   const email = useAccountEmail(!!session);
   const { signIn, dialog } = useSignIn();
   if (isPending) return null;

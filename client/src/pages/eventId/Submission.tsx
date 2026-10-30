@@ -153,15 +153,13 @@ export default function SubmissionPage() {
     fetchEvent();
   }, [fetchEvent]);
 
-  // 自分の回答を決める。控えは、ログインしていないとわかったときだけ読み書きする
+  // 自分の回答を決める。控えは、ゲストのときだけ読む (開いただけでは足さない)
   useEffect(() => {
     if (!eventId || !event || sessionPending) return;
     if (loggedIn) {
       setMyParticipantId(event.participants.find((p) => p.isMine)?.id ?? null);
       return;
     }
-    // 開いたイベントは、ホームの一覧に出す
-    rememberMyEvent({ id: eventId, isHost: false });
     const remembered = findMyEvent(eventId)?.participantId;
     if (remembered && !event.participants.some((p) => p.id === remembered)) {
       // 自分の回答が、ほかの人に消された
@@ -273,8 +271,9 @@ export default function SubmissionPage() {
         if (response.ok) {
           if (!editingParticipantId) {
             const { participant } = await response.json();
-            // 匿名で出せた回答だけを控える
-            if (!loggedIn && !participant.hasOwner) {
+            // 匿名で出せた回答だけを控える。この画面がログイン中だと思っていても (ほかのタブでログアウトした後など)、
+            // サーバーが匿名で受けたなら、このブラウザのゲストの回答なので控える
+            if (!participant.hasOwner) {
               rememberMyEvent({ id: eventId, isHost: false, participantId: participant.id });
             }
           }
@@ -298,7 +297,7 @@ export default function SubmissionPage() {
       await fetchEvent();
       setPostLoading(false);
     },
-    [guestName, comment, eventId, editingParticipantId, loggedIn, fetchEvent, showToast, stopEditing],
+    [guestName, comment, eventId, editingParticipantId, fetchEvent, showToast, stopEditing],
   );
 
   const deleteDialogRef = useRef<HTMLDialogElement>(null);

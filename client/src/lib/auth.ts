@@ -7,13 +7,23 @@ import { API_ENDPOINT } from "../utils";
 /** Better Auth のクライアント。API と同じオリジンの /api/auth を呼ぶ */
 export const authClient = createAuthClient({ basePath: "/api/auth" });
 
+/** ログインを中断した・失敗したときに、元のページに付けて戻すクエリ (`components/SessionEffects.tsx` が読んで消す) */
+export const SIGN_IN_FAILED_PARAM = "signin_failed";
+
 /**
  * Google でログインする。終わると callbackURL (既定は今のページ) に戻る。
+ * 中断した・失敗したときは、今のページに戻ってトーストを出す (Better Auth の既定では、英語のエラーページに移る)。
  * Google のページに移るので、入力中の内容は消える。
  * 画面からは直接呼ばず、控えが消えることを確かめる `useSignIn` (`components/SignInWarning.tsx`) を使う。
  */
 export function signInWithGoogle(callbackURL = window.location.pathname + window.location.search) {
-  return authClient.signIn.social({ provider: "google", callbackURL });
+  const errorCallbackURL = new URL(window.location.href);
+  errorCallbackURL.searchParams.set(SIGN_IN_FAILED_PARAM, "1");
+  return authClient.signIn.social({
+    provider: "google",
+    callbackURL,
+    errorCallbackURL: errorCallbackURL.pathname + errorCallbackURL.search,
+  });
 }
 
 const client = hc<AppType>(API_ENDPOINT);

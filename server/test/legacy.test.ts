@@ -42,7 +42,7 @@ describe("POST /api/legacy/exchange", () => {
     // 一度交換したら、次からは空
     expect(await (await exchange(cookie)).json()).toEqual([]);
     // Cookie は消さない
-    expect(res.headers.get("Set-Cookie")).not.toMatch(/browserId/);
+    expect(res.headers.get("Set-Cookie") ?? "").not.toMatch(/browserId/);
   });
 
   test("Cookie が無ければ空の配列", async () => {
@@ -81,5 +81,33 @@ describe("POST /api/legacy/exchange", () => {
     await env.DB.prepare(`DELETE FROM "event" WHERE id = ?`).bind(id).run();
 
     expect(await legacyRows()).toEqual([]);
+  });
+});
+
+describe("DELETE /api/legacy/browser", () => {
+  test("browserId の行を消し、Domain 付きと host-only の browserId の Cookie を消す", async () => {
+    const mine = await createEvent();
+    const others = await createEvent();
+    await addLegacyRow("me", mine.id, true, null);
+    await addLegacyRow("other", others.id, true, null);
+    const cookie = await serializeSigned("browserId", "me", env.COOKIE_SECRET);
+
+    const res = await requestWorker("/api/legacy/browser", { method: "DELETE", headers: { Cookie: cookie } });
+
+    expect(res.status).toBe(204);
+    expect(await legacyRows()).toEqual([{ browserId: "other", eventId: others.id }]);
+    const cleared = res.headers.getSetCookie().filter((c) => c.startsWith("browserId=;") && /Max-Age=0/.test(c));
+    const hostname = new URL(env.PUBLIC_ORIGIN).hostname;
+    expect(cleared.map((c) => /Domain=([^;]+)/.exec(c)?.[1] ?? null).sort()).toEqual([hostname, null].sort());
+  });
+
+  test("Cookie が無くても 204 で、行は消さない", async () => {
+    const { id } = await createEvent();
+    await addLegacyRow("me", id, true, null);
+
+    const res = await requestWorker("/api/legacy/browser", { method: "DELETE" });
+
+    expect(res.status).toBe(204);
+    expect(await legacyRows()).toEqual([{ browserId: "me", eventId: id }]);
   });
 });

@@ -108,7 +108,8 @@ describe("ログイン中のアカウントの表示 (GET /me)", () => {
     const res = await user.post("/auth/sign-out", {});
 
     expect(res.status).toBe(200);
-    expect(res.headers.getSetCookie().some((c) => c.startsWith("itsuhima.hint=;") && /Max-Age=0/.test(c))).toBe(true);
+    const cookies = res.headers.getSetCookie();
+    expect(cookies.some((c) => c.startsWith("itsuhima.hint=;") && /Max-Age=0/.test(c))).toBe(true);
   });
 
   test("ログインしていなければ 401", async () => {
@@ -117,6 +118,16 @@ describe("ログイン中のアカウントの表示 (GET /me)", () => {
 });
 
 describe("アカウントの削除", () => {
+  test("メールアドレスの Cookie を消す", async () => {
+    const user = await login(alice);
+
+    const res = await user.post("/auth/delete-user", {});
+
+    expect(res.status).toBe(200);
+    const cookies = res.headers.getSetCookie();
+    expect(cookies.some((c) => c.startsWith("itsuhima.hint=;") && /Max-Age=0/.test(c))).toBe(true);
+  });
+
   test("作ったイベントは、ほかの人の回答ごと消える", async () => {
     const user = await login(alice);
     const { id, optionId } = await createEvent({}, user);

@@ -1,13 +1,14 @@
 import type { Context } from "hono";
-import { getCookie } from "hono/cookie";
 import type { AppEnv } from "../env.js";
-import { VISITED_COOKIE } from "../middleware/visited.js";
+import { hasSessionCookie } from "../middleware/actor.js";
 
 /**
- * サービスを利用したことのあるユーザは、LP ("/") からホーム ("/home") にリダイレクトする。
+ * ログインしていれば (セッションの Cookie があれば)、LP ("/") からホーム ("/home") にリダイレクトする。
+ * セッションが有効かは確かめない (Better Auth を作らずに済ませる。切れていれば、ホームはゲストとして開き、Better Auth が Cookie を消す)。
+ * ゲストは、client が控え (localStorage) を見て決める (`client/src/pages/Landing.tsx`)。
  */
 export function landing(c: Context<AppEnv>) {
-  if (getCookie(c, VISITED_COOKIE) !== undefined) {
+  if (hasSessionCookie(c)) {
     return c.redirect("/home", 302);
   }
   return c.env.ASSETS.fetch(c.req.raw);

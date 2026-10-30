@@ -3,7 +3,6 @@ import { createDb } from "../db/index.js";
 import type { AppEnv } from "../env.js";
 import { actorMiddleware } from "../middleware/actor.js";
 import { rateLimitMiddleware } from "../middleware/rateLimit.js";
-import { visitedMiddleware } from "../middleware/visited.js";
 import { ServiceError, type ServiceErrorReason } from "../services/errors.js";
 import { authHandler } from "./auth.js";
 import eventsRoutes from "./events.js";
@@ -29,7 +28,6 @@ export const api = new Hono<AppEnv>()
     // ブラウザにキャッシュさせない。410 (削除したイベント) などは、指定が無いとキャッシュされ、戻したあとも古い応答が出る
     c.header("Cache-Control", "no-store");
   })
-  .use("*", visitedMiddleware)
   .use("*", async (c, next) => {
     c.set("db", createDb(c.env.DB));
     await next();

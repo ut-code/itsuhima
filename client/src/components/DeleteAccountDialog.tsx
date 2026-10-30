@@ -45,7 +45,8 @@ export default function DeleteAccountDialog({ ref }: { ref: RefObject<HTMLDialog
       setIsDeleting(false);
       return;
     }
-    window.location.assign("/home");
+    // 初めて来たときと同じ画面に戻す
+    window.location.assign("/");
   };
 
   return (
