@@ -19,6 +19,7 @@ import type { AppType } from "../../../../server/src/routes/api";
 import { AddToCalendar } from "../../components/AddToCalendar";
 import { Calendar, type Highlight } from "../../components/Calendar";
 import Header from "../../components/Header";
+import { forgetMyEvent, rememberMyEvents } from "../../lib/myEvents";
 import { eventReviver } from "../../revivers";
 import type { Event, Slot } from "../../types";
 import { API_ENDPOINT, readErrorMessage } from "../../utils";
@@ -100,9 +101,15 @@ export default function SubmissionPage() {
       );
       if (res.status === 200) {
         const data = await res.json();
+        if (data.isHost || data.meAsGuest) {
+          rememberMyEvents([data]);
+        }
         const parsedData = eventReviver(data);
         setEvent(parsedData);
       } else {
+        if (res.status === 404) {
+          forgetMyEvent(eventId);
+        }
         const errorMessage = await readErrorMessage(res, "イベントの取得に失敗しました。");
         setToast({
           message: errorMessage,

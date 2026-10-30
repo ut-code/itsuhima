@@ -5,6 +5,7 @@ import { NavLink } from "react-router";
 import type { AppType } from "../../../server/src/routes/api";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
+import { rememberMyEvents } from "../lib/myEvents";
 import { briefEventReviver } from "../revivers";
 import type { BriefEvent } from "../types";
 import { API_ENDPOINT, readErrorMessage } from "../utils";
@@ -26,6 +27,7 @@ export default function HomePage() {
         const res = await client.events.mine.$get({}, { init: { credentials: "include" } });
         if (res.status === 200) {
           const data = await res.json();
+          rememberMyEvents(data);
           const parsedData = data.map((p) => briefEventReviver(p));
           setInvolvedEvents(parsedData);
         } else {

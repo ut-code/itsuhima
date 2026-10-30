@@ -22,6 +22,7 @@ import type { AppType } from "../../../server/src/routes/api";
 import Header from "../components/Header";
 import { EXTERNAL_LINKS } from "../constants/links";
 import dayjs from "../lib/dayjs";
+import { forgetMyEvent } from "../lib/myEvents";
 import { eventReviver } from "../revivers";
 import type { Event } from "../types";
 import { API_ENDPOINT, readErrorMessage } from "../utils";
@@ -725,6 +726,7 @@ export default function EventFormPage() {
                     if (!res.ok) {
                       throw new Error("削除に失敗しました。");
                     }
+                    forgetMyEvent(event.id);
                     navigate("/home");
                     setToast({ message: "イベントを削除しました。", variant: "success" });
                     setTimeout(() => setToast(null), 3000);
