@@ -35,8 +35,10 @@ const eventIdsQuerySchema = z.object({
 });
 
 const router = new Hono<AppEnv>()
+  // 書き込んだら (作成・編集・削除・戻す)、`/` から `/home` に飛ぶようにする
+  .use("*", visitedMiddleware)
   // イベント作成
-  .post("/", visitedMiddleware, zValidator("json", eventReqSchema), async (c) => {
+  .post("/", zValidator("json", eventReqSchema), async (c) => {
     const event = await createEvent(c.get("db"), c.get("actor"), c.req.valid("json"));
     // hasOwner: client は、匿名で作れたものだけを控える
     return c.json({ id: event.id, name: event.name, hasOwner: event.hasOwner }, 201);
@@ -97,7 +99,6 @@ const router = new Hono<AppEnv>()
   // 回答する
   .post(
     "/:eventId/participants",
-    visitedMiddleware,
     zValidator("param", eventIdParamsSchema),
     zValidator("json", submitReqSchema),
     async (c) => {

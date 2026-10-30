@@ -52,6 +52,25 @@ describe("visited の Cookie", () => {
     expect(res.headers.get("Set-Cookie")).toMatch(VISITED_SET_COOKIE);
   });
 
+  test("編集・削除・戻すでも付ける", async () => {
+    const { id } = await createEvent();
+    const requests: [string, string, unknown?][] = [
+      ["PATCH", `/api/events/${id}`, { name: "変更" }],
+      ["DELETE", `/api/events/${id}`],
+      ["POST", `/api/events/${id}/restore`],
+    ];
+
+    for (const [method, path, body] of requests) {
+      const res = await requestWorker(path, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      expect(res.ok, `${method} ${path}`).toBe(true);
+      expect(res.headers.get("Set-Cookie"), `${method} ${path}`).toMatch(VISITED_SET_COOKIE);
+    }
+  });
+
   test("失敗したときは付けない", async () => {
     const res = await postJson("/api/events", { name: "" });
 
@@ -59,10 +78,17 @@ describe("visited の Cookie", () => {
     expect(res.headers.get("Set-Cookie")).toBeNull();
   });
 
-  test("ページを開くだけで呼ぶ API (ログインの状態、イベントの取得) では付けない", async () => {
+  test("読むだけの API (ログインの状態、イベントの取得・一覧・履歴) では付けない", async () => {
     const { id } = await createEvent();
 
-    for (const path of ["/api/auth/get-session", `/api/events/${id}`, "/api/me/events", "/api"]) {
+    for (const path of [
+      "/api/auth/get-session",
+      `/api/events/${id}`,
+      `/api/events?ids=${id}`,
+      `/api/events/${id}/history`,
+      "/api/me/events",
+      "/api",
+    ]) {
       const res = await requestWorker(path);
       expect(res.headers.get("Set-Cookie") ?? "", path).not.toMatch(/visited=/);
     }
